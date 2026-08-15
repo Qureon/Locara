@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hierarchy rotation="0">
+  <android.widget.FrameLayout index="0" package="com.bankmega.msmile" class="android.widget.FrameLayout" text="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[0,0][1080,2400]" displayed="true">
+    <android.widget.LinearLayout index="0" package="com.bankmega.msmile" class="android.widget.LinearLayout" text="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[0,0][1080,2400]" displayed="true">
+      
+      <!-- Header -->
+      <android.widget.TextView index="0" package="com.bankmega.msmile" class="android.widget.TextView" text="Konfirmasi Transfer" resource-id="com.bankmega.msmile:id/tv_title" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[300,120][780,200]" displayed="true" />
+
+      <!-- Transaction Details Container -->
+      <android.widget.RelativeLayout index="1" package="com.bankmega.msmile" class="android.widget.RelativeLayout" text="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[60,250][1020,1200]" displayed="true">
+        <android.widget.TextView index="0" package="com.bankmega.msmile" class="android.widget.TextView" text="Rekening Sumber" resource-id="com.bankmega.msmile:id/tv_lbl_source" bounds="[80,280][400,340]" displayed="true" />
+        <android.widget.TextView index="1" package="com.bankmega.msmile" class="android.widget.TextView" text="Mega Dana - 1234567890" resource-id="com.bankmega.msmile:id/tv_val_source" bounds="[80,350][600,410]" displayed="true" />
+
+        <android.widget.TextView index="2" package="com.bankmega.msmile" class="android.widget.TextView" text="Nominal Transfer" resource-id="com.bankmega.msmile:id/tv_lbl_nominal" bounds="[80,450][400,510]" displayed="true" />
+        <android.widget.TextView index="3" package="com.bankmega.msmile" class="android.widget.TextView" text="Rp 500.000" resource-id="com.bankmega.msmile:id/tv_val_nominal" bounds="[80,520][500,580]" displayed="true" />
+
+        <!-- PIN Input -->
+        <android.widget.EditText index="4" package="com.bankmega.msmile" class="android.widget.EditText" text="" resource-id="com.bankmega.msmile:id/et_mpin" content-desc="Masukkan M-PIN" checkable="false" checked="false" clickable="true" enabled="true" focusable="true" focused="false" scrollable="false" long-clickable="true" password="true" selected="false" bounds="[80,700][1000,820]" displayed="true" />
+      </android.widget.RelativeLayout>
+
+      <!-- Bottom Button Bar -->
+      <android.widget.LinearLayout index="2" package="com.bankmega.msmile" class="android.widget.LinearLayout" bounds="[0,2100][1080,2350]" displayed="true">
+        <!-- Cancel Button -->
+        <android.widget.Button index="0" package="com.bankmega.msmile" class="android.widget.Button" text="Batal" resource-id="com.bankmega.msmile:id/btn_cancel" checkable="false" checked="false" clickable="true" enabled="true" focusable="true" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[60,2150][480,2290]" displayed="true" />
+
+        <!-- Next / Confirm Button -->
+        <android.widget.Button index="1" package="com.bankmega.msmile" class="android.widget.Button" text="Lanjut" resource-id="com.bankmega.msmile:id/btn_next_transfer" content-desc="Tombol Lanjut Transfer" checkable="false" checked="false" clickable="true" enabled="true" focusable="true" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[540,2150][1020,2290]" displayed="true" />
+      </android.widget.LinearLayout>
+
+    </android.widget.LinearLayout>
+  </android.widget.FrameLayout>
+</hierarchy>

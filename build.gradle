@@ -1,0 +1,41 @@
+plugins {
+    id 'java-library'
+}
+
+group = 'com.qureon.locara'
+version = '1.3.0'
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+    options.encoding = 'UTF-8'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+}
+
+jar {
+    archiveBaseName = 'locara'
+    manifest {
+        attributes(
+            'Implementation-Title': 'Locara by Qureon - Autonomous Locator Recovery Engine',
+            'Implementation-Version': project.version,
+            'Implementation-Vendor': 'Qureon Open Source',
+            'Automatic-Module-Name': 'com.qureon.locara.core',
+            'Main-Class': 'com.qureon.locara.cli.LocaraCli'
+        )
+    }
+}
