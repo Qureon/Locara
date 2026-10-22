@@ -1,0 +1,66 @@
+/* ==============================================================================
+   ZERO-HEALING DASHBOARD — PRINT STYLESHEET
+   Clean A4 / Letter Print Layout for UAT Sign-Off Documents
+   ============================================================================== */
+
+@media print {
+    body {
+        background: #FFFFFF !important;
+        color: #000000 !important;
+        font-size: 11pt;
+    }
+
+    .sidebar,
+    .top-bar,
+    .kpi-grid,
+    .ambient-glow,
+    .table-toolbar,
+    .pagination-bar,
+    .btn,
+    .sign-off-actions,
+    .sidebar-backdrop {
+        display: none !important;
+    }
+
+    .main-content {
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .tab-pane {
+        display: none !important;
+    }
+
+    #pane-compliance {
+        display: block !important;
+    }
+
+    .compliance-card {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        background: transparent !important;
+    }
+
+    .compliance-header {
+        border-bottom: 2px solid #000000 !important;
+        margin-bottom: 20px;
+    }
+
+    .compliance-meta-grid,
+    .audit-summary-box {
+        border: 1px solid #CCCCCC !important;
+        background: #F9F9F9 !important;
+    }
+
+    .meta-item,
+    .audit-stat {
+        border: none !important;
+        background: transparent !important;
+    }
+
+    .s-val {
+        color: #000000 !important;
+    }
+}

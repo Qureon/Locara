@@ -1,0 +1,633 @@
+/* ==============================================================================
+   ZERO-HEALING DASHBOARD — TAB PANES & SPECIFIC VIEWS
+   ============================================================================== */
+
+.tab-pane {
+    display: none;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.tab-pane.active {
+    display: flex;
+}
+
+/* ------------------------------------------------------------------------------
+   TAB 2: VISUAL INSPECTOR
+   ------------------------------------------------------------------------------ */
+.visual-inspector-layout {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 24px;
+    align-items: start;
+}
+
+.mobile-viewport-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    display: flex;
+    justify-content: center;
+}
+
+.mobile-frame {
+    width: 320px;
+    height: 640px;
+    background: #000000;
+    border-radius: 40px;
+    border: 10px solid #1E293B;
+    box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.8), 0 0 0 2px rgba(255, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.device-notch {
+    height: 24px;
+    background: #000000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    z-index: 10;
+}
+
+.notch-speaker {
+    width: 50px;
+    height: 4px;
+    background: #334155;
+    border-radius: 4px;
+}
+
+.device-screen {
+    flex: 1;
+    background: #0B1120;
+    color: #F8FAFC;
+    overflow-y: auto;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Mock M-Smile App UI */
+.mock-msmile-app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 16px;
+    gap: 12px;
+}
+
+.mock-app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.mock-card {
+    background: #1E293B;
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mock-label {
+    font-size: 0.7rem;
+    color: #94A3B8;
+}
+
+.mock-val {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #F8FAFC;
+}
+
+.mock-val.amount {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #00E5FF;
+}
+
+.mock-input {
+    background: #0F172A;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    font-family: var(--font-mono);
+    color: #94A3B8;
+    font-size: 0.85rem;
+}
+
+.mock-bottom-bar {
+    margin-top: auto;
+    display: flex;
+    gap: 10px;
+    position: relative;
+    padding-top: 12px;
+}
+
+.mock-btn {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border: none;
+    cursor: default;
+    text-align: center;
+}
+
+.mock-btn-cancel {
+    background: #334155;
+    color: #E2E8F0;
+}
+
+.mock-btn-next {
+    background: #F58220;
+    color: #FFFFFF;
+}
+
+/* Bounding Box Highlight */
+.bounding-box-overlay {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    width: calc(50% + 2px);
+    height: calc(100% - 10px);
+    border: 2px dashed #00E5FF;
+    border-radius: 10px;
+    pointer-events: none;
+    animation: boxPulse 2s infinite;
+}
+
+@keyframes boxPulse {
+    0%, 100% { border-color: #00E5FF; box-shadow: 0 0 0 rgba(0, 229, 255, 0); }
+    50% { border-color: #10B981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.4); }
+}
+
+.bounding-badge {
+    position: absolute;
+    top: -24px;
+    right: 0;
+    background: #0F172A;
+    border: 1px solid #00E5FF;
+    color: #00E5FF;
+    font-size: 0.65rem;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+/* Diff Blocks */
+.diff-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.diff-block {
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.diff-block.broken {
+    background: var(--danger-subtle);
+    border: 1px solid var(--danger-border);
+    color: var(--danger);
+}
+
+.diff-block.healed {
+    background: var(--emerald-subtle);
+    border: 1px solid var(--emerald-border);
+    color: var(--emerald);
+}
+
+.diff-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.diff-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.diff-dot.red { background: var(--danger); }
+.diff-dot.green { background: var(--emerald); }
+
+.diff-code {
+    word-break: break-all;
+    font-size: 0.82rem;
+}
+
+/* 5-Vector Score Progress Bars */
+.vectors-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.vector-bar-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.vector-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+}
+
+.vector-name {
+    color: var(--text-secondary);
+}
+
+.vector-val {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.progress-track {
+    height: 6px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: var(--radius-full);
+    transition: width var(--transition-base);
+}
+
+.progress-fill.cyan { background: var(--cyan); }
+.progress-fill.emerald { background: var(--emerald); }
+.progress-fill.violet { background: var(--violet); }
+.progress-fill.amber { background: var(--amber); }
+
+/* Hardening Guard Badges */
+.guards-status-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.guard-pill {
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    font-size: 0.78rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+}
+
+.guard-pill.safe {
+    border-color: var(--emerald-border);
+    color: var(--emerald);
+}
+
+/* ------------------------------------------------------------------------------
+   TAB 3: REGRESSION HEALTH & ANALYTICS
+   ------------------------------------------------------------------------------ */
+.analytics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.module-bars-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.module-bar-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.module-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+}
+
+.module-count {
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+}
+
+.volatile-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.volatile-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.v-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.v-id {
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.v-badge {
+    font-size: 0.7rem;
+    font-family: var(--font-mono);
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    background: var(--amber-subtle);
+    color: var(--amber);
+    border: 1px solid var(--amber-border);
+}
+
+.v-cause {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+/* ------------------------------------------------------------------------------
+   TAB 4: XML RECON LAB
+   ------------------------------------------------------------------------------ */
+.playground-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.form-group input,
+.form-group textarea {
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 0.84rem;
+    outline: none;
+    transition: border-color var(--transition-fast);
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    border-color: var(--border-focus);
+}
+
+.form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.recon-empty {
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.recon-summary-card {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.recon-match-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.recon-props-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    font-size: 0.82rem;
+}
+
+.prop-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.p-k {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.p-v {
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+    word-break: break-all;
+}
+
+.xpath-preview-box,
+.rs-xml-box {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.box-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.rs-code {
+    font-size: 0.78rem;
+    max-height: 240px;
+    overflow-y: auto;
+    color: var(--cyan);
+}
+
+/* ------------------------------------------------------------------------------
+   TAB 5: COMPLIANCE SIGN-OFF
+   ------------------------------------------------------------------------------ */
+.compliance-header {
+    text-align: center;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.comp-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: var(--radius-full);
+    background: var(--cyan-subtle);
+    color: var(--cyan);
+    border: 1px solid var(--cyan-border);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+}
+
+.comp-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.compliance-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin: 24px 0;
+}
+
+.meta-item {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.m-lbl {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.m-val {
+    font-weight: 600;
+    font-size: 0.88rem;
+}
+
+.audit-summary-box {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 24px;
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.audit-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.s-val {
+    font-size: 2rem;
+    font-weight: 700;
+    font-family: var(--font-mono);
+}
+
+.s-lbl {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+/* ------------------------------------------------------------------------------
+   TAB 6: SETTINGS & THRESHOLDS
+   ------------------------------------------------------------------------------ */
+.settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.slider-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.slider-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.slider-val {
+    font-family: var(--font-mono);
+    color: var(--cyan);
+}
+
+.slider-input {
+    width: 100%;
+    accent-color: var(--cyan);
+    cursor: pointer;
+}

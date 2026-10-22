@@ -1,0 +1,12 @@
+/* ==============================================================================
+   ZERO-HEALING DASHBOARD — MASTER STYLESHEET ENTRYPOINT
+   Modular CSS Architecture
+   ============================================================================== */
+
+@import url('variables.css');
+@import url('base.css');
+@import url('sidebar.css');
+@import url('components.css');
+@import url('tabs.css');
+@import url('responsive.css');
+@import url('print.css');
