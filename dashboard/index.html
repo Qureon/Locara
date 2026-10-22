@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Locara Mission Control · Powered by Qureon</title>
+    <meta name="description" content="Locara by Qureon — Autonomous In-Memory Self-Healing & Instant Object Repository Synthesizer Dashboard">
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+    <!-- Ambient Background Glows -->
+    <div class="ambient-glow glow-cyan"></div>
+    <div class="ambient-glow glow-violet"></div>
+
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand-logo-wrap">
+                    <img src="assets/logo.svg" alt="Locara by Qureon" class="brand-logo-img">
+                </div>
+                <div class="brand-text-wrap">
+                    <span class="brand-title">LOCARA</span>
+                    <div class="brand-badge-row">
+                        <span class="brand-sub">BY QUREON</span>
+                        <span class="semver-badge">v1.3.0</span>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <span class="nav-section-title">Monitoring & Ledgers</span>
+                <button class="nav-item active" data-tab="telemetry" id="nav-telemetry">
+                    <span class="nav-icon" data-icon="activity"></span>
+                    <span class="nav-label">Live Telemetry</span>
+                </button>
+                <button class="nav-item" data-tab="visual-diff" id="nav-visual-diff">
+                    <span class="nav-icon" data-icon="crosshair"></span>
+                    <span class="nav-label">Visual Inspector</span>
+                </button>
+                <button class="nav-item" data-tab="analytics" id="nav-analytics">
+                    <span class="nav-icon" data-icon="barChart"></span>
+                    <span class="nav-label">Regression Health</span>
+                </button>
+
+                <span class="nav-section-title" style="margin-top: 12px;">Tools & Compliance</span>
+                <button class="nav-item" data-tab="playground" id="nav-playground">
+                    <span class="nav-icon" data-icon="code"></span>
+                    <span class="nav-label">XML Recon Lab</span>
+                </button>
+                <button class="nav-item" data-tab="compliance" id="nav-compliance">
+                    <span class="nav-icon" data-icon="fileText"></span>
+                    <span class="nav-label">UAT Sign-Off</span>
+                </button>
+                <button class="nav-item" data-tab="settings" id="nav-settings">
+                    <span class="nav-icon" data-icon="settings"></span>
+                    <span class="nav-label">Engine Config</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <!-- Theme Toggle Button -->
+                <button class="theme-toggle-btn" id="btn-theme-toggle" aria-label="Toggle theme">
+                    <div class="theme-mode-label">
+                        <span class="theme-icon-wrap" id="theme-icon"></span>
+                        <span id="theme-label">Dark Mode</span>
+                    </div>
+                    <span class="text-xs text-muted">Theme</span>
+                </button>
+
+                <!-- Engine Status -->
+                <div class="engine-status-card">
+                    <div class="status-indicator pulse"></div>
+                    <div class="engine-status-meta">
+                        <span class="status-title">Core Engine Active</span>
+                        <span class="status-sub">In-Flight Hook v1.3.0</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Sidebar Mobile Backdrop -->
+        <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Top Header Bar -->
+            <header class="top-bar">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <button class="mobile-menu-toggle" id="btn-mobile-menu" aria-label="Toggle navigation">
+                        <span data-icon="menu"></span>
+                    </button>
+                    <div class="header-titles">
+                        <h1 class="page-header-title" id="page-heading">Locara Mission Control</h1>
+                        <p class="page-header-subtitle" id="page-subtitle">Autonomous in-flight locator self-healing, ledgers, and recovery telemetry.</p>
+                    </div>
+                </div>
+
+                <div class="header-actions">
+                    <div class="connection-pill" id="connection-pill">
+                        <span class="live-pulse"></span>
+                        <span class="pill-text">AUTOMATION SUITE: CONNECTED</span>
+                    </div>
+                    <button class="btn btn-secondary" id="btn-refresh">
+                        <span class="btn-icon-wrap" data-icon="refresh"></span> Refresh
+                    </button>
+                    <button class="btn btn-primary" id="btn-export-audit">
+                        <span class="btn-icon-wrap" data-icon="download"></span> Export Audit Log
+                    </button>
+                </div>
+            </header>
+
+            <!-- KPI Metric Cards Grid -->
+            <section class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <span class="kpi-label">Total Intersepsi Healed</span>
+                        <span class="kpi-icon-wrap cyan" data-icon="zap"></span>
+                    </div>
+                    <div class="kpi-body">
+                        <h3 class="kpi-value" id="kpi-total-healed">1,428</h3>
+                        <div class="kpi-trend positive">
+                            <span class="trend-badge">+34 Regresi Aktif</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <span class="kpi-label">In-Flight Success Rate</span>
+                        <span class="kpi-icon-wrap emerald" data-icon="checkCircle"></span>
+                    </div>
+                    <div class="kpi-body">
+                        <h3 class="kpi-value" id="kpi-success-rate">99.4%</h3>
+                        <div class="kpi-trend positive">
+                            <span class="trend-badge">Zero Aborted TC</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <span class="kpi-label">Rata-Rata Latency</span>
+                        <span class="kpi-icon-wrap violet" data-icon="clock"></span>
+                    </div>
+                    <div class="kpi-body">
+                        <h3 class="kpi-value" id="kpi-latency">36 ms</h3>
+                        <div class="kpi-trend neutral">
+                            <span class="trend-badge">&lt; 50ms Target SLA</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <span class="kpi-label">Safety Lockouts Aktif</span>
+                        <span class="kpi-icon-wrap danger" data-icon="shield"></span>
+                    </div>
+                    <div class="kpi-body">
+                        <h3 class="kpi-value" id="kpi-lockouts">18</h3>
+                        <div class="kpi-trend danger">
+                            <span class="trend-badge">Aksi Bahaya Dicegah</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 1: Live Telemetry & Audit Log -->
+            <section class="tab-pane active" id="pane-telemetry">
+                <div class="card">
+                    <div class="table-toolbar">
+                        <div class="search-box">
+                            <span class="search-icon" data-icon="search"></span>
+                            <input type="text" id="log-search" placeholder="Cari target hint, screen context, atau locator XPath...">
+                        </div>
+                        <div class="filter-chips">
+                            <button class="chip active" data-filter="ALL">Semua</button>
+                            <button class="chip" data-filter="SUCCESS">Success</button>
+                            <button class="chip" data-filter="SCROLLED">Auto-Scrolled</button>
+                            <button class="chip" data-filter="LOCKOUT">Safety Lockout</button>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="audit-table">
+                            <thead>
+                                <tr>
+                                    <th data-sort="timestamp">Waktu <span class="th-sort-icon"></span></th>
+                                    <th data-sort="screen">Screen Context <span class="th-sort-icon"></span></th>
+                                    <th data-sort="targetHint">Target Hint <span class="th-sort-icon"></span></th>
+                                    <th data-sort="action">Aksi <span class="th-sort-icon"></span></th>
+                                    <th data-sort="confidence">Confidence <span class="th-sort-icon"></span></th>
+                                    <th data-sort="status">Status <span class="th-sort-icon"></span></th>
+                                    <th>Target OR (.rs)</th>
+                                    <th>Detail</th>
+                                </tr>
+                            </thead>
+                            <tbody id="audit-table-body">
+                                <!-- Dynamic rows via telemetry.js -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination Controls -->
+                    <div class="pagination-bar">
+                        <span id="pagination-info">Menampilkan halaman 1 dari 1</span>
+                        <div class="pagination-controls">
+                            <button class="page-btn" id="btn-page-prev">Sebelumnya</button>
+                            <button class="page-btn" id="btn-page-next">Selanjutnya</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: Visual Bounding Box & Diff Inspector -->
+            <section class="tab-pane" id="pane-visual-diff">
+                <div class="visual-inspector-layout">
+                    <!-- Left: Mobile Device Simulation Canvas -->
+                    <div class="mobile-viewport-card">
+                        <div class="mobile-frame">
+                            <div class="device-notch">
+                                <div class="notch-speaker"></div>
+                            </div>
+                            <div class="device-screen" id="device-screen">
+                                <div class="mock-msmile-app">
+                                    <div class="mock-app-header">
+                                        <span>Konfirmasi Transfer</span>
+                                        <span class="text-xs text-muted">M-Smile</span>
+                                    </div>
+                                    <div class="mock-card">
+                                        <span class="mock-label">Rekening Sumber</span>
+                                        <span class="mock-val">Mega Dana •••• 5678</span>
+                                        <div style="height: 1px; background: rgba(255,255,255,0.08); margin: 4px 0;"></div>
+                                        <span class="mock-label">Tujuan Transfer</span>
+                                        <span class="mock-val">Bank Central Asia (BCA)</span>
+                                        <span class="text-xs text-muted">0123456789 - SITI AMINAH</span>
+                                    </div>
+                                    <div class="mock-card">
+                                        <span class="mock-label">Nominal Transfer</span>
+                                        <span class="mock-val amount">Rp 1.500.000</span>
+                                        <span class="mock-label">Biaya Admin: Rp 6.500</span>
+                                    </div>
+                                    <div class="mock-input">
+                                        ••••••  (Input M-PIN)
+                                    </div>
+
+                                    <div class="mock-bottom-bar">
+                                        <button class="mock-btn mock-btn-cancel">Batal</button>
+                                        <button class="mock-btn mock-btn-next" id="target-element-btn">Lanjut</button>
+
+                                        <!-- Highlight Bounding Box -->
+                                        <div class="bounding-box-overlay" id="visual-bounding-box">
+                                            <div class="bounding-badge">
+                                                <span class="badge-text">HEALED: 94.2%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Heuristic Diagnostics & Diff Panel -->
+                    <div class="card" style="padding: 24px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <h3 class="card-title">Deep Heuristic Diagnostics</h3>
+                            <span class="status-pill success">AUTONOMOUSLY HEALED</span>
+                        </div>
+
+                        <!-- Locator Diff Block -->
+                        <div class="diff-container">
+                            <div class="diff-block broken">
+                                <div class="diff-header">
+                                    <span class="diff-dot red"></span>
+                                    <span>ORIGINAL FAILED LOCATOR (RESOURCE-ID BERUBAH OLEH DEV)</span>
+                                </div>
+                                <code class="diff-code" id="diff-old-locator">//android.widget.Button[@resource-id='com.bankmega.msmile:id/btn_next']</code>
+                            </div>
+
+                            <div class="diff-block healed">
+                                <div class="diff-header">
+                                    <span class="diff-dot green"></span>
+                                    <span>AUTONOMOUS IN-FLIGHT HEALED XPATH (UNIQUE & ROBUST)</span>
+                                </div>
+                                <code class="diff-code" id="diff-new-locator">//android.widget.Button[@resource-id='com.bankmega.msmile:id/btn_next_transfer' and @text='Lanjut']</code>
+                            </div>
+                        </div>
+
+                        <!-- 5-Vector Score Breakdown -->
+                        <div class="vectors-breakdown">
+                            <h4 style="font-size: 0.9rem; font-weight: 600;">Multi-Vector Similarity Breakdown</h4>
+
+                            <div class="vector-bar-row">
+                                <div class="vector-meta">
+                                    <span class="vector-name">Text Exact / Jaro-Winkler (Bobot: 35%)</span>
+                                    <span class="vector-val" id="vec-text">98.0%</span>
+                                </div>
+                                <div class="progress-track"><div class="progress-fill cyan" style="width: 98%;"></div></div>
+                            </div>
+
+                            <div class="vector-bar-row">
+                                <div class="vector-meta">
+                                    <span class="vector-name">Semantic Resource-ID Overlap (Bobot: 25%)</span>
+                                    <span class="vector-val" id="vec-id">91.5%</span>
+                                </div>
+                                <div class="progress-track"><div class="progress-fill emerald" style="width: 91.5%;"></div></div>
+                            </div>
+
+                            <div class="vector-bar-row">
+                                <div class="vector-meta">
+                                    <span class="vector-name">Content-Description / Accessibility (Bobot: 20%)</span>
+                                    <span class="vector-val" id="vec-desc">95.0%</span>
+                                </div>
+                                <div class="progress-track"><div class="progress-fill violet" style="width: 95%;"></div></div>
+                            </div>
+
+                            <div class="vector-bar-row">
+                                <div class="vector-meta">
+                                    <span class="vector-name">Class Type & Clickability (Bobot: 10%)</span>
+                                    <span class="vector-val" id="vec-class">100.0%</span>
+                                </div>
+                                <div class="progress-track"><div class="progress-fill amber" style="width: 100%;"></div></div>
+                            </div>
+
+                            <div class="vector-bar-row">
+                                <div class="vector-meta">
+                                    <span class="vector-name">Proximity & Viewport Coordinates (Bobot: 10%)</span>
+                                    <span class="vector-val" id="vec-prox">100.0%</span>
+                                </div>
+                                <div class="progress-track"><div class="progress-fill cyan" style="width: 100%;"></div></div>
+                            </div>
+                        </div>
+
+                        <!-- Hardening Guards Status -->
+                        <div class="guards-status-grid" id="guards-status-grid">
+                            <!-- Injected by inspector.js -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: Regression Health & Analytics -->
+            <section class="tab-pane" id="pane-analytics">
+                <div class="analytics-grid">
+                    <div class="card" style="padding: 24px;">
+                        <h3 class="card-title">Healing Frequency by M-Smile Module</h3>
+                        <p class="card-sub">Distribusi perbaikan otonom pada modul transaksi utama Bank Mega</p>
+                        <div class="module-bars-list" id="module-bars-container">
+                            <!-- Injected by analytics.js -->
+                        </div>
+                    </div>
+
+                    <div class="card" style="padding: 24px;">
+                        <h3 class="card-title">Top Volatile Locators (Frequently Changed)</h3>
+                        <p class="card-sub">Elemen UI yang paling sering mengalami perubahan ID / XPath di sprint ini</p>
+                        <div class="volatile-list" id="volatile-list-container">
+                            <!-- Injected by analytics.js -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: Interactive XML Recon Lab -->
+            <section class="tab-pane" id="pane-playground">
+                <div class="playground-layout">
+                    <div class="card" style="padding: 24px;">
+                        <h3 class="card-title">Appium XML Diagnostic Sandbox</h3>
+                        <p class="card-sub">Uji algoritma pencocokan heuristik Locara by Qureon secara langsung di browser.</p>
+
+                        <div class="form-group" style="margin-top: 16px;">
+                            <label for="recon-hint">Target Semantic Hint / Nama Tombol</label>
+                            <input type="text" id="recon-hint" value="Lanjut Transfer" placeholder="Contoh: Lanjut Transfer, Konfirmasi Bayar, MPIN Input">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="recon-xml">Appium Page Source XML</label>
+                            <textarea id="recon-xml" rows="12" placeholder="Tempel potongan raw XML hierarki di sini..."></textarea>
+                        </div>
+
+                        <div class="form-actions">
+                            <button class="btn btn-primary" id="btn-run-recon">
+                                <span class="btn-icon-wrap" data-icon="zap"></span> Jalankan Simulasi
+                            </button>
+                            <button class="btn btn-secondary" id="btn-load-sample">
+                                <span class="btn-icon-wrap" data-icon="fileText"></span> Muat Sampel M-Smile
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card" style="padding: 24px;">
+                        <h3 class="card-title">Hasil Evaluasi & Output .rs</h3>
+                        <div id="recon-result-empty" class="recon-empty">
+                            <span style="width: 32px; height: 32px; color: var(--text-muted);" data-icon="code"></span>
+                            <p>Klik tombol <strong>"Jalankan Simulasi"</strong> untuk melihat hasil pencocokan dan spesifikasi .rs!</p>
+                        </div>
+                        <div id="recon-result-content" class="recon-output-wrapper hidden">
+                            <!-- Injected by playground.js -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: UAT Compliance & Sign-Off -->
+            <section class="tab-pane" id="pane-compliance">
+                <div class="card compliance-card" style="padding: 32px;">
+                    <div class="compliance-header">
+                        <div class="comp-badge">QUREON QA COMPLIANCE GATEWAY</div>
+                        <h2 class="comp-title">UAT Self-Healing Audit & Traceability Sign-Off Certificate</h2>
+                        <p class="card-sub">Dokumen verifikasi resmi integritas pengujian otomasi regresi Locara by Qureon</p>
+                    </div>
+
+                    <div class="compliance-meta-grid">
+                        <div class="meta-item"><span class="m-lbl">Aplikasi Target:</span> <span class="m-val">Mobile App (Android / iOS)</span></div>
+                        <div class="meta-item"><span class="m-lbl">Siklus Pengujian:</span> <span class="m-val">Sprint UAT Regression Cycle</span></div>
+                        <div class="meta-item"><span class="m-lbl">Engine Version:</span> <span class="m-val font-mono">Locara Core v1.3.0</span></div>
+                        <div class="meta-item"><span class="m-lbl">Integritas Hash:</span> <span class="m-val font-mono text-cyan">SHA-256: 7f8a3c...9b1e</span></div>
+                    </div>
+
+                    <div class="audit-summary-box">
+                        <div class="audit-stat">
+                            <span class="s-val text-emerald">100%</span>
+                            <span class="s-lbl">Safety Polarity Compliance</span>
+                        </div>
+                        <div class="audit-stat">
+                            <span class="s-val text-cyan">1,419</span>
+                            <span class="s-lbl">Successful In-Flight Heals</span>
+                        </div>
+                        <div class="audit-stat">
+                            <span class="s-val text-violet">0</span>
+                            <span class="s-lbl">False-Positive Destructive Actions</span>
+                        </div>
+                    </div>
+
+                    <div class="sign-off-actions" style="display: flex; justify-content: center; gap: 12px;">
+                        <button class="btn btn-primary" id="btn-print-certificate">
+                            <span class="btn-icon-wrap" data-icon="fileText"></span> Cetak Dokumen Sign-Off PDF
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 6: Engine Settings & Thresholds -->
+            <section class="tab-pane" id="pane-settings">
+                <div class="settings-grid">
+                    <div class="card" style="padding: 24px;">
+                        <h3 class="card-title">Sensitivitas & Bobot Multi-Vektor</h3>
+                        <p class="card-sub">Penyesuaian bobot matematis untuk pencocokan heuristik Locara by Qureon</p>
+
+                        <div class="slider-group" style="margin-top: 16px;">
+                            <div class="slider-header">
+                                <span>Minimum Similarity Threshold</span>
+                                <span class="slider-val" id="val-min-sim">70%</span>
+                            </div>
+                            <input type="range" class="slider-input" id="slider-min-sim" min="0.50" max="0.95" step="0.05" value="0.70">
+                            <span class="text-xs text-muted">Ambang batas minimal skor kecocokan agar aksi in-flight dieksekusi.</span>
+                        </div>
+
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <span>Text Exact / Jaro-Winkler Weight</span>
+                                <span class="slider-val" id="val-text-weight">35%</span>
+                            </div>
+                            <input type="range" class="slider-input" id="slider-text-weight" min="0.10" max="0.60" step="0.05" value="0.35">
+                        </div>
+
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <span>Resource-ID Semantic Weight</span>
+                                <span class="slider-val" id="val-id-weight">25%</span>
+                            </div>
+                            <input type="range" class="slider-input" id="slider-id-weight" min="0.10" max="0.50" step="0.05" value="0.25">
+                        </div>
+
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <span>Content-Description / Accessibility Weight</span>
+                                <span class="slider-val" id="val-desc-weight">20%</span>
+                            </div>
+                            <input type="range" class="slider-input" id="slider-desc-weight" min="0.10" max="0.40" step="0.05" value="0.20">
+                        </div>
+
+                        <div style="margin-top: 24px; display: flex; align-items: center; gap: 12px;">
+                            <button class="btn btn-primary" id="btn-save-settings">Simpan Konfigurasi</button>
+                            <span class="text-sm text-emerald hidden" id="save-settings-notice">Konfigurasi berhasil disimpan!</span>
+                        </div>
+                    </div>
+
+                    <div class="card" style="padding: 24px;">
+                        <h3 class="card-title">Safety Guards & Invariants</h3>
+                        <p class="card-sub">Aturan perlindungan terhadap aksi destruktif dan gangguan sistem</p>
+
+                        <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 16px;">
+                            <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px;">
+                                <strong style="font-size: 0.86rem; color: var(--danger);">Danger Polarity Guard (Active)</strong>
+                                <p class="text-xs text-secondary" style="margin-top: 4px;">
+                                    Memblokir secara mutlak pencocokan hint transaksi positif ("Lanjut", "Bayar") terhadap tombol destruktif ("Batal", "Hapus", "Blokir").
+                                </p>
+                            </div>
+
+                            <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px;">
+                                <strong style="font-size: 0.86rem; color: var(--emerald);">The Golden Triad Keyboard Guard (Active)</strong>
+                                <p class="text-xs text-secondary" style="margin-top: 4px;">
+                                    Secara otomatis menutup soft keyboard perangkat jika elemen target tertutup viewport keyboard sebelum aksi tap.
+                                </p>
+                            </div>
+
+                            <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px;">
+                                <strong style="font-size: 0.86rem; color: var(--cyan);">Scroll Recovery Engine (Active)</strong>
+                                <p class="text-xs text-secondary" style="margin-top: 4px;">
+                                    Melakukan scrolling vertikal otomatis hingga 2 kali jika elemen target berada di luar batas layar perangkat.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Forensic Details Modal -->
+    <div class="modal-backdrop hidden" id="detail-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-title">Event Forensic Details</h3>
+                <button class="modal-close" id="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Injected dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Master Controller Script -->
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
