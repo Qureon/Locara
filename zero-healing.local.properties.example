@@ -1,0 +1,13 @@
+# ==============================================================================
+# 🛡️ Zero-Healing Local Developer Override (TEMPLATE)
+# 
+# Salin file ini menjadi 'zero-healing.local.properties' jika Anda ingin 
+# mematikan Zero-Healing secara total di laptop Anda:
+#   cp zero-healing.local.properties.example zero-healing.local.properties
+#
+# File 'zero-healing.local.properties' sudah otomatis masuk .gitignore 
+# sehingga TIDAK AKAN PERNAH ter-push ke Git atau bentrok dengan rekan lain.
+# ==============================================================================
+
+# Ubah ke false untuk mematikan Zero-Healing 100% (kembali ke vanilla Katalon murni)
+healing.enabled=false
