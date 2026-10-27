@@ -1,0 +1,27 @@
+# ==============================================================================
+# 🛡️ Locara by Qureon — Local Developer Override (TEMPLATE)
+# 
+# Salin file ini menjadi 'locara.local.properties' jika Anda ingin 
+# mengkonfigurasi atau mematikan Locara secara lokal di mesin Anda:
+#   cp locara.local.properties.example locara.local.properties
+#
+# File '*.local.properties' sudah otomatis masuk .gitignore 
+# sehingga TIDAK AKAN PERNAH ter-push ke Git atau bentrok dengan rekan tim.
+# ==============================================================================
+
+# Ubah ke false untuk mematikan self-healing secara total (kembali ke vanilla Katalon/Appium murni)
+healing.enabled=true
+
+# Threshold minimal similarity (0.50 - 0.95)
+healing.threshold=0.70
+
+# Auto-scroll viewport jika target locator off-screen
+healing.scroll.enabled=true
+healing.scroll.max_attempts=3
+
+# Generator Object Repository .rs otomatis untuk UAT traceability
+healing.rs.synthesize.enabled=true
+healing.rs.output.dir=Object Repository/Healed/
+
+# Safety polarity guard (mencegah klik tombol destruktif saat mencari tombol positif)
+healing.safety.guard.enabled=true
