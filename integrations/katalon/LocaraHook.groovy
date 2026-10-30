@@ -472,13 +472,13 @@ class LocaraWaitForElementPresentKeyword implements IKeyword {
         } catch (Throwable ignored) {}
 
         // Original returned false or threw: Trigger In-Flight Probe Airbag!
-        KeywordUtil.logInfo("[Locara by Qureon] 🛡️ Intercepted missing on Mobile.waitForElementPresent(''). Activating in-flight probe healing...")
+        KeywordUtil.logInfo("[Locara by Qureon] 🛡️ Intercepted missing on Mobile.waitForElementPresent('${objId}'). Activating in-flight probe healing...")
 
         IN_FLIGHT.set(true)
         try {
             boolean healed = Locara.healAndVerifyPresent(to, timeout, objId)
             if (healed) {
-                KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight probe healing succeeded for waitForElementPresent('')!")
+                KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight probe healing succeeded for waitForElementPresent('${objId}')!")
                 return true
             }
         } catch (Throwable healEx) {
@@ -524,13 +524,13 @@ class LocaraVerifyElementPresentKeyword implements IKeyword {
             }
         } catch (Throwable t) {}
 
-        KeywordUtil.logInfo("[Locara by Qureon] 🛡️ Intercepted failure on Mobile.verifyElementPresent(''). Activating in-flight probe healing...")
+        KeywordUtil.logInfo("[Locara by Qureon] 🛡️ Intercepted failure on Mobile.verifyElementPresent('${objId}'). Activating in-flight probe healing...")
 
         IN_FLIGHT.set(true)
         try {
             boolean healed = Locara.healAndVerifyPresent(to, timeout, objId)
             if (healed) {
-                KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight probe healing succeeded for verifyElementPresent('')!")
+                KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight probe healing succeeded for verifyElementPresent('${objId}')!")
                 return true
             }
         } catch (Throwable healEx) {
@@ -579,13 +579,13 @@ class LocaraVerifyElementVisibleKeyword implements IKeyword {
             }
         } catch (Throwable t) {}
 
-        KeywordUtil.logInfo("[Locara by Qureon] 🛡️ Intercepted failure on Mobile.verifyElementVisible(''). Activating in-flight visibility healing...")
+        KeywordUtil.logInfo("[Locara by Qureon] 🛡️ Intercepted failure on Mobile.verifyElementVisible('${objId}'). Activating in-flight visibility healing...")
 
         IN_FLIGHT.set(true)
         try {
             boolean healed = Locara.healAndVerifyVisible(to, timeout, objId)
             if (healed) {
-                KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight visibility healing succeeded for verifyElementVisible('')!")
+                KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight visibility healing succeeded for verifyElementVisible('${objId}')!")
                 return true
             }
         } catch (Throwable healEx) {
