@@ -25,6 +25,7 @@ public class HealConfig {
     private String defaultRsFolder = "Object Repository";
     private String auditLogFolder = "Include/evidence";
 
+    private AppTarget appTarget = AppTarget.AUTO;
     private boolean enabled = true;
 
     public HealConfig() {}
@@ -72,6 +73,8 @@ public class HealConfig {
             config.backupExistingRs = Boolean.parseBoolean(props.getProperty("healing.rs.backup", "true"));
             config.auditLedgerEnabled = Boolean.parseBoolean(props.getProperty("healing.audit.enabled", "true"));
             config.adaptiveFrameworkWeights = Boolean.parseBoolean(props.getProperty("healing.framework.adaptive", "true"));
+            String targetProp = props.getProperty("locara.target", props.getProperty("healing.target", "AUTO"));
+            config.appTarget = AppTarget.fromString(targetProp);
             config.katalonProjectPath = props.getProperty("healing.project.path", config.katalonProjectPath);
         } catch (NumberFormatException ignored) {}
 
@@ -93,6 +96,9 @@ public class HealConfig {
 
         return config;
     }
+
+    public AppTarget getAppTarget() { return appTarget; }
+    public void setAppTarget(AppTarget target) { this.appTarget = target != null ? target : AppTarget.AUTO; }
 
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean val) { this.enabled = val; }
