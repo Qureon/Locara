@@ -5,9 +5,9 @@
 ### Adaptive Locator Intelligence
 *An intelligent self-healing engine for resilient test automation.*
 
-[![Version](https://img.shields.io/badge/version-1.3.0-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara)
+[![Version](https://img.shields.io/badge/version-1.5.0-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-25%2F25%20passing-10B981?style=flat-square)](build.gradle)
+[![Tests](https://img.shields.io/badge/tests-36%2F36%20passing-10B981?style=flat-square)](build.gradle)
 [![Java](https://img.shields.io/badge/java-17%20%7C%2021%20%7C%2024-orange?style=flat-square&logo=openjdk)](build.gradle)
 [![Katalon](https://img.shields.io/badge/katalon-8.x%20%7C%209.x%20%7C%2010.x-00B0FF?style=flat-square)](https://katalon.com)
 [![Appium](https://img.shields.io/badge/appium-2.x%20%7C%201.x-662d91?style=flat-square&logo=appium)](https://appium.io)
@@ -34,6 +34,9 @@ Locara menerapkan prinsip **In-Flight Zero-Interruption**:
 4. **Enterprise Safety Guard**: Proteksi polaritas bahaya (*Danger Polarity Lockout*), auto-dismiss keyboard virtual (*The Golden Triad*), dan *Auto-Scroll Viewport Fallback* untuk tombol di bawah lipatan layar.
 5. **Visual Bounding Box Evidence**: Menghasilkan screenshot UAT bergaris tepi merah dengan badge skor akurasi untuk kelengkapan audit compliance.
 6. **100% Backward Compatibility**: Sepenuhnya kompatibel dengan proyek yang sebelumnya menggunakan namespace `com.zerohealing.*`.
+7. **Universal 2D Spatial Alignment (v1.5.0)**: Menemukan target input atau dropdown berdasarkan kedekatan geometris sumbu X & Y (Left-to-Right & Top-to-Bottom) saat elemen kehilangan test-tag atau ID.
+8. **Universal Field Relationship Extraction (v1.5.0)**: Membedah form transaksi dan struk belanja menjadi pasangan terstruktur `Key -> Value` secara otomatis.
+9. **Autonomous Overlay & Permission Airbag (v1.5.0)**: Menetralisir dialog izin sistem OS (`permissioncontroller`) dan modal banner tak terduga secara instan tanpa menghentikan eksekusi test suite.
 
 ---
 
