@@ -57,7 +57,10 @@ public class HealConfig {
         }
 
         try {
-            config.enabled = Boolean.parseBoolean(props.getProperty("healing.enabled", "true"));
+            String propEnabled = props.getProperty("locara.enabled",
+                    props.getProperty("qureon.enabled",
+                    props.getProperty("healing.enabled", "true")));
+            config.enabled = Boolean.parseBoolean(propEnabled);
             config.minConfidenceThreshold = Double.parseDouble(props.getProperty("healing.threshold", "0.70"));
             config.weightText = Double.parseDouble(props.getProperty("healing.weight.text", "0.35"));
             config.weightId = Double.parseDouble(props.getProperty("healing.weight.id", "0.25"));
