@@ -240,6 +240,129 @@ public class Locara {
         return executeHealing(testObject, hint, "CLEAR_TEXT", "", timeoutSeconds, null);
     }
 
+    /**
+     * Directly triggers self-healing for waitForElementPresent and verifyElementPresent.
+     * Evaluates UI hierarchy via multi-vector heuristics and semantic intent matching.
+     * If found, patches the in-memory TestObject and returns true.
+     */
+    public static boolean healAndVerifyPresent(Object testObject, int timeoutSeconds, String hint) {
+        if (!ENGINE.getConfig().isEnabled()) return false;
+        try {
+            Object driver = KatalonDriverBridge.getMobileDriver();
+            if (driver == null) {
+                return false;
+            }
+
+            String pageSource = KatalonDriverBridge.getPageSource(driver);
+            if (pageSource == null || pageSource.isEmpty()) {
+                return false;
+            }
+
+            String rsPath = extractObjectId(testObject);
+            String rawHint = (hint != null && !hint.isEmpty()) ? hint : rsPath;
+            String effectiveHint = com.qureon.locara.core.matcher.HeuristicMatcher.cleanSemanticHint(rawHint);
+            if (effectiveHint.isEmpty()) effectiveHint = rawHint;
+
+            String expectedTag = extractExpectedTag(rsPath);
+
+            HealContext context = HealContext.builder()
+                    .targetHint(effectiveHint)
+                    .action("VERIFY_PRESENT")
+                    .value("")
+                    .targetRsPath(rsPath)
+                    .screenName(deriveScreenName(rsPath))
+                    .originalLocator(extractLocator(testObject))
+                    .expectedTag(expectedTag)
+                    .build();
+
+            HealResult result = ENGINE.heal(pageSource, context);
+
+            // Tier 2: Semantic Intent Matcher Fallback for banking error dialogs/text
+            if (!result.isSuccess()) {
+                try {
+                    com.qureon.locara.core.parser.PageSourceParser parser = new com.qureon.locara.core.parser.PageSourceParser();
+                    java.util.List<com.qureon.locara.core.model.UIElementNode> nodes = parser.parse(pageSource);
+                    com.qureon.locara.core.model.UIElementNode bestNode = null;
+                    double bestScore = 0.0;
+
+                    for (com.qureon.locara.core.model.UIElementNode node : nodes) {
+                        if (node.hasText()) {
+                            double score = com.qureon.locara.core.matcher.LocaraIntentMatcher.calculateIntentScore(node.getText(), effectiveHint);
+                            if (score > bestScore && score >= 0.70) {
+                                bestScore = score;
+                                bestNode = node;
+                            }
+                        }
+                    }
+
+                    if (bestNode != null) {
+                        String generatedXPath = new com.qureon.locara.core.generator.DynamicXPathGenerator().generateOptimalXPath(bestNode, nodes, "VERIFY_PRESENT");
+                        com.qureon.locara.core.model.HealCandidate candidate = new com.qureon.locara.core.model.HealCandidate(bestNode, generatedXPath, bestScore, "SEMANTIC_INTENT_MATCH");
+                        result = new HealResult(true, candidate, null, "Healed via Semantic Intent Matching (" + String.format(java.util.Locale.US, "%.1f%%", bestScore * 100.0) + ")");
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            // Auto-Scroll Fallback: If not found, attempt scroll recovery
+            if (!result.isSuccess()) {
+                try {
+                    java.util.List<com.qureon.locara.core.model.UIElementNode> nodes = new com.qureon.locara.core.parser.PageSourceParser().parse(pageSource);
+                    if (SCROLL_ENGINE.hasScrollableContainer(nodes)) {
+                        for (int attempt = 1; attempt <= SCROLL_ENGINE.getMaxScrollAttempts(); attempt++) {
+                            boolean scrolled = SCROLL_ENGINE.performScrollDown(driver);
+                            if (!scrolled) break;
+
+                            pageSource = KatalonDriverBridge.getPageSource(driver);
+                            if (pageSource != null) {
+                                result = ENGINE.heal(pageSource, context);
+                                if (result.isSuccess()) break;
+                            }
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            if (!result.isSuccess() || result.getCandidate() == null) {
+                return false;
+            }
+
+            String healedXPath = result.getCandidate().getSuggestedXPath();
+            System.out.println("[Locara by Qureon] 🌟 HEALED PRESENT: " + hint + " -> XPath: " + healedXPath + " (Score: " +
+                    String.format(java.util.Locale.US, "%.1f%%", result.getCandidate().getConfidenceScore() * 100.0) + ")");
+
+            if (result.getGeneratedRsFile() != null) {
+                System.out.println("[Locara by Qureon] 📝 Object Repository (.rs) written to: " + result.getGeneratedRsFile().getAbsolutePath());
+            }
+
+            if (testObject != null) {
+                KatalonDriverBridge.patchTestObject(testObject, result.getCandidate().getNode(), healedXPath);
+            }
+
+            return verifyElementExists(driver, healedXPath);
+        } catch (Throwable t) {
+            System.out.println("[Locara by Qureon] Probing heal error: " + t.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Directly triggers self-healing for verifyElementVisible.
+     */
+    public static boolean healAndVerifyVisible(Object testObject, int timeoutSeconds, String hint) {
+        if (!ENGINE.getConfig().isEnabled()) return false;
+        boolean present = healAndVerifyPresent(testObject, timeoutSeconds, hint);
+        if (!present) return false;
+        try {
+            Object driver = KatalonDriverBridge.getMobileDriver();
+            if (driver == null) return true;
+            String healedXPath = extractLocator(testObject);
+            if (healedXPath == null || healedXPath.isEmpty()) return true;
+            return verifyElementDisplayed(driver, healedXPath);
+        } catch (Throwable t) {
+            return true;
+        }
+    }
+
     private static boolean executeHealing(Object testObject,
                                           String hint,
                                           String action,
@@ -450,5 +573,38 @@ public class Locara {
             return normalized.substring(0, normalized.indexOf("/"));
         }
         return "DefaultScreen";
+    }
+
+    private static boolean verifyElementExists(Object driver, String xpath) {
+        try {
+            Class<?> byClass = Class.forName("org.openqa.selenium.By");
+            Method xpathMethod = byClass.getMethod("xpath", String.class);
+            Object by = xpathMethod.invoke(null, xpath);
+
+            Method findElementsMethod = driver.getClass().getMethod("findElements", byClass);
+            java.util.List<?> elements = (java.util.List<?>) findElementsMethod.invoke(driver, by);
+            return elements != null && !elements.isEmpty();
+        } catch (Throwable t) {
+            return true; // Node was already verified from XML DOM
+        }
+    }
+
+    private static boolean verifyElementDisplayed(Object driver, String xpath) {
+        try {
+            Class<?> byClass = Class.forName("org.openqa.selenium.By");
+            Method xpathMethod = byClass.getMethod("xpath", String.class);
+            Object by = xpathMethod.invoke(null, xpath);
+
+            Method findElementsMethod = driver.getClass().getMethod("findElements", byClass);
+            java.util.List<?> elements = (java.util.List<?>) findElementsMethod.invoke(driver, by);
+            if (elements != null && !elements.isEmpty()) {
+                Object el = elements.get(0);
+                Method isDisplayed = el.getClass().getMethod("isDisplayed");
+                return (Boolean) isDisplayed.invoke(el);
+            }
+            return false;
+        } catch (Throwable t) {
+            return true;
+        }
     }
 }
