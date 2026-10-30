@@ -91,6 +91,56 @@ public class ScrollRecoveryEngine {
         return false;
     }
 
+    /**
+     * Performs a short, controlled downward scroll to reveal elements without overshooting.
+     */
+    public boolean performShortScroll(Object driver) {
+        if (driver == null) return false;
+        int[] dims = getScreenDimensions(driver);
+        int width = dims[0];
+        int height = dims[1];
+
+        int startX = width / 2;
+        int startY = (int) (height * 0.55);
+        int endX = width / 2;
+        int endY = (int) (height * 0.40);
+
+        try {
+            Class<?> mobileKeywords = Class.forName("com.kms.katalon.core.mobile.keyword.MobileBuiltInKeywords");
+            Method swipeMethod = mobileKeywords.getMethod("swipe", int.class, int.class, int.class, int.class);
+            swipeMethod.invoke(null, startX, startY, endX, endY);
+            Thread.sleep(400);
+            return true;
+        } catch (Exception ignored) {}
+
+        return false;
+    }
+
+    /**
+     * Performs an upward scroll (swipe top to bottom) to recover overshot elements.
+     */
+    public boolean performScrollUp(Object driver) {
+        if (driver == null) return false;
+        int[] dims = getScreenDimensions(driver);
+        int width = dims[0];
+        int height = dims[1];
+
+        int startX = width / 2;
+        int startY = (int) (height * 0.30);
+        int endX = width / 2;
+        int endY = (int) (height * 0.70);
+
+        try {
+            Class<?> mobileKeywords = Class.forName("com.kms.katalon.core.mobile.keyword.MobileBuiltInKeywords");
+            Method swipeMethod = mobileKeywords.getMethod("swipe", int.class, int.class, int.class, int.class);
+            swipeMethod.invoke(null, startX, startY, endX, endY);
+            Thread.sleep(500);
+            return true;
+        } catch (Exception ignored) {}
+
+        return false;
+    }
+
     private int[] getScreenDimensions(Object driver) {
         try {
             Method manageMethod = driver.getClass().getMethod("manage");

@@ -12,3 +12,6 @@ zero-healing.local.properties
 locara.local.properties
 querion.local.properties
 *.local.properties
+
+__pycache__/
+*.pyc
