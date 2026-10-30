@@ -13,4 +13,4 @@
 ### 🔗 Quick Resources
 - [GitHub Repository](https://github.com/Qureon/Locara)
 - [Releases & Changelog](https://github.com/Qureon/Locara/releases)
-- [MIT License](https://github.com/Qureon/Locara/blob/main/LICENSE)\n
+- [MIT License](https://github.com/Qureon/Locara/blob/main/LICENSE)

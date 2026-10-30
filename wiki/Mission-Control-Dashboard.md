@@ -27,4 +27,4 @@ Once started, open your browser at:
 5. **REST API Endpoints**:
    - `GET /api/health` — Dashboard server health status.
    - `GET /api/metrics` — Aggregate healing statistics (JSON).
-   - `POST /api/heal-event` — Ingest telemetry events from running test suites.\n
+   - `POST /api/heal-event` — Ingest telemetry events from running test suites.

@@ -29,4 +29,4 @@ import com.qureon.locara.katalon.LocaraKeywords
 
 // Switch profile on-the-fly during test suite execution
 LocaraKeywords.setTargetProfile("KMP")
-```\n
+```

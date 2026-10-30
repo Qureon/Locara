@@ -56,4 +56,4 @@ locara.telemetry.port=8085
 | `locara.similarity.threshold` | `0.72` | Minimum confidence score (0.0 – 1.0) required to trigger healing. |
 | `locara.max.search.depth` | `6` | Maximum DOM tree traversal depth when resolving parent-child containers. |
 | `locara.airbag.auto.dismiss` | `true` | Automatically detects and closes blocking overlays/promotions. |
-| `locara.telemetry.enabled` | `true` | Emits live recovery events to the Mission Control Dashboard. |\n
+| `locara.telemetry.enabled` | `true` | Emits live recovery events to the Mission Control Dashboard. |

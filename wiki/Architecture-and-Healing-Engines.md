@@ -51,4 +51,4 @@ Form inputs (e.g., Account Number, Transfer Amount, Password) often lack stable 
 Unexpected overlays (in-app promotions, system permission dialogs, rating prompts, session timeout warnings) are the #1 cause of flaky failures.
 - Intercepts non-clickable exceptions.
 - Matches known close buttons (`ic_close`, `btn_cancel`, `Tutup`, `Nanti Saja`, `Allow`).
-- Dismisses the airbag automatically, verifies target element visibility, and resumes the test sequence without human intervention.\n
+- Dismisses the airbag automatically, verifies target element visibility, and resumes the test sequence without human intervention.

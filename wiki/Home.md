@@ -44,4 +44,4 @@ Explore the topics below to get up and running:
 2. **Field Relationship Parser**: Anchors dynamic input fields to adjacent static text labels (supports Above, Left-Of, Below, and Inside-Container relationships).
 3. **Autonomous Overlay Airbag**: Automatically identifies and dismisses obstructive popups (permission dialogs, promos, announcements, dismiss buttons) before interacting with targets.
 4. **Tri-Target Heuristic Architecture**: Switch seamlessly between `UMUM` (generic cross-app), `REVAMP` (legacy hybrid banking), and `KMP` (modern testID-first banking).
-5. **Zero External Dependencies**: Distributed as an ultra-compact, self-contained Fat JAR (`locara-1.5.0.jar`) compatible with Katalon Studio 8.x–10.x and standard Appium 2.x suites.\n
+5. **Zero External Dependencies**: Distributed as an ultra-compact, self-contained Fat JAR (`locara-1.5.0.jar`) compatible with Katalon Studio 8.x–10.x and standard Appium 2.x suites.

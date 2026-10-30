@@ -23,4 +23,4 @@ locara.similarity.threshold=0.85
 ---
 
 ### Q4: Is Locara compatible with iOS XCUITest?
-**Yes.** Locara supports both Android (UiAutomator2) and iOS (XCUITest). 2D spatial alignment and overlay dismissal functions adapt automatically to iOS accessibility hierarchies.\n
+**Yes.** Locara supports both Android (UiAutomator2) and iOS (XCUITest). 2D spatial alignment and overlay dismissal functions adapt automatically to iOS accessibility hierarchies.

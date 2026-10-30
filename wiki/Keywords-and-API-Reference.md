@@ -34,4 +34,4 @@ LocaraKeywords.dismissBlockingOverlays()
 Manually triggers healing resolution for a `TestObject` and returns the newly healed Appium `WebElement`.
 ```groovy
 WebElement healedElement = LocaraKeywords.healSelector(findTestObject('Object Repository/Home/icon_QRIS'))
-```\n
+```
