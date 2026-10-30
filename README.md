@@ -5,7 +5,7 @@
 ### Adaptive Locator Intelligence
 *An intelligent self-healing engine for resilient test automation.*
 
-[![Version](https://img.shields.io/badge/version-1.4.0-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara)
+[![Version](https://img.shields.io/badge/version-1.4.1-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-25%2F25%20passing-10B981?style=flat-square)](build.gradle)
 [![Java](https://img.shields.io/badge/java-17%20%7C%2021%20%7C%2024-orange?style=flat-square&logo=openjdk)](build.gradle)
