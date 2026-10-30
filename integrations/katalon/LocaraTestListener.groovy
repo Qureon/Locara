@@ -1,7 +1,7 @@
 import com.kms.katalon.core.annotation.AfterTestCase
 import com.kms.katalon.core.context.TestCaseContext
 import com.kms.katalon.core.mobile.keyword.internal.MobileDriverFactory
-import com.qureon.locara.core.LocaraingEngine
+import com.qureon.locara.core.LocaraEngine
 import com.qureon.locara.core.model.HealContext
 import com.qureon.locara.core.model.HealResult
 
@@ -18,7 +18,7 @@ import java.util.regex.Pattern
  */
 class LocaraTestListener {
 
-    private static final LocaraingEngine ENGINE = new LocaraingEngine()
+    private static final LocaraEngine ENGINE = new LocaraEngine()
     private static final Pattern OBJECT_ID_PATTERN = Pattern.compile("Object Repository/([^\'\"\\s]+)")
 
     @AfterTestCase
