@@ -7,7 +7,7 @@ import com.qureon.locara.katalon.Locara
 /**
  * Native Katalon Studio Custom Keyword wrapper for Locara by Qureon.
  * Copy this file into your Katalon Studio project under:
- * Keywords/com/zerohealing/katalon/LocaraKeywords.groovy
+ * Keywords/com/qureon/locara/katalon/LocaraKeywords.groovy
  */
 class LocaraKeywords {
 
