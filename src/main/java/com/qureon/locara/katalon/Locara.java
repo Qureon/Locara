@@ -45,6 +45,31 @@ public class Locara {
         return new LocaraEngine(config);
     }
 
+    private static com.qureon.locara.core.model.AppTarget currentTarget = com.qureon.locara.core.model.AppTarget.AUTO;
+
+    /**
+     * Sets the high-level application optimization profile.
+     * Options:
+     * - AppTarget.UMUM   : Universal app-agnostic mode (Standard balanced weights, 2D spatial alignment)
+     * - AppTarget.REVAMP : React Native / Revamp M-Smile mode (Parent container ascension, text/desc priority)
+     * - AppTarget.KMP    : Kotlin Multiplatform / Compose mode (TestID morphology, scrambled PIN, dynamic tokens)
+     * - AppTarget.AUTO   : Adaptive runtime fingerprinting (Default)
+     */
+    public static void setAppTarget(com.qureon.locara.core.model.AppTarget target) {
+        currentTarget = target != null ? target : com.qureon.locara.core.model.AppTarget.AUTO;
+        ENGINE.getConfig().setAppTarget(currentTarget);
+        System.out.println("[Locara by Qureon] Active Target Profile: " + currentTarget.getDescription());
+    }
+
+    public static com.qureon.locara.core.model.AppTarget getAppTarget() {
+        return currentTarget;
+    }
+
+    public static void setProfileUmum() { setAppTarget(com.qureon.locara.core.model.AppTarget.UMUM); }
+    public static void setProfileRevamp() { setAppTarget(com.qureon.locara.core.model.AppTarget.REVAMP); }
+    public static void setProfileKmp() { setAppTarget(com.qureon.locara.core.model.AppTarget.KMP); }
+    public static void setProfileAuto() { setAppTarget(com.qureon.locara.core.model.AppTarget.AUTO); }
+
     public static void setAutoGenerateRs(boolean enable) {
         ENGINE.getConfig().setAutoGenerateRs(enable);
         System.out.println("[Locara by Qureon] Auto-generate .rs files on disk: " + (enable ? "ENABLED" : "DISABLED"));

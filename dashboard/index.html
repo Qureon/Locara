@@ -81,7 +81,7 @@
                     <div class="status-indicator pulse"></div>
                     <div class="engine-status-meta">
                         <span class="status-title">Core Engine Active</span>
-                        <span class="status-sub">In-Flight Hook v1.3.0</span>
+                        <span class="status-sub">In-Flight Hook v1.5.0</span>
                     </div>
                 </div>
             </div>
@@ -105,6 +105,9 @@
                 </div>
 
                 <div class="header-actions">
+                    <div class="badge badge-accent font-mono" id="target-profile-pill" style="font-size: 0.78rem; padding: 6px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-full); display: flex; align-items: center; gap: 6px;">
+                        <span style="color: var(--cyan);">●</span> TARGET: AUTO (Umum / Revamp / KMP)
+                    </div>
                     <div class="connection-pill" id="connection-pill">
                         <span class="live-pulse"></span>
                         <span class="pill-text">AUTOMATION SUITE: CONNECTED</span>
@@ -485,7 +488,7 @@
                     <div class="compliance-meta-grid">
                         <div class="meta-item"><span class="m-lbl">Aplikasi Target:</span> <span class="m-val">Mobile App (Android / iOS)</span></div>
                         <div class="meta-item"><span class="m-lbl">Siklus Pengujian:</span> <span class="m-val">Sprint UAT Regression Cycle</span></div>
-                        <div class="meta-item"><span class="m-lbl">Engine Version:</span> <span class="m-val font-mono">Locara Core v1.3.0</span></div>
+                        <div class="meta-item"><span class="m-lbl">Engine Version:</span> <span class="m-val font-mono">Locara Core v1.5.0</span></div>
                         <div class="meta-item"><span class="m-lbl">Integritas Hash:</span> <span class="m-val font-mono text-cyan">SHA-256: 7f8a3c...9b1e</span></div>
                     </div>
 
@@ -518,6 +521,17 @@
                     <div class="card" style="padding: 24px;">
                         <h3 class="card-title">Sensitivitas & Bobot Multi-Vektor</h3>
                         <p class="card-sub">Penyesuaian bobot matematis untuk pencocokan heuristik Locara by Qureon</p>
+
+                        <div class="form-group" style="margin-top: 16px; margin-bottom: 20px;">
+                            <label style="font-weight: 600; font-size: 0.88rem; display: block; margin-bottom: 8px;">Target Architecture Preset</label>
+                            <div class="profile-switcher" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+                                <button type="button" class="btn btn-secondary profile-btn active" data-target="AUTO" id="btn-target-auto">AUTO (Adaptif)</button>
+                                <button type="button" class="btn btn-secondary profile-btn" data-target="UMUM" id="btn-target-umum">UMUM (Universal)</button>
+                                <button type="button" class="btn btn-secondary profile-btn" data-target="REVAMP" id="btn-target-revamp">REVAMP (React Native)</button>
+                                <button type="button" class="btn btn-secondary profile-btn" data-target="KMP" id="btn-target-kmp">KMP (Compose)</button>
+                            </div>
+                            <span class="text-xs text-muted" id="target-preset-desc" style="display: block; margin-top: 6px;">Pendeteksian runtime otomatis berdasarkan tanda tangan hierarki XML aplikasi aktif.</span>
+                        </div>
 
                         <div class="slider-group" style="margin-top: 16px;">
                             <div class="slider-header">

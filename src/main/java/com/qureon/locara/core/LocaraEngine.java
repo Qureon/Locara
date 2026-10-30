@@ -78,8 +78,21 @@ public class LocaraEngine {
             return new HealResult(false, null, null, "Zero UI elements found in page source hierarchy");
         }
 
-        // Framework Fingerprinting Detection
-        com.qureon.locara.core.framework.FrameworkFingerprint fingerprint = frameworkDetector.detect(nodes, xmlPageSource);
+        // Framework Fingerprinting Detection / Profile Enforcement
+        com.qureon.locara.core.framework.FrameworkFingerprint fingerprint;
+        com.qureon.locara.core.model.AppTarget target = config.getAppTarget();
+        if (target == com.qureon.locara.core.model.AppTarget.REVAMP) {
+            fingerprint = new com.qureon.locara.core.framework.FrameworkFingerprint(
+                    com.qureon.locara.core.framework.AppFramework.REACT_NATIVE, 1.0, "Enforced Profile: Revamp (React Native)", 0.50);
+        } else if (target == com.qureon.locara.core.model.AppTarget.KMP) {
+            fingerprint = new com.qureon.locara.core.framework.FrameworkFingerprint(
+                    com.qureon.locara.core.framework.AppFramework.KMP_COMPOSE, 1.0, "Enforced Profile: KMP (Compose Multiplatform)", 0.0);
+        } else if (target == com.qureon.locara.core.model.AppTarget.UMUM) {
+            fingerprint = new com.qureon.locara.core.framework.FrameworkFingerprint(
+                    com.qureon.locara.core.framework.AppFramework.UNIVERSAL, 1.0, "Enforced Profile: Umum (Universal App-Agnostic)", 0.0);
+        } else {
+            fingerprint = frameworkDetector.detect(nodes, xmlPageSource);
+        }
 
         List<HealCandidate> candidates = matcher.findCandidates(nodes, context, config, fingerprint);
         if (candidates.isEmpty()) {

@@ -27,9 +27,13 @@ public class FrameworkTuningProfile {
         }
 
         switch (framework) {
+            case KMP_COMPOSE:
+                // KMP Compose: reliable testIDs following <screen>_<element> morphology, high ID weight
+                return new FrameworkTuningProfile(AppFramework.KMP_COMPOSE, 0.30, 0.45, 0.15, 0.05, 0.05);
+
             case REACT_NATIVE:
-                // React Native (Tailored for M-Smile & Modern RN apps without testIDs):
-                // Elevate visible text and structural proximity, reduce reliance on missing testID/accessibilityLabel
+                // React Native (Revamp M-Smile & Modern RN):
+                // Elevate visible text and structural proximity, reduce reliance on missing testID
                 return new FrameworkTuningProfile(AppFramework.REACT_NATIVE, 0.55, 0.08, 0.07, 0.15, 0.15);
 
             case FLUTTER:
@@ -40,15 +44,16 @@ public class FrameworkTuningProfile {
                 // Jetpack Compose: Text and semantics contentDescription are primary
                 return new FrameworkTuningProfile(AppFramework.JETPACK_COMPOSE, 0.35, 0.15, 0.35, 0.05, 0.10);
 
+            case UNIVERSAL:
             case NATIVE_ANDROID:
             default:
-                // Classic Native Kotlin/Java XML: Balanced weights for resource-ids and content-desc
-                return new FrameworkTuningProfile(AppFramework.NATIVE_ANDROID, 0.35, 0.25, 0.20, 0.10, 0.10);
+                // Universal / Umum: Balanced weights across all vectors with 2D spatial alignment
+                return new FrameworkTuningProfile(AppFramework.UNIVERSAL, 0.35, 0.25, 0.20, 0.10, 0.10);
         }
     }
 
     public static FrameworkTuningProfile getDefaultProfile() {
-        return new FrameworkTuningProfile(AppFramework.NATIVE_ANDROID, 0.35, 0.25, 0.20, 0.10, 0.10);
+        return new FrameworkTuningProfile(AppFramework.UNIVERSAL, 0.35, 0.25, 0.20, 0.10, 0.10);
     }
 
     public AppFramework getFramework() {

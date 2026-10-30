@@ -4,7 +4,9 @@ package com.zerohealing.core.framework;
  * Mobile application frameworks detectable from Appium view hierarchies and APK metadata.
  */
 public enum AppFramework {
-    REACT_NATIVE("React Native (JavaScript / TypeScript)", "RN"),
+    UNIVERSAL("Universal App-Agnostic (Umum)", "Universal"),
+    REACT_NATIVE("React Native (Revamp M-Smile)", "RN"),
+    KMP_COMPOSE("Kotlin Multiplatform / Compose (KMP)", "KMP"),
     JETPACK_COMPOSE("Jetpack Compose (Modern Native Kotlin)", "Compose"),
     NATIVE_ANDROID("Native Android (Classic Kotlin / Java XML)", "Android XML"),
     FLUTTER("Flutter (Dart Canvas)", "Flutter"),

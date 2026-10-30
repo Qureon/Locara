@@ -15,6 +15,14 @@ from pathlib import Path
 from datetime import datetime
 
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8088
+CURRENT_CONFIG = {
+    "appTarget": "AUTO",
+    "minSimilarityThreshold": 0.70,
+    "textSimilarityWeight": 0.35,
+    "resourceIdSimilarityWeight": 0.25,
+    "contentDescSimilarityWeight": 0.20,
+    "auditLedgerEnabled": True
+}
 DASHBOARD_DIR = Path(__file__).resolve().parent
 
 # File paths
@@ -127,22 +135,20 @@ class ZeroHealingHandler(http.server.SimpleHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
-        config_data = {
-            "minSimilarityThreshold": 0.70,
-            "textSimilarityWeight": 0.35,
-            "resourceIdSimilarityWeight": 0.25,
-            "contentDescSimilarityWeight": 0.20,
-            "auditLedgerEnabled": True
-        }
-        self.wfile.write(json.dumps(config_data).encode("utf-8"))
+        self.wfile.write(json.dumps(CURRENT_CONFIG).encode("utf-8"))
 
     def handle_post_config(self):
         length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(length)
+        try:
+            data = json.loads(body.decode("utf-8"))
+            CURRENT_CONFIG.update(data)
+        except Exception:
+            pass
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
-        self.wfile.write(json.dumps({"success": True, "message": "Config saved"}).encode("utf-8"))
+        self.wfile.write(json.dumps({"success": True, "message": "Config saved", "config": CURRENT_CONFIG}).encode("utf-8"))
 
     def handle_get_report(self):
         if REPORT_FILE.exists():

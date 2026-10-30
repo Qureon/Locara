@@ -563,3 +563,11 @@
     flex-direction: column;
     gap: 20px;
 }
+
+.profile-btn.active {
+    background: rgba(0, 229, 255, 0.15);
+    color: var(--cyan, #00E5FF);
+    border-color: var(--cyan, #00E5FF);
+    font-weight: 600;
+    box-shadow: 0 0 12px rgba(0, 229, 255, 0.25);
+}
