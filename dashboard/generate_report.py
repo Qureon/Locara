@@ -189,7 +189,7 @@ REPORT_TEMPLATE = """<!DOCTYPE html>
             <div class="meta-right">
                 <p><strong>Target App:</strong> Mobile Application (Android/iOS)</p>
                 <p><strong>Generated:</strong> {generated_time}</p>
-                <p><strong>Engine:</strong> Locara Core v1.5.2</p>
+                <p><strong>Engine:</strong> Locara Core v1.5.3</p>
             </div>
         </header>
 
