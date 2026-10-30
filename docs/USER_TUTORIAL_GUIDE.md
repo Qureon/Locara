@@ -39,9 +39,9 @@ Oleh karena itu, Locara dirancang dengan sistem **Zero-Friction Coexistence**:
 ### B. Bagi Rekan yang TIDAK INGIN MENGGUNAKAN (Opt-Out 100% Murni)
 Jika Anda ingin mematikan Locara secara total di laptop Anda:
 
-1. Buat file baru bernama **`locara.local.properties`** (atau `zero-healing.local.properties`) di folder root proyek:
+1. Buat file baru bernama **`locara.local.properties`** di folder root proyek:
    ```properties
-   healing.enabled=false
+   locara.enabled=false
    ```
 2. Simpan file tersebut.
 
@@ -49,8 +49,8 @@ Jika Anda ingin mematikan Locara secara total di laptop Anda:
 > File `*.local.properties` **sudah otomatis masuk dalam `.gitignore`**!  
 > Pengaturan ini 100% lokal di laptop Anda, **tidak akan pernah ter-commit ke Git atau menimbulkan *merge conflict* dengan rekan lain**.
 
-**Efek saat `healing.enabled=false`:**
-- `LocaraHook` (dan `ZeroHealHook`) otomatis mundur dan **tidak menyentuh/mengubah keyword Katalon sama sekali**.
+**Efek saat `locara.enabled=false`:**
+- `LocaraHook` otomatis mundur dan **tidak menyentuh/mengubah keyword Katalon sama sekali**.
 - Semua keyword `Mobile.*` berjalan 100% murni *engine* asli Katalon.
 - `VerificationHelper` kembali ke metode pencocokan teks konvensional tanpa bantuan semantik.
 - Tidak ada log `[Locara]`, eksekusi kembali persis seperti sebelum ada engine.
@@ -63,7 +63,7 @@ Selain menggunakan file properties lokal, Anda juga dapat mengatur sakelar melal
 
 | Metode | Cara Konfigurasi | Cocok Untuk |
 |---|---|---|
-| **System Property (JVM)** | Tambahkan argumen `-Dhealing.enabled=false` atau `-Dlocara.enabled=false` pada runner. | CI/CD Pipeline / Command Line Runner |
+| **System Property (JVM)** | Tambahkan argumen `-Dlocara.enabled=false` pada runner. | CI/CD Pipeline / Command Line Runner |
 | **Environment Variable** | Set variabel OS `LOCARA_ENABLED=false` atau `QUREON_ENABLED=false` di terminal Anda. | Terminal / Mac zsh environment |
 | **Execution Profile** | Tambahkan `ENABLE_LOCARA = false` pada profil Katalon (misal `default.glbl`). | Eksekusi manual via Katalon Studio GUI |
 
