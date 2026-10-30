@@ -52,6 +52,10 @@
                     <span class="nav-icon" data-icon="code"></span>
                     <span class="nav-label">XML Recon Lab</span>
                 </button>
+                <button class="nav-item" data-tab="form-inspector" id="nav-form-inspector">
+                    <span class="nav-icon" data-icon="layers"></span>
+                    <span class="nav-label">Spatial & Form Inspector</span>
+                </button>
                 <button class="nav-item" data-tab="compliance" id="nav-compliance">
                     <span class="nav-icon" data-icon="fileText"></span>
                     <span class="nav-label">UAT Sign-Off</span>
@@ -426,6 +430,44 @@
                         </div>
                         <div id="recon-result-content" class="recon-output-wrapper hidden">
                             <!-- Injected by playground.js -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB: Universal Spatial & Form Inspector (v1.5.0) -->
+            <section class="tab-pane" id="pane-form-inspector">
+                <div class="playground-layout">
+                    <div class="card" style="padding: 24px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                            <h3 class="card-title">Universal 2D Spatial Relationship Inspector</h3>
+                            <span class="badge badge-accent">Core v1.5.0</span>
+                        </div>
+                        <p class="card-sub">Ekstraksi otonom pasangan field transaksi (Label &rarr; Value) berbasis irisan geometris 2D &amp; batas seksi tanpa hardcode selector.</p>
+
+                        <div class="form-group" style="margin-top: 16px;">
+                            <label for="form-inspector-xml">Appium XML Hierarki / Page Source</label>
+                            <textarea id="form-inspector-xml" rows="12" placeholder="Tempel XML hierarki halaman form transaksi di sini..."></textarea>
+                        </div>
+
+                        <div class="form-actions">
+                            <button class="btn btn-primary" id="btn-run-spatial-extract">
+                                <span class="btn-icon-wrap" data-icon="layers"></span> Ekstraksi Relasi Spasial
+                            </button>
+                            <button class="btn btn-secondary" id="btn-load-form-sample">
+                                <span class="btn-icon-wrap" data-icon="fileText"></span> Muat Sampel Transaksi
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card" style="padding: 24px;">
+                        <h3 class="card-title">Pasangan Field Terdeteksi &amp; Snapshot Spasial</h3>
+                        <div id="form-result-empty" class="recon-empty">
+                            <span style="width: 32px; height: 32px; color: var(--text-muted);" data-icon="layers"></span>
+                            <p>Klik tombol <strong>"Ekstraksi Relasi Spasial"</strong> untuk membedah relasi 2D label-value dan batas form!</p>
+                        </div>
+                        <div id="form-result-content" class="recon-output-wrapper hidden">
+                            <!-- Injected by formInspector.js -->
                         </div>
                     </div>
                 </div>

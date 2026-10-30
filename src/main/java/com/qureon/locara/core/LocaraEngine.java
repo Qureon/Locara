@@ -24,6 +24,8 @@ public class LocaraEngine {
     private final HealingAuditLedger ledger;
     private final com.qureon.locara.core.ledger.VisualEvidenceAnnotator visualAnnotator;
     private final com.qureon.locara.core.framework.FrameworkDetector frameworkDetector;
+    private final com.qureon.locara.core.spatial.SpatialAlignmentEngine spatialEngine;
+    private final com.qureon.locara.core.generator.DynamicXPathGenerator xpathGenerator;
 
     public LocaraEngine() {
         this(new HealConfig());
@@ -37,6 +39,8 @@ public class LocaraEngine {
         this.ledger = new HealingAuditLedger();
         this.visualAnnotator = new com.qureon.locara.core.ledger.VisualEvidenceAnnotator();
         this.frameworkDetector = new com.qureon.locara.core.framework.FrameworkDetector();
+        this.spatialEngine = new com.qureon.locara.core.spatial.SpatialAlignmentEngine();
+        this.xpathGenerator = new com.qureon.locara.core.generator.DynamicXPathGenerator();
     }
 
     public HealConfig getConfig() {
@@ -78,6 +82,17 @@ public class LocaraEngine {
         com.qureon.locara.core.framework.FrameworkFingerprint fingerprint = frameworkDetector.detect(nodes, xmlPageSource);
 
         List<HealCandidate> candidates = matcher.findCandidates(nodes, context, config, fingerprint);
+        if (candidates.isEmpty()) {
+            // Spatial Proximity Fallback: Infer target input/value element based on visual 2D layout alignment
+            java.util.Optional<UIElementNode> spatialNode = spatialEngine.findTargetByLabel(context.getTargetHint(), nodes);
+            if (spatialNode.isPresent()) {
+                UIElementNode sNode = spatialNode.get();
+                String sXPath = xpathGenerator.generateOptimalXPath(sNode, nodes, context.getAction());
+                HealCandidate sCand = new HealCandidate(sNode, sXPath, 0.85, "SPATIAL_ALIGNMENT_PROXIMITY");
+                candidates = java.util.Collections.singletonList(sCand);
+            }
+        }
+
         if (candidates.isEmpty()) {
             ledger.recordEvent(context, null, null, "THRESHOLD_REJECTED", config, fingerprint);
             return new HealResult(false, null, null, null, fingerprint,

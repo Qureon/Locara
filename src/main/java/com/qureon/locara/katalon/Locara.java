@@ -17,6 +17,7 @@ public class Locara {
     private static final LocaraEngine ENGINE = createDefaultEngine();
     private static final KeyboardGuard KEYBOARD_GUARD = new KeyboardGuard();
     private static final ScrollRecoveryEngine SCROLL_ENGINE = new ScrollRecoveryEngine(2);
+    private static final com.qureon.locara.core.guard.OverlayAirbag OVERLAY_AIRBAG = new com.qureon.locara.core.guard.OverlayAirbag();
 
     private static LocaraEngine createDefaultEngine() {
         String userDir = System.getProperty("user.dir");
@@ -195,6 +196,17 @@ public class Locara {
                 .build();
 
         HealResult result = ENGINE.heal(pageSource, context);
+
+        // Overlay Airbag Fallback: If target not found, check for blocking OS permission or modal overlay
+        if (!result.isSuccess()) {
+            boolean dismissed = OVERLAY_AIRBAG.dismissBlockingOverlay(driver, pageSource);
+            if (dismissed) {
+                pageSource = KatalonDriverBridge.getPageSource(driver);
+                if (pageSource != null) {
+                    result = ENGINE.heal(pageSource, context);
+                }
+            }
+        }
 
         if (!result.isSuccess() || result.getCandidate() == null) {
             throw new RuntimeException("[Locara by Qureon Failed] " + result.getMessage());

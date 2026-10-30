@@ -22,7 +22,7 @@ export async function fetchEngineHealth() {
         if (!res.ok) throw new Error(`HTTP error ${res.status}`);
         return await res.json();
     } catch (err) {
-        return { status: "STANDALONE", engine: "Locara Core v1.3.0", target: "Qureon_Autonomous_QA" };
+        return { status: "STANDALONE", engine: "Locara Core v1.5.0", target: "Qureon_Autonomous_QA" };
     }
 }
 
@@ -46,5 +46,20 @@ export async function saveEngineConfig(config) {
         return res.ok;
     } catch (err) {
         return false;
+    }
+}
+
+export async function extractFields(xml) {
+    try {
+        const res = await fetch("/api/extract-fields", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ xml })
+        });
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        return await res.json();
+    } catch (err) {
+        console.error("Field extraction failed:", err);
+        return { success: false, error: err.message, pairs: [] };
     }
 }

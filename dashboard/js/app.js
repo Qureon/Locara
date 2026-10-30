@@ -15,6 +15,7 @@ import { initAnalyticsModule } from "./modules/analytics.js";
 import { initPlaygroundModule } from "./modules/playground.js";
 import { initComplianceModule } from "./modules/compliance.js";
 import { initSettingsModule } from "./modules/settings.js";
+import { initFormInspectorModule } from "./modules/formInspector.js";
 
 // Global forensic modal viewer
 window.viewEventForensics = function(eventId) {
@@ -90,6 +91,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     initPlaygroundModule();
     initComplianceModule();
     initSettingsModule();
+    initFormInspectorModule();
 
     // 5. Connect to Live Server Telemetry
     await connectLiveEngine();
@@ -124,6 +126,10 @@ function initNavigation() {
         "playground": {
             title: "Interactive XML Reconnaissance Sandbox",
             sub: "Uji pencocokan XML hierarki Appium dan ekspor instan spesifikasi Object Repository (.rs)."
+        },
+        "form-inspector": {
+            title: "Universal Spatial & Form Relationship Inspector",
+            sub: "Analisis visual relasi spasial 2D (Left-to-Right & Top-to-Bottom), deteksi batas section, dan ekstraksi key-value otonom."
         },
         "compliance": {
             title: "UAT Compliance & Audit Sign-Off",

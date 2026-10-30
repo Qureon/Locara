@@ -63,6 +63,8 @@ class ZeroHealingHandler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         if self.path == "/api/config":
             self.handle_post_config()
+        elif self.path == "/api/extract-fields":
+            self.handle_extract_fields()
         else:
             self.send_response(404)
             self.end_headers()
@@ -73,7 +75,7 @@ class ZeroHealingHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
         payload = {
             "status": "ONLINE",
-            "engine": "Locara Core v1.3.0 · Powered by Qureon",
+            "engine": "Locara Core v1.5.0 · Powered by Qureon",
             "target": "Qureon Autonomous QA Platform",
             "timestamp": datetime.now().isoformat(),
             "server_port": PORT
@@ -154,6 +156,83 @@ class ZeroHealingHandler(http.server.SimpleHTTPRequestHandler):
             self.send_header("Content-Type", "text/plain")
             self.end_headers()
             self.wfile.write(b"Report not yet generated. Run dashboard/generate_report.py first.")
+
+    def handle_extract_fields(self):
+        content_length = int(self.headers.get("Content-Length", 0))
+        post_data = self.rfile.read(content_length).decode("utf-8")
+        try:
+            body = json.loads(post_data)
+            xml_text = body.get("xml", "")
+            if not xml_text:
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Empty XML content"}).encode("utf-8"))
+                return
+
+            import xml.etree.ElementTree as ET
+            import re
+
+            root = ET.fromstring(xml_text)
+            nodes = []
+            bounds_pattern = re.compile(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]")
+
+            for el in root.iter():
+                text = el.get("text", "") or ""
+                desc = el.get("content-desc", "") or ""
+                b_str = el.get("bounds", "")
+                m = bounds_pattern.match(b_str)
+                if m:
+                    x1, y1, x2, y2 = map(int, m.groups())
+                    nodes.append({
+                        "tag": el.tag,
+                        "text": text.strip(),
+                        "desc": desc.strip(),
+                        "x1": x1, "y1": y1, "x2": x2, "y2": y2,
+                        "w": x2 - x1, "h": y2 - y1,
+                        "clickable": el.get("clickable", "false") == "true"
+                    })
+
+            pairs = []
+            labels = [n for n in nodes if n["text"] and n["w"] > 0]
+            claimed = set()
+
+            for lbl in labels:
+                best_val = None
+                best_score = 0.0
+                for cand in nodes:
+                    if cand is lbl or id(cand) in claimed:
+                        continue
+                    if cand["x1"] >= lbl["x1"] and cand["x2"] > lbl["x2"]:
+                        v_overlap = max(0, min(lbl["y2"], cand["y2"]) - max(lbl["y1"], cand["y1"]))
+                        min_h = max(1, min(lbl["h"], cand["h"]))
+                        if (v_overlap / min_h) >= 0.40 and (cand["text"] or cand["desc"] or cand["clickable"]):
+                            h_dist = max(0, cand["x1"] - lbl["x2"])
+                            score = (v_overlap / min_h) * 0.6 + (1.0 / (1.0 + h_dist / 100.0)) * 0.4
+                            if score > best_score:
+                                best_score = score
+                                best_val = cand
+
+                if best_val and (best_val["text"] or best_val["desc"]):
+                    val_text = best_val["text"] or best_val["desc"]
+                    if val_text != lbl["text"]:
+                        claimed.add(id(best_val))
+                        pairs.append({
+                            "label": lbl["text"],
+                            "value": val_text,
+                            "score": round(best_score, 2),
+                            "bounds": f"[{lbl['x1']},{lbl['y1']}][{best_val['x2']},{best_val['y2']}]"
+                        })
+
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"success": True, "count": len(pairs), "pairs": pairs}).encode("utf-8"))
+        except Exception as e:
+            self.send_response(500)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
 
 def run():
     socketserver.TCPServer.allow_reuse_address = True

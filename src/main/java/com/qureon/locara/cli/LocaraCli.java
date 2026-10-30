@@ -8,6 +8,7 @@ import com.qureon.locara.core.model.HealResult;
 import com.qureon.locara.core.model.UIElementNode;
 import com.qureon.locara.core.parser.PageSourceParser;
 import com.qureon.locara.core.sanitizer.LocaraOrSanitizer;
+import com.qureon.locara.core.parser.FieldRelationshipParser;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -30,6 +31,24 @@ public class LocaraCli {
 
         if ("sanitize-or".equalsIgnoreCase(command) || hasArg(args, "--sanitize-or")) {
             runSanitizeMode(args);
+            return;
+        }
+
+        if ("inspect-fields".equalsIgnoreCase(command) || hasArg(args, "--inspect-fields")) {
+            String xmlPath = getArg(args, "--xml");
+            if (xmlPath == null && args.length > 1 && !args[1].startsWith("-")) {
+                xmlPath = args[1];
+            }
+            if (xmlPath == null) {
+                System.err.println("❌ Error: Missing --xml <path_to_xml>");
+                System.exit(1);
+            }
+            try {
+                String xmlContent = Files.readString(new File(xmlPath).toPath(), StandardCharsets.UTF_8);
+                runInspectFieldsMode(xmlContent);
+            } catch (Exception e) {
+                System.err.println("❌ Error reading XML file: " + e.getMessage());
+            }
             return;
         }
 
@@ -201,6 +220,25 @@ public class LocaraCli {
         return str.length() > max ? str.substring(0, max - 3) + "..." : str;
     }
 
+    private static void runInspectFieldsMode(String xmlContent) {
+        try {
+            PageSourceParser parser = new PageSourceParser();
+            List<UIElementNode> nodes = parser.parse(xmlContent);
+            FieldRelationshipParser fieldParser = new FieldRelationshipParser();
+            FieldRelationshipParser.ParsedDocument doc = fieldParser.parse(nodes);
+
+            System.out.println("==============================================================");
+            System.out.println("  Locara by Qureon · Universal Form & Field Relationship Table ");
+            System.out.println("==============================================================");
+            System.out.println(doc.toSummaryTable());
+            if (doc.getTotalEntry().isPresent()) {
+                System.out.println("🎯 Terminal Total Detected: " + doc.getTotalEntry().get().getRawLabel() + " -> " + doc.getTotalEntry().get().getValue());
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Failed to parse field relationships: " + e.getMessage());
+        }
+    }
+
     private static void printUsage() {
         System.out.println("Locara by Qureon CLI v1.4.0 — Autonomous Mobile Recon & Synthesizer");
         System.out.println("Usage:");
@@ -208,6 +246,7 @@ public class LocaraCli {
         System.out.println("  locara sanitize-or --path <path> [--fix] [--no-backup]");
         System.out.println("\nCommands & Options:");
         System.out.println("  sanitize-or        Scan and convert brittle hierarchy XPaths in Object Repository to relative");
+        System.out.println("  inspect-fields     Autonomously extract all label-value pairs and totals from XML");
         System.out.println("  --xml <path>       Path to Appium pageSource XML dump file");
         System.out.println("  --hint <text>      Semantic description or label of the target element");
         System.out.println("  --out <path>       Target path for generated .rs file (e.g. Object Repository/Screen/btn.rs)");
