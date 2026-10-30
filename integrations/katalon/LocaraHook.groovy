@@ -167,8 +167,59 @@ class LocaraHook {
                 mobileCache.put("verifyElementText", vetList)
             }
 
+            // Intercept waitForElementPresent keyword (Probing & Presence Healing)
+            IKeyword originalWaitForElementPresent = null
+            if (mobileCache.containsKey("waitForElementPresent") && mobileCache.get("waitForElementPresent") != null && !mobileCache.get("waitForElementPresent").isEmpty()) {
+                originalWaitForElementPresent = mobileCache.get("waitForElementPresent").get(0)
+            }
+            if (originalWaitForElementPresent == null) {
+                try {
+                    Class<?> wfClass = Class.forName("com.kms.katalon.core.mobile.keyword.builtin.WaitForElementPresentKeyword")
+                    originalWaitForElementPresent = (IKeyword) wfClass.getDeclaredConstructor().newInstance()
+                } catch (Throwable ignored) {}
+            }
+            if (originalWaitForElementPresent != null && !(originalWaitForElementPresent instanceof LocaraWaitForElementPresentKeyword)) {
+                List<IKeyword> wfList = new ArrayList<>()
+                wfList.add(new LocaraWaitForElementPresentKeyword(originalWaitForElementPresent))
+                mobileCache.put("waitForElementPresent", wfList)
+            }
+
+            // Intercept verifyElementPresent keyword
+            IKeyword originalVerifyElementPresent = null
+            if (mobileCache.containsKey("verifyElementPresent") && mobileCache.get("verifyElementPresent") != null && !mobileCache.get("verifyElementPresent").isEmpty()) {
+                originalVerifyElementPresent = mobileCache.get("verifyElementPresent").get(0)
+            }
+            if (originalVerifyElementPresent == null) {
+                try {
+                    Class<?> vepClass = Class.forName("com.kms.katalon.core.mobile.keyword.builtin.VerifyElementPresentKeyword")
+                    originalVerifyElementPresent = (IKeyword) vepClass.getDeclaredConstructor().newInstance()
+                } catch (Throwable ignored) {}
+            }
+            if (originalVerifyElementPresent != null && !(originalVerifyElementPresent instanceof LocaraVerifyElementPresentKeyword)) {
+                List<IKeyword> vepList = new ArrayList<>()
+                vepList.add(new LocaraVerifyElementPresentKeyword(originalVerifyElementPresent))
+                mobileCache.put("verifyElementPresent", vepList)
+            }
+
+            // Intercept verifyElementVisible keyword
+            IKeyword originalVerifyElementVisible = null
+            if (mobileCache.containsKey("verifyElementVisible") && mobileCache.get("verifyElementVisible") != null && !mobileCache.get("verifyElementVisible").isEmpty()) {
+                originalVerifyElementVisible = mobileCache.get("verifyElementVisible").get(0)
+            }
+            if (originalVerifyElementVisible == null) {
+                try {
+                    Class<?> vevClass = Class.forName("com.kms.katalon.core.mobile.keyword.builtin.VerifyElementVisibleKeyword")
+                    originalVerifyElementVisible = (IKeyword) vevClass.getDeclaredConstructor().newInstance()
+                } catch (Throwable ignored) {}
+            }
+            if (originalVerifyElementVisible != null && !(originalVerifyElementVisible instanceof LocaraVerifyElementVisibleKeyword)) {
+                List<IKeyword> vevList = new ArrayList<>()
+                vevList.add(new LocaraVerifyElementVisibleKeyword(originalVerifyElementVisible))
+                mobileCache.put("verifyElementVisible", vevList)
+            }
+
             installed = true
-            KeywordUtil.logInfo("[Locara by Qureon] Native KeywordExecutor Hook successfully installed (tap, setText, getText & verifyElementText intercepted)")
+            KeywordUtil.logInfo("[Locara by Qureon] Native KeywordExecutor Hook v1.4.0 successfully installed (tap, setText, getText, verifyElementText, waitForElementPresent, verifyElementPresent/Visible intercepted)")
         } catch (Throwable t) {
             KeywordUtil.markWarning("[Locara by Qureon] Failed to install KeywordExecutor hook: " + t.getMessage())
         }
@@ -384,6 +435,169 @@ class LocaraVerifyElementTextKeyword implements IKeyword {
             }
             return false
         }
+    }
+}
+
+class LocaraWaitForElementPresentKeyword implements IKeyword {
+    private final IKeyword originalKeyword
+    private static final ThreadLocal<Boolean> IN_FLIGHT = ThreadLocal.withInitial { false }
+
+    LocaraWaitForElementPresentKeyword(IKeyword originalKeyword) {
+        this.originalKeyword = originalKeyword
+    }
+
+    @Override
+    SupportLevel getSupportLevel(Object... params) {
+        return originalKeyword != null ? originalKeyword.getSupportLevel(params) : null
+    }
+
+    @Override
+    Object execute(Object... params) {
+        if (IN_FLIGHT.get()) {
+            return originalKeyword != null ? originalKeyword.execute(params) : false
+        }
+
+        TestObject to = params != null && params.length > 0 && params[0] instanceof TestObject ? (params[0] as TestObject) : null
+        int timeout = params != null && params.length > 1 && params[1] instanceof Number ? ((Number) params[1]).intValue() : 10
+        FailureHandling flow = params != null && params.length > 2 && params[2] instanceof FailureHandling ? 
+            (params[2] as FailureHandling) : RunConfiguration.getDefaultFailureHandling()
+
+        String objId = to != null ? to.getObjectId() : "UnknownElement"
+
+        try {
+            Object res = originalKeyword != null ? originalKeyword.execute(params) : false
+            if (res instanceof Boolean && ((Boolean) res).booleanValue()) {
+                return true
+            }
+        } catch (Throwable ignored) {}
+
+        // Original returned false or threw: Trigger In-Flight Probe Airbag!
+        KeywordUtil.logInfo("[Locara by Qureon] 🛡️ Intercepted missing on Mobile.waitForElementPresent(''). Activating in-flight probe healing...")
+
+        IN_FLIGHT.set(true)
+        try {
+            boolean healed = Locara.healAndVerifyPresent(to, timeout, objId)
+            if (healed) {
+                KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight probe healing succeeded for waitForElementPresent('')!")
+                return true
+            }
+        } catch (Throwable healEx) {
+            KeywordUtil.logInfo("[Locara by Qureon] ⚠️ Probe healing attempt failed: " + healEx.getMessage())
+        } finally {
+            IN_FLIGHT.set(false)
+        }
+
+        return false
+    }
+}
+
+class LocaraVerifyElementPresentKeyword implements IKeyword {
+    private final IKeyword originalKeyword
+    private static final ThreadLocal<Boolean> IN_FLIGHT = ThreadLocal.withInitial { false }
+
+    LocaraVerifyElementPresentKeyword(IKeyword originalKeyword) {
+        this.originalKeyword = originalKeyword
+    }
+
+    @Override
+    SupportLevel getSupportLevel(Object... params) {
+        return originalKeyword != null ? originalKeyword.getSupportLevel(params) : null
+    }
+
+    @Override
+    Object execute(Object... params) {
+        if (IN_FLIGHT.get()) {
+            return originalKeyword != null ? originalKeyword.execute(params) : false
+        }
+
+        TestObject to = params != null && params.length > 0 && params[0] instanceof TestObject ? (params[0] as TestObject) : null
+        int timeout = params != null && params.length > 1 && params[1] instanceof Number ? ((Number) params[1]).intValue() : 10
+        FailureHandling flow = params != null && params.length > 2 && params[2] instanceof FailureHandling ? 
+            (params[2] as FailureHandling) : RunConfiguration.getDefaultFailureHandling()
+
+        String objId = to != null ? to.getObjectId() : "UnknownElement"
+
+        try {
+            Object res = originalKeyword != null ? originalKeyword.execute(params) : false
+            if (res instanceof Boolean && ((Boolean) res).booleanValue()) {
+                return true
+            }
+        } catch (Throwable t) {}
+
+        KeywordUtil.logInfo("[Locara by Qureon] 🛡️ Intercepted failure on Mobile.verifyElementPresent(''). Activating in-flight probe healing...")
+
+        IN_FLIGHT.set(true)
+        try {
+            boolean healed = Locara.healAndVerifyPresent(to, timeout, objId)
+            if (healed) {
+                KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight probe healing succeeded for verifyElementPresent('')!")
+                return true
+            }
+        } catch (Throwable healEx) {
+            KeywordUtil.logInfo("[Locara by Qureon] ⚠️ Probe healing attempt failed: " + healEx.getMessage())
+        } finally {
+            IN_FLIGHT.set(false)
+        }
+
+        if (flow == FailureHandling.STOP_ON_FAILURE) {
+            throw new com.kms.katalon.core.exception.StepFailedException("Element '" + objId + "' not present after in-flight probe healing")
+        }
+        return false
+    }
+}
+
+class LocaraVerifyElementVisibleKeyword implements IKeyword {
+    private final IKeyword originalKeyword
+    private static final ThreadLocal<Boolean> IN_FLIGHT = ThreadLocal.withInitial { false }
+
+    LocaraVerifyElementVisibleKeyword(IKeyword originalKeyword) {
+        this.originalKeyword = originalKeyword
+    }
+
+    @Override
+    SupportLevel getSupportLevel(Object... params) {
+        return originalKeyword != null ? originalKeyword.getSupportLevel(params) : null
+    }
+
+    @Override
+    Object execute(Object... params) {
+        if (IN_FLIGHT.get()) {
+            return originalKeyword != null ? originalKeyword.execute(params) : false
+        }
+
+        TestObject to = params != null && params.length > 0 && params[0] instanceof TestObject ? (params[0] as TestObject) : null
+        int timeout = params != null && params.length > 1 && params[1] instanceof Number ? ((Number) params[1]).intValue() : 10
+        FailureHandling flow = params != null && params.length > 2 && params[2] instanceof FailureHandling ? 
+            (params[2] as FailureHandling) : RunConfiguration.getDefaultFailureHandling()
+
+        String objId = to != null ? to.getObjectId() : "UnknownElement"
+
+        try {
+            Object res = originalKeyword != null ? originalKeyword.execute(params) : false
+            if (res instanceof Boolean && ((Boolean) res).booleanValue()) {
+                return true
+            }
+        } catch (Throwable t) {}
+
+        KeywordUtil.logInfo("[Locara by Qureon] 🛡️ Intercepted failure on Mobile.verifyElementVisible(''). Activating in-flight visibility healing...")
+
+        IN_FLIGHT.set(true)
+        try {
+            boolean healed = Locara.healAndVerifyVisible(to, timeout, objId)
+            if (healed) {
+                KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight visibility healing succeeded for verifyElementVisible('')!")
+                return true
+            }
+        } catch (Throwable healEx) {
+            KeywordUtil.logInfo("[Locara by Qureon] ⚠️ Visibility healing attempt failed: " + healEx.getMessage())
+        } finally {
+            IN_FLIGHT.set(false)
+        }
+
+        if (flow == FailureHandling.STOP_ON_FAILURE) {
+            throw new com.kms.katalon.core.exception.StepFailedException("Element '" + objId + "' not visible after in-flight healing")
+        }
+        return false
     }
 }
 

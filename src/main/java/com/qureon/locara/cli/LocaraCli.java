@@ -7,6 +7,7 @@ import com.qureon.locara.core.model.HealContext;
 import com.qureon.locara.core.model.HealResult;
 import com.qureon.locara.core.model.UIElementNode;
 import com.qureon.locara.core.parser.PageSourceParser;
+import com.qureon.locara.core.sanitizer.LocaraOrSanitizer;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -15,13 +16,20 @@ import java.util.List;
 
 /**
  * Standalone Command Line Interface (CLI) for Locara by Qureon.
- * Allows instant reconnaissance, inspection, and .rs generation from any terminal.
+ * Allows instant reconnaissance, inspection, Object Repository sanitization, and .rs generation.
  */
 public class LocaraCli {
 
     public static void main(String[] args) {
         if (args.length == 0 || hasArg(args, "--help") || hasArg(args, "-h")) {
             printUsage();
+            return;
+        }
+
+        String command = args[0];
+
+        if ("sanitize-or".equalsIgnoreCase(command) || hasArg(args, "--sanitize-or")) {
+            runSanitizeMode(args);
             return;
         }
 
@@ -67,6 +75,42 @@ public class LocaraCli {
         }
 
         runHealingMode(xmlContent, hint, action, outPath);
+    }
+
+    private static void runSanitizeMode(String[] args) {
+        String path = getArg(args, "--path", "Object Repository");
+        boolean fix = hasArg(args, "--fix");
+        boolean backup = !hasArg(args, "--no-backup");
+
+        File target = new File(path);
+        if (!target.exists()) {
+            System.err.println("❌ Error: Target path not found: " + target.getAbsolutePath());
+            System.exit(1);
+        }
+
+        System.out.println("==============================================================");
+        System.out.println("  Locara by Qureon · Object Repository Hygiene & Sanitizer     ");
+        System.out.println("  Target Path: " + target.getAbsolutePath());
+        System.out.println("  Mode       : " + (fix ? "FIX (Auto-rewrite brittle XPaths)" : "DRY-RUN (Scan only)"));
+        System.out.println("  Backup     : " + (backup ? "ENABLED (.bak)" : "DISABLED"));
+        System.out.println("==============================================================");
+
+        try {
+            LocaraOrSanitizer sanitizer = new LocaraOrSanitizer();
+            LocaraOrSanitizer.SanitizeSummary summary = sanitizer.scanAndSanitize(target, fix, backup);
+
+            System.out.println("\n📊 Sanitization Summary:");
+            System.out.println("   • Total .rs files scanned: " + summary.getTotalScanned());
+            System.out.println("   • Brittle hierarchy XPaths: " + summary.getBrittleFound());
+            System.out.println("   • Files successfully sanitized: " + summary.getTotalSanitized());
+
+            if (!fix && summary.getBrittleFound() > 0) {
+                System.out.println("\n💡 Tip: Run with --fix to automatically replace brittle hierarchy XPaths with resilient relative XPaths.");
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Sanitization error: " + e.getMessage());
+            System.exit(1);
+        }
     }
 
     private static void runHealingMode(String xmlContent, String hint, String action, String outPath) {
@@ -158,14 +202,16 @@ public class LocaraCli {
     }
 
     private static void printUsage() {
-        System.out.println("Locara by Qureon CLI v1.3.0 — Autonomous Mobile Recon & Synthesizer");
+        System.out.println("Locara by Qureon CLI v1.4.0 — Autonomous Mobile Recon & Synthesizer");
         System.out.println("Usage:");
-        System.out.println("  java -jar locara-1.3.0.jar --xml <path> --hint <hint> [options]");
-        System.out.println("\nOptions:");
-        System.out.println("  --xml <path>       Path to Appium pageSource XML dump file (Required)");
+        System.out.println("  locara --xml <path> --hint <hint> [options]");
+        System.out.println("  locara sanitize-or --path <path> [--fix] [--no-backup]");
+        System.out.println("\nCommands & Options:");
+        System.out.println("  sanitize-or        Scan and convert brittle hierarchy XPaths in Object Repository to relative");
+        System.out.println("  --xml <path>       Path to Appium pageSource XML dump file");
         System.out.println("  --hint <text>      Semantic description or label of the target element");
         System.out.println("  --out <path>       Target path for generated .rs file (e.g. Object Repository/Screen/btn.rs)");
-        System.out.println("  --action <action>  Action type: TAP (default) or SET_TEXT");
+        System.out.println("  --action <action>  Action type: TAP (default), SET_TEXT, or VERIFY_PRESENT");
         System.out.println("  --inspect          List all interactive UI elements discovered in the XML");
         System.out.println("  --help, -h         Show this help screen");
     }

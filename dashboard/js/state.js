@@ -240,7 +240,12 @@ class StateStore {
 
     getFilteredAndSortedEvents() {
         let result = this.events.filter(e => {
-            if (this.filter !== "ALL" && e.status !== this.filter) return false;
+            if (this.filter === "PROBE") {
+                const isProbe = (e.action === "VERIFY_PRESENT" || (e.method && e.method.includes("INTENT")) || (e.strategy && e.strategy.includes("INTENT")));
+                if (!isProbe) return false;
+            } else if (this.filter !== "ALL" && e.status !== this.filter) {
+                return false;
+            }
             if (this.search) {
                 const matchScreen = (e.screen || "").toLowerCase().includes(this.search);
                 const matchHint = (e.targetHint || "").toLowerCase().includes(this.search);
