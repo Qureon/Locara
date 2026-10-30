@@ -49,13 +49,13 @@ class LocaraHook {
         } catch (Throwable ignored) {}
 
         // 2. Check System Property
-        for (String key : ["locara.enabled", "qureon.enabled", "healing.enabled", "zerohealing.enabled"]) {
+        for (String key : ["locara.enabled", "qureon.enabled", "healing.enabled"]) {
             String sysProp = System.getProperty(key)
             if (sysProp != null) return Boolean.parseBoolean(sysProp)
         }
 
         // 3. Check Environment Variable
-        for (String key : ["LOCARA_ENABLED", "QUREON_ENABLED", "HEALING_ENABLED", "ZEROHEALING_ENABLED"]) {
+        for (String key : ["LOCARA_ENABLED", "QUREON_ENABLED", "HEALING_ENABLED"]) {
             String env = System.getenv(key)
             if (env != null) return Boolean.parseBoolean(env)
         }
@@ -64,19 +64,22 @@ class LocaraHook {
         try {
             String userDir = System.getProperty("user.dir")
             List<String> filenames = [
-                "locara.local.properties", "qureon.local.properties", "zero-healing.local.properties",
-                "locara.properties", "qureon.properties", "zero-healing.properties"
+                "locara.local.properties", "qureon.local.properties",
+                "locara.properties", "qureon.properties"
             ]
             for (String fn : filenames) {
                 File f = new File(userDir, fn)
                 if (f.exists()) {
                     Properties p = new Properties()
                     f.withInputStream { p.load(it) }
-                    if (p.containsKey("healing.enabled")) {
-                        return Boolean.parseBoolean(p.getProperty("healing.enabled"))
-                    }
                     if (p.containsKey("locara.enabled")) {
                         return Boolean.parseBoolean(p.getProperty("locara.enabled"))
+                    }
+                    if (p.containsKey("qureon.enabled")) {
+                        return Boolean.parseBoolean(p.getProperty("qureon.enabled"))
+                    }
+                    if (p.containsKey("healing.enabled")) {
+                        return Boolean.parseBoolean(p.getProperty("healing.enabled"))
                     }
                 }
             }
