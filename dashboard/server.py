@@ -75,7 +75,7 @@ class ZeroHealingHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
         payload = {
             "status": "ONLINE",
-            "engine": "Locara Core v1.5.0 · Powered by Qureon",
+            "engine": "Locara Core v1.5.1 · Powered by Qureon",
             "target": "Qureon Autonomous QA Platform",
             "timestamp": datetime.now().isoformat(),
             "server_port": PORT

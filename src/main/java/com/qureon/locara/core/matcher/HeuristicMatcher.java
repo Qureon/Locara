@@ -59,10 +59,17 @@ public class HeuristicMatcher {
                 textScore = StringSimilarity.compositeScore(node.getText(), targetHint);
             }
 
-            // Calculate Vector 2: Resource ID Semantic Similarity
+            // Calculate Vector 2: Resource ID Semantic & KMP Morphology Similarity
             double idScore = 0.0;
             if (node.hasResourceId()) {
-                idScore = StringSimilarity.compositeScore(node.getStrippedResourceId(), targetHint);
+                double rawIdScore = StringSimilarity.compositeScore(node.getStrippedResourceId(), targetHint);
+                double morphScore = KmpMorphologyResolver.calculateMorphologyScore(node, targetHint, action);
+                idScore = Math.max(rawIdScore, morphScore);
+            } else if (node.hasContentDesc()) {
+                double morphScore = KmpMorphologyResolver.calculateMorphologyScore(node, targetHint, action);
+                if (morphScore > 0.70) {
+                    idScore = morphScore;
+                }
             }
 
             // Calculate Vector 3: Content-Description Similarity

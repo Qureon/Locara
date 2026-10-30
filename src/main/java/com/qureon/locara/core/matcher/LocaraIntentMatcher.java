@@ -61,6 +61,43 @@ public final class LocaraIntentMatcher {
                 "sistem sedang sibuk", "silakan coba beberapa saat lagi", "transaksi tidak dapat diproses",
                 "terjadi gangguan koneksi", "system busy", "timeout", "network error"
         ));
+
+        // Canonical QA Pack Concepts (M-Smile KMP i18n alignment)
+        registerConcept("EMPTY_NOMINAL", Arrays.asList(
+                "nominal tidak boleh kosong", "masukkan nominal transaksi", "nominal kosong",
+                "amount empty", "nominal_tidak_boleh_kosong"
+        ));
+
+        registerConcept("EMPTY_PACKAGE", Arrays.asList(
+                "jenis paket atau waktu transaksi tidak boleh kosong", "pilih paket terlebih dahulu",
+                "package empty", "paket kosong"
+        ));
+
+        registerConcept("NO_SOURCE_OF_FUNDS", Arrays.asList(
+                "tambahkan dan aktifkan sumber dana", "belum ada sumber dana aktif",
+                "tidak ada sumber dana aktif untuk alur itu", "manage source of funds",
+                "no source screen", "no source", "atur sumber dana"
+        ));
+
+        registerConcept("OPERATOR_UNAVAILABLE", Arrays.asList(
+                "operator tidak tersedia mohon coba beberapa saat lagi", "operator gangguan",
+                "operator_unavailable", "provider gangguan"
+        ));
+
+        registerConcept("SESSION_EXPIRED", Arrays.asList(
+                "sesi berakhir", "session expired", "rc 06", "rc 86", "rc 66", "rc 12",
+                "silakan login kembali", "session end alert"
+        ));
+
+        registerConcept("NETWORK_UNSTABLE", Arrays.asList(
+                "yah koneksi internet tidak stabil", "oops koneksi terputus", "cek kembali koneksi anda",
+                "koneksi yang aman tidak dapat dilakukan", "ssl pinning failed", "koneksi offline"
+        ));
+
+        registerConcept("STATUS_UNKNOWN", Arrays.asList(
+                "status transaksi belum diketahui", "transaction status unknown", "rc 99", "qr68",
+                "status belum diketahui", "status_unknown"
+        ));
     }
 
     private LocaraIntentMatcher() {}
@@ -91,9 +128,10 @@ public final class LocaraIntentMatcher {
 
         // 2. Concept cluster match
         for (Map.Entry<String, List<String>> entry : CONCEPT_CLUSTERS.entrySet()) {
+            String clusterKeyNorm = normalize(entry.getKey());
             List<String> terms = entry.getValue();
-            boolean actualInConcept = isInCluster(actualNorm, terms);
-            boolean expectedInConcept = isInCluster(expectedNorm, terms);
+            boolean actualInConcept = isInCluster(actualNorm, terms) || actualNorm.equals(clusterKeyNorm);
+            boolean expectedInConcept = isInCluster(expectedNorm, terms) || expectedNorm.equals(clusterKeyNorm);
 
             if (actualInConcept && expectedInConcept) {
                 return 0.92; // Strong semantic equivalence
