@@ -5,7 +5,7 @@
 ### Adaptive Locator Intelligence & Universal Self-Healing Engine
 *An autonomous, offline-first self-healing engine for resilient mobile & hybrid test automation.*
 
-[![Version](https://img.shields.io/badge/version-1.6.1-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
+[![Version](https://img.shields.io/badge/version-1.6.2-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-52%2F52%20passing-10B981?style=flat-square)](build.gradle)
 [![Java](https://img.shields.io/badge/java-17%20%7C%2021%20%7C%2024-orange?style=flat-square&logo=openjdk)](build.gradle)
@@ -143,8 +143,6 @@ Locara.tapByHint('Konfirmasi Bayar', 'Object Repository/Transfer/btn_Konfirmasi'
 // Skenario C: Input Field M-PIN / Nominal
 Locara.setText(findTestObject('Object Repository/Transfer/input_MPIN'), '123456', 'Masukkan M-PIN')
 ```
-
-> **Catatan Kompatibilitas:** Jika Anda memiliki skrip eksisting yang mengimpor `com.zerohealing.katalon.ZeroHeal`, skrip tersebut tetap berjalan normal tanpa perlu diubah melalui layer backward-compatibility.
 
 ---
 
@@ -297,8 +295,7 @@ Locara/
     │   │   ├── core/parser/                  # PageSourceParser & HtmlDomParser
     │   │   ├── katalon/                      # In-flight hooks & keyboard/scroll guards
     │   │   └── appium/                       # Standalone Appium driver wrappers
-    │   └── com/zerohealing/                  # Backward Compatibility Layer
-    └── test/                                 # 52/52 Unit & E2E Simulation Suite
+    └── test/                                 # Unit & E2E Simulation Suite
 ```
 
 ---

@@ -1,4 +1,4 @@
-package com.zerohealing.appium;
+package com.qureon.locara.appium;
 
 import org.junit.jupiter.api.Test;
 
@@ -7,7 +7,7 @@ import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class AppiumZeroHealTest {
+public class AppiumLocaraTest {
 
     // Dummy mock driver mimicking AppiumDriver
     public static class MockAppiumDriver {
@@ -48,7 +48,7 @@ public class AppiumZeroHealTest {
     }
 
     @Test
-    public void testAppiumZeroHealTapWithMockDriver() throws Exception {
+    public void testAppiumLocaraTapWithMockDriver() throws Exception {
         String xml;
         try (InputStream is = getClass().getResourceAsStream("/samples/msmile_transfer_confirm.xml")) {
             assertNotNull(is);
@@ -59,9 +59,9 @@ public class AppiumZeroHealTest {
 
         // Intentionally broken locator: "btn_broken_id"
         // Semantic hint: "Lanjut"
-        boolean success = AppiumZeroHeal.tap(driver, "//android.widget.Button[@id='btn_broken_id']", "Lanjut");
+        boolean success = AppiumLocara.tap(driver, "//android.widget.Button[@id='btn_broken_id']", "Lanjut");
 
-        assertTrue(success, "AppiumZeroHeal should heal and click the element");
+        assertTrue(success, "AppiumLocara should heal and click the element");
         assertTrue(driver.isClicked(), "Mock element click() should be executed");
     }
 }

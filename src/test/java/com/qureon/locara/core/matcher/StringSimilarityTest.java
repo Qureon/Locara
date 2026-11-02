@@ -1,6 +1,6 @@
-package com.zerohealing.core;
+package com.qureon.locara.core;
 
-import com.zerohealing.core.matcher.StringSimilarity;
+import com.qureon.locara.core.matcher.StringSimilarity;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -44,35 +44,35 @@ public class StringSimilarityTest {
     @DisplayName("cleanSemanticHint should sanitize full Katalon Object Repository paths")
     void testCleanSemanticHint() {
         String raw = "Object Repository/Dashboard/01. ViewGroup - Top Up dan Bayar";
-        String cleaned = com.zerohealing.core.matcher.HeuristicMatcher.cleanSemanticHint(raw);
+        String cleaned = com.qureon.locara.core.matcher.HeuristicMatcher.cleanSemanticHint(raw);
         assertEquals("Top Up dan Bayar", cleaned);
 
         String buttonRaw = "Object Repository/Login/02. Button - Lanjut Transaksi.rs";
-        assertEquals("Lanjut Transaksi", com.zerohealing.core.matcher.HeuristicMatcher.cleanSemanticHint(buttonRaw));
+        assertEquals("Lanjut Transaksi", com.qureon.locara.core.matcher.HeuristicMatcher.cleanSemanticHint(buttonRaw));
 
         // Bank Mega 2-tier sub-index (05-2. TextView - Value Nama Produk)
         String twoTier = "Object Repository/Dashboard/Top Up/05-2. TextView - Value Nama Produk.rs";
-        assertEquals("Nama Produk", com.zerohealing.core.matcher.HeuristicMatcher.cleanSemanticHint(twoTier));
+        assertEquals("Nama Produk", com.qureon.locara.core.matcher.HeuristicMatcher.cleanSemanticHint(twoTier));
 
         // GroupView prefix and Tombol
         String groupView = "Object Repository/Dashboard/Apply/04. GroupView - Tombol Kembali Di Halaman Produk.rs";
-        assertEquals("Kembali Di Halaman Produk", com.zerohealing.core.matcher.HeuristicMatcher.cleanSemanticHint(groupView));
+        assertEquals("Kembali Di Halaman Produk", com.qureon.locara.core.matcher.HeuristicMatcher.cleanSemanticHint(groupView));
 
         // Button without space after dash (-Tombol)
         String noSpaceDash = "Object Repository/Dashboard/Apply/05. Button -Tombol OK no path file di deskrpsi 1.rs";
-        assertEquals("OK no path file di deskrpsi 1", com.zerohealing.core.matcher.HeuristicMatcher.cleanSemanticHint(noSpaceDash));
+        assertEquals("OK no path file di deskrpsi 1", com.qureon.locara.core.matcher.HeuristicMatcher.cleanSemanticHint(noSpaceDash));
 
         // Banner prefix
         String banner = "Object Repository/Dashboard/Ajak Teman/01. Banner - Ajak Teman.rs";
-        assertEquals("Ajak Teman", com.zerohealing.core.matcher.HeuristicMatcher.cleanSemanticHint(banner));
+        assertEquals("Ajak Teman", com.qureon.locara.core.matcher.HeuristicMatcher.cleanSemanticHint(banner));
 
         // Box prefix
         String box = "Object Repository/Dashboard/Apply/Reksa Dana/Kinerja/05. TextView - Box 1 Day.rs";
-        assertEquals("1 Day", com.zerohealing.core.matcher.HeuristicMatcher.cleanSemanticHint(box));
+        assertEquals("1 Day", com.qureon.locara.core.matcher.HeuristicMatcher.cleanSemanticHint(box));
 
         // Label qualifier
         String label = "Object Repository/Dashboard/05-1. TextView - Label Detail Produk.rs";
-        assertEquals("Detail Produk", com.zerohealing.core.matcher.HeuristicMatcher.cleanSemanticHint(label));
+        assertEquals("Detail Produk", com.qureon.locara.core.matcher.HeuristicMatcher.cleanSemanticHint(label));
     }
 
     @Test

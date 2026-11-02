@@ -1,6 +1,6 @@
-package com.zerohealing.core.generator;
+package com.qureon.locara.core.generator;
 
-import com.zerohealing.core.model.UIElementNode;
+import com.qureon.locara.core.model.UIElementNode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

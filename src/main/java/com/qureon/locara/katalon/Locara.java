@@ -25,11 +25,7 @@ public class Locara {
                 new File(userDir, "locara.properties"),
                 new File(userDir, "qureon.properties"),
                 new File(userDir, "Include/config/locara.properties"),
-                new File(userDir, "Include/config/qureon.properties"),
-                new File(userDir, "zero-healing.properties"),
-                new File(userDir, "zerohealing.properties"),
-                new File(userDir, "Include/config/zero-healing.properties"),
-                new File(userDir, "Include/config/zerohealing.properties")
+                new File(userDir, "Include/config/qureon.properties")
         };
         File targetProp = null;
         for (File f : candidates) {

@@ -1,7 +1,7 @@
-package com.zerohealing.core;
+package com.qureon.locara.core;
 
-import com.zerohealing.core.guard.DangerKeywordGuard;
-import com.zerohealing.core.model.UIElementNode;
+import com.qureon.locara.core.guard.DangerKeywordGuard;
+import com.qureon.locara.core.model.UIElementNode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

@@ -75,7 +75,7 @@ Alih-alih hanya mengandalkan locator cadangan yang sudah di-spy sebelumnya, **Lo
 ### 🔹 Phase 3: Runtime Interceptor & In-Flight Metaprogramming (v1.2.0 - v1.3.0)
 - [x] Katalon `TestObject` in-memory mutator tanpa restart test case.
 - [x] Appium Driver Live Bridge untuk eksekusi aksi instan (`click()`, `sendKeys()`).
-- [x] `Locara` Master Wrapper API dengan backward-compatibility layer untuk namespace lama `com.zerohealing.*`.
+- [x] `Locara` Master Wrapper API dengan arsitektur bersih di bawah namespace `com.qureon.locara.*`.
 
 ### 🔹 Phase 4: Enterprise Safety, Danger Polarity & Keyboard Airbag (v1.4.0)
 - [x] `DangerKeywordGuard`: Proteksi polaritas positif vs destruktif (mencegah klik tombol *Batal*/*Hapus*).

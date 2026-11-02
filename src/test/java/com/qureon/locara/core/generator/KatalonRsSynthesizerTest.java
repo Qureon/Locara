@@ -1,9 +1,9 @@
-package com.zerohealing.core.generator;
+package com.qureon.locara.core.generator;
 
-import com.zerohealing.core.model.HealCandidate;
-import com.zerohealing.core.model.HealConfig;
-import com.zerohealing.core.model.HealContext;
-import com.zerohealing.core.model.UIElementNode;
+import com.qureon.locara.core.model.HealCandidate;
+import com.qureon.locara.core.model.HealConfig;
+import com.qureon.locara.core.model.HealContext;
+import com.qureon.locara.core.model.UIElementNode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

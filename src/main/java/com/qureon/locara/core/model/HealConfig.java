@@ -44,9 +44,7 @@ public class HealConfig {
         // 2. Load local properties override if exists (ignored by Git)
         File[] localCandidates = new File[] {
                 new File(System.getProperty("user.dir"), "locara.local.properties"),
-                new File(System.getProperty("user.dir"), "qureon.local.properties"),
-                new File(System.getProperty("user.dir"), "zero-healing.local.properties"),
-                new File(System.getProperty("user.dir"), "zerohealing.local.properties")
+                new File(System.getProperty("user.dir"), "qureon.local.properties")
         };
         for (File candidate : localCandidates) {
             if (candidate.exists()) {
@@ -81,7 +79,7 @@ public class HealConfig {
         // 3. System properties override (highest precedence)
         String sysEnabled = System.getProperty("locara.enabled",
                 System.getProperty("qureon.enabled",
-                System.getProperty("zerohealing.enabled", System.getProperty("healing.enabled"))));
+                System.getProperty("healing.enabled")));
         if (sysEnabled != null) {
             config.enabled = Boolean.parseBoolean(sysEnabled);
         }
@@ -89,7 +87,7 @@ public class HealConfig {
         // 4. Environment variable override
         String envEnabled = System.getenv("LOCARA_ENABLED");
         if (envEnabled == null) envEnabled = System.getenv("QUREON_ENABLED");
-        if (envEnabled == null) envEnabled = System.getenv("ZEROHEALING_ENABLED");
+        if (envEnabled == null) envEnabled = System.getenv("HEALING_ENABLED");
         if (envEnabled != null) {
             config.enabled = Boolean.parseBoolean(envEnabled);
         }

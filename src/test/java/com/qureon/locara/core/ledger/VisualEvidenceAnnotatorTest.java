@@ -1,9 +1,11 @@
-package com.zerohealing.core;
+package com.qureon.locara.core.ledger;
 
-import com.zerohealing.core.ledger.VisualEvidenceAnnotator;
-import com.zerohealing.core.model.HealCandidate;
-import com.zerohealing.core.model.HealConfig;
-import com.zerohealing.core.model.UIElementNode;
+import com.qureon.locara.core.ledger.VisualEvidenceAnnotator;
+
+import com.qureon.locara.core.ledger.VisualEvidenceAnnotator;
+import com.qureon.locara.core.model.HealCandidate;
+import com.qureon.locara.core.model.HealConfig;
+import com.qureon.locara.core.model.UIElementNode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
