@@ -61,24 +61,37 @@ public class HealConfig {
                     props.getProperty("qureon.enabled",
                     props.getProperty("healing.enabled", "true")));
             config.enabled = Boolean.parseBoolean(propEnabled);
-            config.minConfidenceThreshold = Double.parseDouble(props.getProperty("healing.threshold", "0.70"));
-            config.weightText = Double.parseDouble(props.getProperty("healing.weight.text", "0.35"));
-            config.weightId = Double.parseDouble(props.getProperty("healing.weight.id", "0.25"));
-            config.weightDesc = Double.parseDouble(props.getProperty("healing.weight.desc", "0.20"));
-            config.weightClass = Double.parseDouble(props.getProperty("healing.weight.class", "0.10"));
-            config.weightProximity = Double.parseDouble(props.getProperty("healing.weight.proximity", "0.10"));
-            config.autoGenerateRs = Boolean.parseBoolean(props.getProperty("healing.rs.generate", "false"));
-            config.allowOverwriteExistingRs = Boolean.parseBoolean(props.getProperty("healing.rs.overwrite", "false"));
-            config.backupExistingRs = Boolean.parseBoolean(props.getProperty("healing.rs.backup", "true"));
-            config.auditLedgerEnabled = Boolean.parseBoolean(props.getProperty("healing.audit.enabled", "true"));
-            config.adaptiveFrameworkWeights = Boolean.parseBoolean(props.getProperty("healing.framework.adaptive", "true"));
+            config.minConfidenceThreshold = Double.parseDouble(props.getProperty("locara.threshold",
+                    props.getProperty("healing.threshold", "0.70")));
+            config.weightText = Double.parseDouble(props.getProperty("locara.weight.text",
+                    props.getProperty("healing.weight.text", "0.35")));
+            config.weightId = Double.parseDouble(props.getProperty("locara.weight.id",
+                    props.getProperty("healing.weight.id", "0.25")));
+            config.weightDesc = Double.parseDouble(props.getProperty("locara.weight.desc",
+                    props.getProperty("healing.weight.desc", "0.20")));
+            config.weightClass = Double.parseDouble(props.getProperty("locara.weight.class",
+                    props.getProperty("healing.weight.class", "0.10")));
+            config.weightProximity = Double.parseDouble(props.getProperty("locara.weight.proximity",
+                    props.getProperty("healing.weight.proximity", "0.10")));
+            config.autoGenerateRs = Boolean.parseBoolean(props.getProperty("locara.rs.generate",
+                    props.getProperty("healing.rs.generate", "false")));
+            config.allowOverwriteExistingRs = Boolean.parseBoolean(props.getProperty("locara.rs.overwrite",
+                    props.getProperty("healing.rs.overwrite", "false")));
+            config.backupExistingRs = Boolean.parseBoolean(props.getProperty("locara.rs.backup",
+                    props.getProperty("healing.rs.backup", "true")));
+            config.auditLedgerEnabled = Boolean.parseBoolean(props.getProperty("locara.audit.enabled",
+                    props.getProperty("healing.audit.enabled", "true")));
+            config.adaptiveFrameworkWeights = Boolean.parseBoolean(props.getProperty("locara.framework.adaptive",
+                    props.getProperty("healing.framework.adaptive", "true")));
             String scrollProp = props.getProperty("locara.scroll.enabled",
                     props.getProperty("qureon.scroll.enabled",
                     props.getProperty("healing.scroll.enabled", "true")));
             config.scrollRecoveryEnabled = Boolean.parseBoolean(scrollProp);
-            String targetProp = props.getProperty("locara.target", props.getProperty("healing.target", "AUTO"));
+            String targetProp = props.getProperty("locara.target",
+                    props.getProperty("healing.target", "AUTO"));
             config.appTarget = AppTarget.fromString(targetProp);
-            config.katalonProjectPath = props.getProperty("healing.project.path", config.katalonProjectPath);
+            config.katalonProjectPath = props.getProperty("locara.project.path",
+                    props.getProperty("healing.project.path", config.katalonProjectPath));
         } catch (NumberFormatException ignored) {}
 
         // 3. System properties override (highest precedence)

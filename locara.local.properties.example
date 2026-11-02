@@ -10,18 +10,23 @@
 # ==============================================================================
 
 # Ubah ke false untuk mematikan self-healing secara total (kembali ke vanilla Katalon/Appium murni)
-healing.enabled=true
+# Standard baru menggunakan awalan 'locara.*' (legacy 'healing.*' tetap didukung 100%)
+locara.enabled=true
 
 # Threshold minimal similarity (0.50 - 0.95)
-healing.threshold=0.70
+locara.threshold=0.70
 
-# Auto-scroll viewport jika target locator off-screen
-healing.scroll.enabled=true
-healing.scroll.max_attempts=3
+# Auto-scroll viewport jika target locator form off-screen (pop-up/modal dilarang scroll)
+locara.scroll.enabled=true
+locara.scroll.max_attempts=2
 
 # Generator Object Repository .rs otomatis untuk UAT traceability
-healing.rs.synthesize.enabled=true
-healing.rs.output.dir=Object Repository/Healed/
+locara.rs.generate=true
+locara.rs.overwrite=false
+locara.rs.backup=true
 
-# Safety polarity guard (mencegah klik tombol destruktif saat mencari tombol positif)
-healing.safety.guard.enabled=true
+# Audit Ledger
+locara.audit.enabled=true
+
+# Adaptive Framework Detection (React Native, Compose, Flutter, Android XML)
+locara.framework.adaptive=true

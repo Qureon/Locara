@@ -5,7 +5,7 @@
 ### Adaptive Locator Intelligence & Universal Self-Healing Engine
 *An autonomous, offline-first self-healing engine for resilient mobile & hybrid test automation.*
 
-[![Version](https://img.shields.io/badge/version-1.7.1-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
+[![Version](https://img.shields.io/badge/version-1.7.2-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-54%2F54%20passing-10B981?style=flat-square)](build.gradle)
 [![Java](https://img.shields.io/badge/java-17%20%7C%2021%20%7C%2024-orange?style=flat-square&logo=openjdk)](build.gradle)
@@ -202,35 +202,41 @@ Letakkan file `locara.properties` di root folder proyek untuk tuning engine:
 
 ```properties
 # Master Switch: Aktifkan atau nonaktifkan engine secara global
-healing.enabled=true
+locara.enabled=true
 
 # Ambang batas minimal confidence (0.0 - 1.0) untuk mengeksekusi healing
-healing.threshold=0.70
+locara.threshold=0.70
 
 # Bobot Scoring Multi-Vector (Total = 1.0)
-healing.weight.text=0.35
-healing.weight.id=0.25
-healing.weight.desc=0.20
-healing.weight.class=0.10
-healing.weight.proximity=0.10
+locara.weight.text=0.35
+locara.weight.id=0.25
+locara.weight.desc=0.20
+locara.weight.class=0.10
+locara.weight.proximity=0.10
 
-# Auto-scroll jika elemen off-screen
-healing.scroll.enabled=true
-healing.scroll.max_attempts=3
+# Auto-scroll jika elemen form off-screen (pop-up/modal otomatis dilarang scroll)
+locara.scroll.enabled=true
+locara.scroll.max_attempts=2
 
 # Pengaturan Object Repository (.rs)
-healing.rs.generate=true
-healing.rs.backup=true
+locara.rs.generate=true
+locara.rs.overwrite=false
+locara.rs.backup=true
 
 # Audit Ledger
-healing.audit.enabled=true
+locara.audit.enabled=true
+
+# Adaptive Framework Detection (React Native, Compose, Flutter, Android XML)
+locara.framework.adaptive=true
 ```
+
+> **Catatan Kompatibilitas**: Format awalan `locara.*` adalah standar baku terbaru. Seluruh awalan warisan lama (`healing.*` dan `qureon.*`) tetap didukung 100% secara *backward-compatible*.
 
 ### Opt-Out Lokal (Developer Override)
 Jika ada anggota tim yang ingin menonaktifkan self-healing secara lokal di komputernya:
 1. Buat file `locara.local.properties` di root proyek:
    ```properties
-   healing.enabled=false
+   locara.enabled=false
    ```
 2. File ini terdaftar di `.gitignore` sehingga tidak akan ter-push ke repository remote.
 
