@@ -1,0 +1,23 @@
+{
+  "name": "@qureon/cucumber-locara",
+  "version": "1.7.4",
+  "description": "Locara by Qureon: Autonomous BDD & Gherkin Self-Healing Step Definitions for Cucumber, Playwright, and Appium",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "keywords": [
+    "cucumber",
+    "bdd",
+    "gherkin",
+    "self-healing",
+    "locara",
+    "qureon",
+    "automation",
+    "testing",
+    "generative-ai"
+  ],
+  "author": "Qureon Open Source",
+  "license": "Apache-2.0",
+  "peerDependencies": {
+    "@cucumber/cucumber": ">=10.0.0"
+  }
+}

@@ -5,13 +5,14 @@
 ### Adaptive Locator Intelligence & Universal Self-Healing Engine
 *An autonomous, offline-first self-healing engine for resilient mobile & hybrid test automation.*
 
-[![Version](https://img.shields.io/badge/version-1.7.3-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
+[![Version](https://img.shields.io/badge/version-1.7.4-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-58%2F58%20passing-10B981?style=flat-square)](build.gradle)
+[![Tests](https://img.shields.io/badge/tests-63%2F63%20passing-10B981?style=flat-square)](build.gradle)
 [![Java](https://img.shields.io/badge/java-17%20%7C%2021%20%7C%2024-orange?style=flat-square&logo=openjdk)](build.gradle)
 [![Katalon](https://img.shields.io/badge/katalon-8.x%20%7C%209.x%20%7C%2010.x%20%7C%2011.x%20(11.7.0%2B%20Ready)-00B0FF?style=flat-square)](https://katalon.com)
 [![Appium](https://img.shields.io/badge/appium-2.x%20%7C%201.x-662d91?style=flat-square&logo=appium)](https://appium.io)
 [![Playwright](https://img.shields.io/badge/playwright-v1.40%2B%20%7C%20MCP%20%7C%20Azure-2EAD33?style=flat-square&logo=playwright)](integrations/playwright/)
+[![Cucumber](https://img.shields.io/badge/cucumber-BDD%20%7C%20Gherkin%20%7C%20GenAI-23D96C?style=flat-square&logo=cucumber)](integrations/cucumber/)
 
 [Releases](https://github.com/Qureon/Locara/releases) • [Architecture & Flow](docs/ARCHITECTURE_AND_FLOW.md) • [User Tutorial Guide](docs/USER_TUTORIAL_GUIDE.md) • [Mission Control Dashboard](dashboard/) • [MIT License](LICENSE)
 
@@ -208,7 +209,37 @@ Locator healed = (Locator) PlaywrightLocara.locator(page, "#broken-selector", "B
 
 ---
 
-### Mode 5: Standalone CLI Quick-Recon
+### Mode 5: Autonomous Cucumber BDD (Java & TypeScript / GenAI)
+Eksekusi pengujian Behavior-Driven Development (BDD) berbasis Gherkin tanpa takut patah akibat *locator rot* atau *step definition drift*:
+
+#### A. Zero-Boilerplate Gherkin Step (Java Cucumber-JVM)
+```java
+import com.qureon.locara.cucumber.CucumberLocara;
+
+// Eksekusi langsung kalimat Gherkin dengan auto-parsing semantik & multi-driver healing
+CucumberLocara.executeGherkinStep(driver, "When Pengguna menekan tombol \"Bayar Sekarang\"", null);
+
+// Step definition standar dengan self-healing
+@When("Pengguna memasukkan {string} pada kolom {string}")
+public void fillInput(String textValue, String fieldLabel) {
+    CucumberLocara.setText(driver, "", textValue, fieldLabel);
+}
+```
+
+#### B. Modern Cucumber-JS (`@qureon/cucumber-locara`)
+```gherkin
+Feature: Pembayaran Tagihan M-Smile
+
+  Scenario: Nasabah melakukan pembayaran
+    Given Pengguna berada di halaman tagihan
+    When Pengguna memasukkan "1234567890" pada kolom "Nomor Pelanggan"
+    And Pengguna menekan tombol "Bayar Sekarang"
+    Then Pengguna melihat status "Transaksi Berhasil"
+```
+
+---
+
+### Mode 6: Standalone CLI Quick-Recon
 Jalankan evaluasi heuristik dan inspeksi langsung dari terminal:
 
 ```bash
