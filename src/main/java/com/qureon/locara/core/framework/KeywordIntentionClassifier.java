@@ -32,6 +32,9 @@ public class KeywordIntentionClassifier {
     /**
      * Determines the intention tier from a keyword action name or Katalon/Appium method name.
      */
+    /**
+     * Determines the intention tier from a keyword action name or Katalon/Appium method name.
+     */
     public static IntentionTier classify(String actionOrKeyword) {
         if (actionOrKeyword == null || actionOrKeyword.trim().isEmpty()) {
             return IntentionTier.INTERACTION;
@@ -39,21 +42,36 @@ public class KeywordIntentionClassifier {
 
         String name = actionOrKeyword.trim().toLowerCase();
 
-        // 1. Conditional status probes (Katalon 11.7+ & Appium)
+        // Strip WebUI. or Mobile. or Windows. qualifiers if present
+        if (name.startsWith("webui.") || name.startsWith("mobile.") || name.startsWith("windows.")) {
+            name = name.substring(name.indexOf('.') + 1);
+        }
+
+        // 1. Conditional status probes (Katalon 11.2 - 11.7+ & Appium non-fatal probes)
+        // 26 new WebUI keywords return boolean true/false for branching without failing test runs
         if (name.startsWith("iselement") || name.startsWith("is_element") ||
                 name.contains("findfirst") || name.contains("find_first") ||
-                name.contains("probe") || name.contains("optional")) {
+                name.contains("probe") || name.contains("optional") ||
+                name.startsWith("waitfor") && name.contains("optional")) {
             return IntentionTier.CONDITIONAL_PROBE;
         }
 
-        // 2. Strict Checkpoints and Assertions
+        // 2. Strict Checkpoints and Assertions (Katalon assertElement* & verifyElement*)
+        // 26 assertElement* keywords fail the step when element is not in expected state
         if (name.startsWith("verify") || name.startsWith("assert") ||
                 name.contains("check_point") || name.contains("checkpoint")) {
             return IntentionTier.CHECKPOINT;
         }
 
-        // 3. User interactions (default)
+        // 3. User interactions (default: tap, setText, click, scroll, clearText, etc.)
         return IntentionTier.INTERACTION;
+    }
+
+    /**
+     * Checks if the keyword action is a user interaction.
+     */
+    public static boolean isInteraction(String actionOrKeyword) {
+        return classify(actionOrKeyword) == IntentionTier.INTERACTION;
     }
 
     /**

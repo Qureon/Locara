@@ -396,6 +396,38 @@ public class Locara {
         }
     }
 
+    /**
+     * Non-fatal conditional status probe (aligning with Katalon 11.2 - 11.7+ isElement*).
+     * Returns true if element is present or can be healed; returns false without throwing fatal exceptions.
+     */
+    public static boolean isElementPresent(Object testObject, String hint) {
+        return isElementPresent(testObject, 10, hint);
+    }
+
+    public static boolean isElementPresent(Object testObject, int timeoutSeconds, String hint) {
+        try {
+            return healAndVerifyPresent(testObject, timeoutSeconds, hint);
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /**
+     * Strict checkpoint assertion (aligning with Katalon 11.2 - 11.7+ assertElement*).
+     * Heals element if needed; throws AssertionError if element is missing.
+     */
+    public static boolean assertElementPresent(Object testObject, String hint) {
+        return assertElementPresent(testObject, 10, hint);
+    }
+
+    public static boolean assertElementPresent(Object testObject, int timeoutSeconds, String hint) {
+        boolean ok = healAndVerifyPresent(testObject, timeoutSeconds, hint);
+        if (!ok) {
+            throw new AssertionError("[Locara by Qureon Assertion Failed] Element not present on screen: " + hint);
+        }
+        return true;
+    }
+
     private static boolean executeHealing(Object testObject,
                                           String hint,
                                           String action,

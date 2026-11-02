@@ -91,7 +91,7 @@ function initExportButton() {
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState.events, null, 2));
             const a = document.createElement("a");
             a.setAttribute("href", dataStr);
-            a.setAttribute("download", `bank_mega_zero_healing_audit_${Date.now()}.json`);
+            a.setAttribute("download", `locara_audit_${Date.now()}.json`);
             document.body.appendChild(a);
             a.click();
             a.remove();
@@ -137,6 +137,14 @@ export function renderTelemetryTable() {
         }
 
         const actionStr = (evt.action || "TAP").toUpperCase();
+        const tier = (evt.intentionTier || "INTERACTION").toUpperCase();
+        let tierPill = `<span class="badge" style="font-size:0.68rem; padding:2px 6px; background:rgba(0,229,255,0.12); color:var(--cyan); border:1px solid rgba(0,229,255,0.25); border-radius:4px; margin-right:4px;" title="User Interaction">INT</span>`;
+        if (tier === "CHECKPOINT") {
+            tierPill = `<span class="badge" style="font-size:0.68rem; padding:2px 6px; background:rgba(16,185,129,0.12); color:var(--emerald); border:1px solid rgba(16,185,129,0.25); border-radius:4px; margin-right:4px;" title="Assertion Checkpoint (Katalon 11.2+ assertElement*)">CHK</span>`;
+        } else if (tier === "CONDITIONAL_PROBE") {
+            tierPill = `<span class="badge" style="font-size:0.68rem; padding:2px 6px; background:rgba(139,92,246,0.12); color:var(--violet); border:1px solid rgba(139,92,246,0.25); border-radius:4px; margin-right:4px;" title="Conditional Status Probe (Katalon 11.2+ isElement*)">PRB</span>`;
+        }
+
         const rsPath = evt.generatedRs || evt.rsFile || "";
         const rsShortName = rsPath ? rsPath.split("/").pop() : "-";
         const targetHintStr = evt.targetHint || evt.hint || "-";
@@ -147,7 +155,7 @@ export function renderTelemetryTable() {
                 <td class="font-mono text-muted text-sm">${timeDisplay}</td>
                 <td><strong>${escapeHtml(evt.screen || "DefaultScreen")}</strong></td>
                 <td><span class="target-hint-tag font-mono text-sm">${escapeHtml(targetHintStr)}</span></td>
-                <td><span class="action-tag ${actionStr.toLowerCase()}">${actionStr}</span></td>
+                <td><div style="display:flex; align-items:center;">${tierPill}<span class="action-tag ${actionStr.toLowerCase()}">${actionStr}</span></div></td>
                 <td><span class="conf-pill ${confLevel}">${confPct}%</span></td>
                 <td><span class="status-pill ${statusClass}">${statusLabel}</span></td>
                 <td class="font-mono text-sm text-cyan" title="${escapeHtml(rsPath)}">${escapeHtml(rsShortName)}</td>

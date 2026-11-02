@@ -38,6 +38,47 @@ public class DynamicXPathGenerator {
      * Generates the most deterministic and minimal XPath for the given candidate node,
      * taking into account the intended UI action (e.g., TAP vs GET_TEXT).
      */
+    /**
+     * Generates a ranked map of alternative XPath locators for the given node,
+     * mirroring Katalon Studio 11.6.0+ Object's XPaths table (xpath:attributes, xpath:idRelative, xpath:position, xpath:custom).
+     */
+    public java.util.LinkedHashMap<String, String> generateRankedXPaths(UIElementNode targetNode, List<UIElementNode> allNodes, String action) {
+        java.util.LinkedHashMap<String, String> ranked = new java.util.LinkedHashMap<>();
+        if (targetNode == null) return ranked;
+
+        String primary = generateOptimalXPath(targetNode, allNodes, action);
+        if (!primary.isEmpty()) {
+            ranked.put("xpath:attributes", primary);
+        }
+
+        String tag = targetNode.getTag().isEmpty() ? "*" : targetNode.getTag();
+        String text = targetNode.getText();
+        String resourceId = targetNode.getResourceId();
+
+        // 1. Structural / Relative Parent Strategy
+        if (targetNode.getParent() != null) {
+            UIElementNode parent = targetNode.getParent();
+            String parentId = parent.getResourceId().isEmpty() ? parent.getAttribute("id") : parent.getResourceId();
+            if (!parentId.isEmpty()) {
+                ranked.put("xpath:idRelative", String.format("//*[@id='%s']//%s", parentId, tag));
+            } else if (!parent.getTag().isEmpty()) {
+                ranked.put("xpath:idRelative", String.format("//%s/%s", parent.getTag(), tag));
+            }
+        }
+
+        // 2. Visible text / Custom Strategy
+        if (!text.isEmpty()) {
+            ranked.put("xpath:custom", String.format("//%s[text()=%s or .=%s]", tag, toXPathLiteral(text), toXPathLiteral(text)));
+        }
+
+        // 3. Fallback Hierarchy Position Strategy
+        if (!targetNode.getXpath().isEmpty()) {
+            ranked.put("xpath:position", targetNode.getXpath());
+        }
+
+        return ranked;
+    }
+
     public String generateOptimalXPath(UIElementNode targetNode, List<UIElementNode> allNodes, String action) {
         if (targetNode == null) return "";
 

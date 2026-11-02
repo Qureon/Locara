@@ -159,4 +159,42 @@ public class KatalonRsSynthesizerTest {
         assertTrue(xml.contains("<name>text</name>"));
         assertTrue(xml.contains("<value>Home</value>"));
     }
+
+    @Test
+    @DisplayName("Should synthesize Katalon 11.6.0 Object's XPaths table entries for Web Test Objects")
+    void testWebXmlMultiXPathSynthesis() {
+        Map<String, String> attrs = new LinkedHashMap<>();
+        attrs.put("id", "login-button");
+        attrs.put("data-testid", "btn-login");
+
+        UIElementNode node = new UIElementNode(
+                "button",
+                "btn-login",
+                "Login",
+                "",
+                "btn btn-primary",
+                "//button[@id='login-button']",
+                new Rectangle(100, 200, 120, 40),
+                true,
+                true,
+                true,
+                false,
+                false,
+                3,
+                attrs
+        );
+
+        HealCandidate candidate = new HealCandidate(node, "//button[@id='login-button']", 0.98, "High DOM match");
+        HealContext context = HealContext.builder().action("CLICK").build();
+        String xml = synthesizer.generateWebXmlContent("Button - Login", candidate, context, null);
+
+        assertTrue(xml.contains("<WebElementEntity>"));
+        assertTrue(xml.contains("<selectorMethod>XPATH</selectorMethod>"));
+        // Katalon 11.6.0 Object's XPaths table entries
+        assertTrue(xml.contains("<name>xpath:attributes</name>"));
+        assertTrue(xml.contains("<name>xpath:position</name>"));
+        assertTrue(xml.contains("<name>xpath:custom</name>"));
+        assertTrue(xml.contains("<key>CSS</key>"));
+        assertTrue(xml.contains("<value>#login-button</value>"));
+    }
 }

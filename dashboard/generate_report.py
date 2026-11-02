@@ -187,9 +187,9 @@ REPORT_TEMPLATE = """<!DOCTYPE html>
                 <p class="subtitle">Autonomous Locator Self-Healing & Object Repository Verification</p>
             </div>
             <div class="meta-right">
-                <p><strong>Target App:</strong> Mobile Application (Android/iOS)</p>
+                <p><strong>Target App:</strong> Mobile Application (Android/iOS) &amp; Web</p>
                 <p><strong>Generated:</strong> {generated_time}</p>
-                <p><strong>Engine:</strong> Locara Core v1.6.2</p>
+                <p><strong>Engine:</strong> Locara Core v1.7.0 (Katalon 11.7.0+ Ready)</p>
             </div>
         </header>
 
@@ -222,6 +222,7 @@ REPORT_TEMPLATE = """<!DOCTYPE html>
                         <th>Timestamp</th>
                         <th>Screen Context</th>
                         <th>Target Hint</th>
+                        <th>Tier</th>
                         <th>Status</th>
                         <th>Confidence</th>
                         <th>Healed XPath</th>
@@ -320,6 +321,8 @@ def generate_report(output_path=None):
     for e in events:
         status = e.get("status", "SUCCESS")
         badge_cls = "badge-success" if status == "SUCCESS" else ("badge-scrolled" if status == "SCROLLED" else "badge-lockout")
+        tier = e.get("intentionTier", "INTERACTION")
+        tier_style = "background:rgba(0,229,255,0.15); color:var(--cyan);" if tier == "INTERACTION" else ("background:rgba(16,185,129,0.15); color:var(--emerald);" if tier == "CHECKPOINT" else "background:rgba(139,92,246,0.15); color:var(--violet);")
         conf = f"{float(e.get('confidence', 0.0)) * 100:.1f}%"
         xpath = e.get("healedXPath", "-")
         rs = Path(e.get("rsFile", "-")).name if e.get("rsFile") else "-"
@@ -329,6 +332,7 @@ def generate_report(output_path=None):
                 <td style="font-family: var(--font-mono); color: var(--text-secondary);">{e.get("timestamp", "-")}</td>
                 <td><strong>{e.get("screen", "-")}</strong></td>
                 <td>{e.get("hint", "-")}</td>
+                <td><span class="badge" style="{tier_style} font-size:10px;">{tier}</span></td>
                 <td><span class="badge {badge_cls}">{status}</span></td>
                 <td><strong>{conf}</strong></td>
                 <td><code>{xpath}</code></td>

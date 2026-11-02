@@ -172,6 +172,12 @@ class StateStore {
         const generatedRs = e.generatedRs || e.rsFile || "";
         const module = e.module || (screen.includes("/") ? screen.split("/")[0].trim() : screen);
         const timestamp = e.timestamp ? e.timestamp.replace("T", " ") : new Date().toISOString().replace("T", " ").substring(0, 19);
+        const intentionTier = e.intentionTier || (
+            action.startsWith("IS_") || action.startsWith("ISELEMENT") ? "CONDITIONAL_PROBE" :
+            action.startsWith("VERIFY") || action.startsWith("ASSERT") ? "CHECKPOINT" : "INTERACTION"
+        );
+        const intentionGroup = e.intentionGroup || "";
+        const tags = e.tags || "";
 
         return {
             id,
@@ -179,6 +185,9 @@ class StateStore {
             screen,
             targetHint: hint,
             action,
+            intentionTier,
+            intentionGroup,
+            tags,
             confidence,
             status,
             brokenLocator,
@@ -240,9 +249,13 @@ class StateStore {
 
     getFilteredAndSortedEvents() {
         let result = this.events.filter(e => {
-            if (this.filter === "PROBE") {
-                const isProbe = (e.action === "VERIFY_PRESENT" || (e.method && e.method.includes("INTENT")) || (e.strategy && e.strategy.includes("INTENT")));
+            if (this.filter === "PROBE" || this.filter === "CONDITIONAL_PROBE") {
+                const isProbe = e.intentionTier === "CONDITIONAL_PROBE" || (e.action === "VERIFY_PRESENT" || (e.method && e.method.includes("INTENT")) || (e.strategy && e.strategy.includes("INTENT")));
                 if (!isProbe) return false;
+            } else if (this.filter === "CHECKPOINT") {
+                if (e.intentionTier !== "CHECKPOINT" && !e.action.startsWith("VERIFY") && !e.action.startsWith("ASSERT")) return false;
+            } else if (this.filter === "INTERACTION") {
+                if (e.intentionTier !== "INTERACTION" && !["TAP", "CLICK", "SET_TEXT", "CLEAR_TEXT"].includes(e.action)) return false;
             } else if (this.filter !== "ALL" && e.status !== this.filter) {
                 return false;
             }
@@ -251,7 +264,9 @@ class StateStore {
                 const matchHint = (e.targetHint || "").toLowerCase().includes(this.search);
                 const matchOld = (e.brokenLocator || "").toLowerCase().includes(this.search);
                 const matchNew = (e.healedLocator || "").toLowerCase().includes(this.search);
-                return matchScreen || matchHint || matchOld || matchNew;
+                const matchTier = (e.intentionTier || "").toLowerCase().includes(this.search);
+                const matchTags = (e.tags || "").toLowerCase().includes(this.search);
+                return matchScreen || matchHint || matchOld || matchNew || matchTier || matchTags;
             }
             return true;
         });

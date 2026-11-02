@@ -27,11 +27,28 @@ public class KeywordIntentionClassifierTest {
     }
 
     @Test
-    @DisplayName("Should classify conditional probes correctly (Katalon 11.7 isElement*)")
+    @DisplayName("Should classify conditional probes correctly (Katalon 11.2 - 11.7+ isElement*)")
     void testClassifyProbes() {
         assertEquals(KeywordIntentionClassifier.IntentionTier.CONDITIONAL_PROBE, KeywordIntentionClassifier.classify("isElementPresent"));
         assertEquals(KeywordIntentionClassifier.IntentionTier.CONDITIONAL_PROBE, KeywordIntentionClassifier.classify("isElementVisible"));
+        assertEquals(KeywordIntentionClassifier.IntentionTier.CONDITIONAL_PROBE, KeywordIntentionClassifier.classify("WebUI.isElementPresent"));
+        assertEquals(KeywordIntentionClassifier.IntentionTier.CONDITIONAL_PROBE, KeywordIntentionClassifier.classify("Mobile.isElementVisible"));
+        assertEquals(KeywordIntentionClassifier.IntentionTier.CONDITIONAL_PROBE, KeywordIntentionClassifier.classify("isElementClickable"));
+        assertEquals(KeywordIntentionClassifier.IntentionTier.CONDITIONAL_PROBE, KeywordIntentionClassifier.classify("isElementChecked"));
+        assertEquals(KeywordIntentionClassifier.IntentionTier.CONDITIONAL_PROBE, KeywordIntentionClassifier.classify("isElementHasAttribute"));
+        assertEquals(KeywordIntentionClassifier.IntentionTier.CONDITIONAL_PROBE, KeywordIntentionClassifier.classify("isElementText"));
+        assertEquals(KeywordIntentionClassifier.IntentionTier.CONDITIONAL_PROBE, KeywordIntentionClassifier.classify("isElementInViewport"));
         assertEquals(KeywordIntentionClassifier.IntentionTier.CONDITIONAL_PROBE, KeywordIntentionClassifier.classify("findFirstElement"));
         assertTrue(KeywordIntentionClassifier.isConditionalProbe("isElementClickable"));
+        assertTrue(KeywordIntentionClassifier.isConditionalProbe("WebUI.isElementNotPresent"));
+    }
+
+    @Test
+    @DisplayName("Should classify interaction keywords with prefixes correctly")
+    void testClassifyInteractionsWithPrefixes() {
+        assertTrue(KeywordIntentionClassifier.isInteraction("Mobile.tap"));
+        assertTrue(KeywordIntentionClassifier.isInteraction("WebUI.setText"));
+        assertTrue(KeywordIntentionClassifier.isInteraction("click"));
+        assertFalse(KeywordIntentionClassifier.isInteraction("verifyElementPresent"));
     }
 }

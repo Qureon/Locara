@@ -188,9 +188,15 @@ function renderReconResult(result) {
     const confPct = (w.score * 100).toFixed(1);
     const isSuccess = w.score >= APP_CONFIG.defaultThresholds.minSimilarity && !w.lockout;
 
-    let optimalXPath = `//${w.clazz}`;
-    if (w.resId) optimalXPath += `[@resource-id='${w.resId}']`;
-    if (w.text) optimalXPath += (w.resId ? `[contains(@text, '${w.text}')]` : `[@text='${w.text}']`);
+    let xpathAttributes = `//${w.clazz}`;
+    if (w.resId && w.text) xpathAttributes += `[@resource-id='${w.resId}' and @text='${w.text}']`;
+    else if (w.resId) xpathAttributes += `[@resource-id='${w.resId}']`;
+    else if (w.desc) xpathAttributes += `[@content-desc='${w.desc}']`;
+    else if (w.text) xpathAttributes += `[@text='${w.text}']`;
+
+    const xpathRelative = w.resId ? `//*[@id='${w.resId}']//${w.clazz}` : `//android.widget.LinearLayout/${w.clazz}`;
+    const xpathCustom = w.text ? `//${w.clazz}[text()='${w.text}' or .='${w.text}']` : "";
+    const xpathPosition = `//${w.clazz}[1]`;
 
     const rsName = (w.resId ? w.resId.split("/").pop() : "element_healed") + ".rs";
     const rsXml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -199,15 +205,38 @@ function renderReconResult(result) {
    <name>${rsName.replace(".rs", "")}</name>
    <tag></tag>
    <elementGuidId>${generateGuid()}</elementGuidId>
-   <selectorMethod>BASIC</selectorMethod>
+   <selectorMethod>XPATH</selectorMethod>
    <useRalativeImagePath>false</useRalativeImagePath>
    <webElementProperties>
       <isSelected>true</isSelected>
       <matchCondition>equals</matchCondition>
-      <name>xpath</name>
+      <name>xpath:attributes</name>
       <type>Main</type>
-      <value>${optimalXPath}</value>
+      <value>${xpathAttributes}</value>
+      <webElementGuid>${generateGuid()}</webElementGuid>
    </webElementProperties>
+   <webElementProperties>
+      <isSelected>false</isSelected>
+      <matchCondition>equals</matchCondition>
+      <name>xpath:idRelative</name>
+      <type>Main</type>
+      <value>${xpathRelative}</value>
+      <webElementGuid>${generateGuid()}</webElementGuid>
+   </webElementProperties>
+   <webElementProperties>
+      <isSelected>false</isSelected>
+      <matchCondition>equals</matchCondition>
+      <name>xpath:position</name>
+      <type>Main</type>
+      <value>${xpathPosition}</value>
+      <webElementGuid>${generateGuid()}</webElementGuid>
+   </webElementProperties>
+   <selectorCollection>
+      <entry>
+         <key>XPATH</key>
+         <value>${xpathAttributes}</value>
+      </entry>
+   </selectorCollection>
 </WebElementEntity>`;
 
     contentBox.innerHTML = `
@@ -217,6 +246,7 @@ function renderReconResult(result) {
                     <div style="display:flex; align-items:center; gap:8px;">
                         <span class="text-xs text-muted font-mono">TARGET MATCHED:</span>
                         <span class="font-mono text-xs" style="padding: 2px 6px; border-radius: 4px; background: var(--cyan-subtle); color: var(--cyan); border: 1px solid var(--cyan-border);">Framework: ${escapeHtml(fw.name)}</span>
+                        <span class="badge" style="background:rgba(16,185,129,0.15); color:var(--emerald); border:1px solid rgba(16,185,129,0.3); font-size:0.72rem; padding:2px 6px;">KS 11.6+ Object XPaths Table Ready</span>
                     </div>
                     <h4 class="font-mono text-cyan" style="font-size: 1.1rem; margin-top: 4px;">&lt;${w.clazz}&gt;</h4>
                 </div>
@@ -234,14 +264,40 @@ function renderReconResult(result) {
                 <div class="prop-item"><span class="p-k">Bounds:</span> <code class="p-v">${escapeHtml(w.bounds || '(empty)')}</code></div>
             </div>
 
-            <div class="xpath-preview-box">
-                <span class="box-title">Synthesized Dynamic XPath</span>
-                <code class="font-mono" style="color: var(--cyan); word-break: break-all;">${escapeHtml(optimalXPath)}</code>
+            <!-- Katalon 11.6.0+ Object's XPaths Table Simulator -->
+            <div style="margin-top: 16px; background: var(--bg-card); border: 1px solid var(--card-border); border-radius: 8px; padding: 14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <span style="font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--cyan);">Katalon 11.6.0+ Object's XPaths Table</span>
+                    <span style="font-size:0.72rem; color:var(--text-muted);">Editable Locator Tiers</span>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:6px 10px; border-radius:4px;">
+                        <span class="font-mono text-xs" style="color:var(--text-muted); min-width:120px;">xpath:attributes</span>
+                        <code class="font-mono text-xs" style="color:var(--cyan); word-break:break-all; flex:1; margin:0 8px;">${escapeHtml(xpathAttributes)}</code>
+                        <span class="badge" style="font-size:0.68rem; background:rgba(0,229,255,0.15); color:var(--cyan);">Primary</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:6px 10px; border-radius:4px;">
+                        <span class="font-mono text-xs" style="color:var(--text-muted); min-width:120px;">xpath:idRelative</span>
+                        <code class="font-mono text-xs" style="color:var(--emerald); word-break:break-all; flex:1; margin:0 8px;">${escapeHtml(xpathRelative)}</code>
+                        <span class="badge" style="font-size:0.68rem; background:rgba(16,185,129,0.15); color:var(--emerald);">Relative</span>
+                    </div>
+                    ${xpathCustom ? `
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:6px 10px; border-radius:4px;">
+                        <span class="font-mono text-xs" style="color:var(--text-muted); min-width:120px;">xpath:custom</span>
+                        <code class="font-mono text-xs" style="color:var(--violet); word-break:break-all; flex:1; margin:0 8px;">${escapeHtml(xpathCustom)}</code>
+                        <span class="badge" style="font-size:0.68rem; background:rgba(139,92,246,0.15); color:var(--violet);">Text Anchor</span>
+                    </div>` : ''}
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:6px 10px; border-radius:4px;">
+                        <span class="font-mono text-xs" style="color:var(--text-muted); min-width:120px;">xpath:position</span>
+                        <code class="font-mono text-xs" style="color:var(--text-secondary); word-break:break-all; flex:1; margin:0 8px;">${escapeHtml(xpathPosition)}</code>
+                        <span class="badge" style="font-size:0.68rem; background:rgba(255,255,255,0.1); color:var(--text-muted);">Hierarchy</span>
+                    </div>
+                </div>
             </div>
 
-            <div class="rs-xml-box">
+            <div class="rs-xml-box" style="margin-top:16px;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span class="box-title">Katalon Object Repository (.rs) XML</span>
+                    <span class="box-title">Generated Katalon .rs Object XML</span>
                     <button class="btn btn-secondary btn-sm" id="btn-copy-playground-rs" style="padding: 4px 8px; font-size: 0.76rem;">
                         <span class="btn-icon-wrap">${renderIcon("copy")}</span> Salin XML .rs
                     </button>

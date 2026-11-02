@@ -5,11 +5,11 @@
 ### Adaptive Locator Intelligence & Universal Self-Healing Engine
 *An autonomous, offline-first self-healing engine for resilient mobile & hybrid test automation.*
 
-[![Version](https://img.shields.io/badge/version-1.6.2-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
+[![Version](https://img.shields.io/badge/version-1.7.0-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-52%2F52%20passing-10B981?style=flat-square)](build.gradle)
+[![Tests](https://img.shields.io/badge/tests-54%2F54%20passing-10B981?style=flat-square)](build.gradle)
 [![Java](https://img.shields.io/badge/java-17%20%7C%2021%20%7C%2024-orange?style=flat-square&logo=openjdk)](build.gradle)
-[![Katalon](https://img.shields.io/badge/katalon-8.x%20%7C%209.x%20%7C%2010.x%20%7C%2011.x-00B0FF?style=flat-square)](https://katalon.com)
+[![Katalon](https://img.shields.io/badge/katalon-8.x%20%7C%209.x%20%7C%2010.x%20%7C%2011.x%20(11.7.0%2B%20Ready)-00B0FF?style=flat-square)](https://katalon.com)
 [![Appium](https://img.shields.io/badge/appium-2.x%20%7C%201.x-662d91?style=flat-square&logo=appium)](https://appium.io)
 
 [Releases](https://github.com/Qureon/Locara/releases) • [Architecture & Flow](docs/ARCHITECTURE_AND_FLOW.md) • [User Tutorial Guide](docs/USER_TUTORIAL_GUIDE.md) • [Mission Control Dashboard](dashboard/) • [MIT License](LICENSE)
@@ -33,9 +33,9 @@ Locara menerapkan prinsip **In-Flight Zero-Interruption**:
 3. **Zero Compile-Time Coupling (Ghost Mode)**: Integrasi berbasis dynamic reflection. Proyek tim **100% HIJAU (0 compile errors)** baik ketika JAR Locara ada maupun saat JAR tidak dipasang di komputer rekan kerja.
 4. **Universal 2D Spatial Alignment (v1.5.0)**: Menemukan target input atau dropdown berdasarkan kedekatan geometris sumbu X & Y (Left-to-Right & Top-to-Bottom) saat elemen kehilangan test-tag atau ID.
 5. **Universal Hybrid Mobile & WebView Engine (v1.6.0)**: Deteksi otomatis dan self-healing penuh pada embedded WebView HTML DOM (Cordova, Capacitor, Ionic, React Native WebViews) tanpa dependensi eksternal.
-6. **Universal Semantic Synonym Tensor (v1.6.0)**: Kamus sinonim dwibahasa (ID/EN) 100% offline (15 kluster universal) untuk penyesuaian otomatis saat elemen berubah kata (misal *Masuk* $\leftrightarrow$ *Login*, *Lanjut* $\leftrightarrow$ *Next*, *Cari* $\leftrightarrow$ *Search*).
-7. **Concurrency & Parallel Execution Hardening (v1.6.0)**: Dukungan eksekusi paralel multi-thread (Katalon 11.4+) dengan lock ledger thread-safe dan thread tracing.
-8. **Framework Keyword Hub (v1.6.0)**: Intersepsi cerdas untuk keyword baru Katalon 11.7.0 (`Mobile.assertElement*` dan `Mobile.isElement*`) melalui klasifikasi intensi aksi atomik.
+6. **Katalon 11.6.0+ Ranked Multi-XPath Synthesizer (v1.7.0)**: Menghasilkan struktur `.rs` XML dengan tabel *Object's XPaths* berlapis (`xpath:attributes`, `xpath:idRelative`, `xpath:position`, `xpath:custom`) yang kompatibel penuh dengan fitur edit locator di Katalon Studio 11.6.0+.
+7. **Katalon 11.2 - 11.7.0+ Element State Keywords Hub (v1.7.0)**: Klasifikasi dan penanganan otonom untuk 26 keyword baru `isElement*` (conditional branching non-fatal) dan `assertElement*` (strict assertion checkpoints).
+8. **Pause & Resume Concurrency Resilience (v1.7.0)**: Manajemen sesi aman untuk fitur *Pause/Resume Test Suite* Katalon 11.6.0 dengan ledger disk-flush atomik dan invalidasi context otomatis.
 9. **Enterprise Safety Guard**: Proteksi polaritas bahaya (*Danger Polarity Lockout*), auto-dismiss keyboard virtual (*The Golden Triad*), dan *Auto-Scroll Viewport Fallback* untuk tombol di bawah lipatan layar.
 10. **Zero Cloud PII Leakage**: 100% offline, nol transmisi data keluar mesin lokal. Aman untuk standar kepatuhan perbankan & enterprise.
 

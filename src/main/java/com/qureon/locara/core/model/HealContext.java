@@ -15,6 +15,8 @@ public class HealContext {
     private final String targetRsPath;
     private final String action;
     private final String value;
+    private final String intentionGroup;
+    private final String executionTags;
     private final java.io.File rawScreenshot;
     private final Map<String, String> attributes = new HashMap<>();
 
@@ -26,6 +28,8 @@ public class HealContext {
         this.targetRsPath = builder.targetRsPath != null ? builder.targetRsPath : "";
         this.action = builder.action != null ? builder.action : "TAP";
         this.value = builder.value != null ? builder.value : "";
+        this.intentionGroup = builder.intentionGroup != null ? builder.intentionGroup : "";
+        this.executionTags = builder.executionTags != null ? builder.executionTags : "";
         this.rawScreenshot = builder.rawScreenshot;
         this.attributes.putAll(builder.attributes);
     }
@@ -37,6 +41,11 @@ public class HealContext {
     public String getTargetRsPath() { return targetRsPath; }
     public String getAction() { return action; }
     public String getValue() { return value; }
+    public String getIntentionGroup() { return intentionGroup; }
+    public String getExecutionTags() { return executionTags; }
+    public com.qureon.locara.core.framework.KeywordIntentionClassifier.IntentionTier getIntentionTier() {
+        return com.qureon.locara.core.framework.KeywordIntentionClassifier.classify(action);
+    }
     public java.io.File getRawScreenshot() { return rawScreenshot; }
     public Map<String, String> getAttributes() { return attributes; }
 
@@ -52,11 +61,23 @@ public class HealContext {
         private String targetRsPath;
         private String action;
         private String value;
+        private String intentionGroup;
+        private String executionTags;
         private java.io.File rawScreenshot;
         private final Map<String, String> attributes = new HashMap<>();
 
         public Builder rawScreenshot(java.io.File file) {
             this.rawScreenshot = file;
+            return this;
+        }
+
+        public Builder intentionGroup(String group) {
+            this.intentionGroup = group;
+            return this;
+        }
+
+        public Builder executionTags(String tags) {
+            this.executionTags = tags;
             return this;
         }
 

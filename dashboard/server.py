@@ -40,9 +40,9 @@ if DASHBOARD_DIR.parent.parent.exists():
 AUDIT_CANDIDATES = [p for p in AUDIT_CANDIDATES if p is not None]
 
 REPORT_FILE = DASHBOARD_DIR.parent / "Include" / "evidence" / "healing_report.html"
-CONFIG_FILE = DASHBOARD_DIR.parent / "locara.properties" if (DASHBOARD_DIR.parent / "locara.properties").exists() else DASHBOARD_DIR.parent / "zero-healing.properties"
+CONFIG_FILE = DASHBOARD_DIR.parent / "locara.properties"
 
-class ZeroHealingHandler(http.server.SimpleHTTPRequestHandler):
+class LocaraHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(DASHBOARD_DIR), **kwargs)
 
@@ -80,6 +80,10 @@ class ZeroHealingHandler(http.server.SimpleHTTPRequestHandler):
             self.handle_post_config()
         elif self.path == "/api/extract-fields":
             self.handle_extract_fields()
+        elif self.path == "/api/synthesize-xpath":
+            self.handle_synthesize_xpath()
+        elif self.path == "/api/classify-keyword":
+            self.handle_classify_keyword()
         else:
             self.send_response(404)
             self.end_headers()
@@ -90,7 +94,7 @@ class ZeroHealingHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
         payload = {
             "status": "ONLINE",
-            "engine": "Locara Core v1.6.2 · Powered by Qureon",
+            "engine": "Locara Core v1.7.0 · Powered by Qureon (Katalon 11.7.0+ Ready)",
             "target": "Qureon Autonomous QA Platform",
             "timestamp": datetime.now().isoformat(),
             "server_port": PORT
@@ -247,9 +251,84 @@ class ZeroHealingHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
 
+    def handle_synthesize_xpath(self):
+        length = int(self.headers.get("Content-Length", 0))
+        post_data = self.rfile.read(length).decode("utf-8")
+        try:
+            body = json.loads(post_data) if post_data else {}
+            tag = body.get("tag", "*")
+            text = body.get("text", "")
+            res_id = body.get("resourceId", body.get("id", ""))
+            desc = body.get("contentDesc", body.get("desc", ""))
+            cls = body.get("className", body.get("class", ""))
+
+            ranked = {}
+            if res_id and text:
+                ranked["xpath:attributes"] = f"//{tag}[@resource-id='{res_id}' and @text='{text}']"
+            elif res_id:
+                ranked["xpath:attributes"] = f"//{tag}[@resource-id='{res_id}']"
+            elif desc:
+                ranked["xpath:attributes"] = f"//{tag}[@content-desc='{desc}']"
+            elif text:
+                ranked["xpath:attributes"] = f"//{tag}[@text='{text}']"
+            else:
+                ranked["xpath:attributes"] = f"//{tag}"
+
+            if res_id:
+                ranked["xpath:idRelative"] = f"//*[@id='{res_id}']"
+            if text:
+                ranked["xpath:custom"] = f"//{tag}[text()='{text}' or .='{text}']"
+            if cls:
+                ranked["xpath:position"] = f"//*[@class='{cls}']"
+
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "success": True,
+                "engine": "Locara Katalon 11.6+ Object XPaths Synthesizer",
+                "rankedXPaths": ranked
+            }).encode("utf-8"))
+        except Exception as e:
+            self.send_response(500)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+
+    def handle_classify_keyword(self):
+        length = int(self.headers.get("Content-Length", 0))
+        post_data = self.rfile.read(length).decode("utf-8")
+        try:
+            body = json.loads(post_data) if post_data else {}
+            kw = (body.get("keyword") or "").strip().lower()
+            if kw.startswith("webui.") or kw.startswith("mobile.") or kw.startswith("windows."):
+                kw = kw.split(".", 1)[1]
+
+            tier = "INTERACTION"
+            if (kw.startswith("iselement") or kw.startswith("is_element") or
+                    "findfirst" in kw or "probe" in kw or "optional" in kw):
+                tier = "CONDITIONAL_PROBE"
+            elif kw.startswith("verify") or kw.startswith("assert") or "checkpoint" in kw:
+                tier = "CHECKPOINT"
+
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "success": True,
+                "keyword": body.get("keyword"),
+                "tier": tier,
+                "note": "Aligns with Katalon 11.2 - 11.7+ Element State Specification"
+            }).encode("utf-8"))
+        except Exception as e:
+            self.send_response(500)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+
 def run():
     socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("127.0.0.1", PORT), ZeroHealingHandler) as httpd:
+    with socketserver.TCPServer(("127.0.0.1", PORT), LocaraHandler) as httpd:
         target_name = os.environ.get("LOCARA_TARGET_NAME", "Active Automation Suite")
         print(f"\n========================================================")
         print(f"🛡️  Locara Mission Control Dashboard · Powered by Qureon")

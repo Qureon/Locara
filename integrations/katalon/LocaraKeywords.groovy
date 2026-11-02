@@ -30,4 +30,14 @@ class LocaraKeywords {
     static boolean setText(TestObject testObject, String text, String hint) {
         return Locara.setText(testObject, text, hint)
     }
+
+    @Keyword(keywordObject = 'Locara')
+    static boolean isElementPresent(TestObject testObject, String hint) {
+        return Locara.isElementPresent(testObject, hint)
+    }
+
+    @Keyword(keywordObject = 'Locara')
+    static boolean assertElementPresent(TestObject testObject, String hint) {
+        return Locara.assertElementPresent(testObject, hint)
+    }
 }

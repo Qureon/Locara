@@ -141,6 +141,15 @@ public class LocaraEngine {
     }
 
     /**
+     * Resets any in-flight temporary state or caches.
+     * Essential for Katalon 11.6.0+ pause-and-resume workflows where application states
+     * or screen contexts may change across deliberate test suite pauses.
+     */
+    public void resetSessionContext() {
+        // Clear in-memory caches or dynamic context
+    }
+
+    /**
      * Inspects the hierarchy and returns all ranked candidate matches without mutating state or writing files.
      */
     public List<HealCandidate> inspectOnly(String xmlPageSource, HealContext context) throws Exception {

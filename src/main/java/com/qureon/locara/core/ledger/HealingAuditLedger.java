@@ -58,15 +58,21 @@ public class HealingAuditLedger {
         String eventId = java.util.UUID.randomUUID().toString().substring(0, 8);
 
         String threadName = Thread.currentThread().getName();
+        String intentionTier = context.getIntentionTier() != null ? context.getIntentionTier().name() : "INTERACTION";
+        String intentionGroup = context.getIntentionGroup() != null ? context.getIntentionGroup() : "";
+        String tags = context.getExecutionTags() != null ? context.getExecutionTags() : "";
 
         // Append to JSON Lines with Locale.US and full schema keys for dashboard
         String jsonEntry = String.format(
                 java.util.Locale.US,
-                "{\"id\":\"%s\",\"timestamp\":\"%s\",\"screen\":\"%s\",\"action\":\"%s\",\"hint\":\"%s\",\"targetHint\":\"%s\",\"origLocator\":\"%s\",\"status\":\"%s\",\"confidence\":%.4f,\"framework\":\"%s\",\"healedXPath\":\"%s\",\"healedLocator\":\"%s\",\"rsFile\":\"%s\",\"generatedRs\":\"%s\",\"reason\":\"%s\",\"thread\":\"%s\"}\n",
+                "{\"id\":\"%s\",\"timestamp\":\"%s\",\"screen\":\"%s\",\"action\":\"%s\",\"intentionTier\":\"%s\",\"intentionGroup\":\"%s\",\"tags\":\"%s\",\"hint\":\"%s\",\"targetHint\":\"%s\",\"origLocator\":\"%s\",\"status\":\"%s\",\"confidence\":%.4f,\"framework\":\"%s\",\"healedXPath\":\"%s\",\"healedLocator\":\"%s\",\"rsFile\":\"%s\",\"generatedRs\":\"%s\",\"reason\":\"%s\",\"thread\":\"%s\"}\n",
                 eventId,
                 now,
                 escapeJson(context.getScreenName()),
                 escapeJson(action),
+                escapeJson(intentionTier),
+                escapeJson(intentionGroup),
+                escapeJson(tags),
                 escapeJson(context.getTargetHint()),
                 escapeJson(context.getTargetHint()),
                 escapeJson(context.getOriginalLocator()),

@@ -177,6 +177,13 @@ public class KatalonRsSynthesizer {
         String reason = candidate != null ? candidate.getHealReason() : "Self-Healing";
         double confidence = candidate != null ? candidate.getConfidenceScore() : 1.0;
         String xpath = candidate != null ? candidate.getSuggestedXPath() : "";
+        UIElementNode node = candidate != null ? candidate.getNode() : null;
+
+        DynamicXPathGenerator xpathGen = new DynamicXPathGenerator();
+        java.util.LinkedHashMap<String, String> ranked = xpathGen.generateRankedXPaths(node, null, context != null ? context.getAction() : null);
+        if (ranked.isEmpty() && !xpath.isEmpty()) {
+            ranked.put("xpath:attributes", xpath);
+        }
 
         StringBuilder sb = new StringBuilder();
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
@@ -191,11 +198,30 @@ public class KatalonRsSynthesizer {
         sb.append("   <selectorMethod>XPATH</selectorMethod>\n");
         sb.append("   <smartLocatorEnabled>false</smartLocatorEnabled>\n");
         sb.append("   <useRalativeImagePath>false</useRalativeImagePath>\n");
+
+        // Katalon 11.6.0+ Object's XPaths Table Entries (<webElementProperties>)
+        for (Map.Entry<String, String> entry : ranked.entrySet()) {
+            sb.append("   <webElementProperties>\n");
+            sb.append("      <isSelected>").append(entry.getKey().equals("xpath:attributes")).append("</isSelected>\n");
+            sb.append("      <matchCondition>equals</matchCondition>\n");
+            sb.append("      <name>").append(sanitizeXml(entry.getKey())).append("</name>\n");
+            sb.append("      <type>Main</type>\n");
+            sb.append("      <value>").append(sanitizeXml(entry.getValue())).append("</value>\n");
+            sb.append("      <webElementGuid>").append(UUID.randomUUID().toString()).append("</webElementGuid>\n");
+            sb.append("   </webElementProperties>\n");
+        }
+
         sb.append("   <selectorCollection>\n");
         sb.append("      <entry>\n");
         sb.append("         <key>XPATH</key>\n");
-        sb.append("         <value>").append(sanitizeXml(xpath)).append("</value>\n");
+        sb.append("         <value>").append(sanitizeXml(xpath.isEmpty() ? ranked.getOrDefault("xpath:attributes", "") : xpath)).append("</value>\n");
         sb.append("      </entry>\n");
+        if (node != null && !node.getAttribute("id").isEmpty()) {
+            sb.append("      <entry>\n");
+            sb.append("         <key>CSS</key>\n");
+            sb.append("         <value>#").append(sanitizeXml(node.getAttribute("id"))).append("</value>\n");
+            sb.append("      </entry>\n");
+        }
         sb.append("   </selectorCollection>\n");
         sb.append("</WebElementEntity>\n");
         return sb.toString();
