@@ -37,6 +37,11 @@ public class PageSourceParser {
             return flattenedNodes;
         }
 
+        // Automatic WebView HTML DOM detection:
+        if (com.qureon.locara.core.framework.WebViewContextDetector.isHtml(xmlSource)) {
+            return new HtmlDomParser().parse(xmlSource);
+        }
+
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         // Disallow external entity resolution for security and speed
         factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);

@@ -43,8 +43,12 @@ public class HeuristicMatcher {
         }
 
         for (UIElementNode node : nodes) {
-            // Filter 1: Must be displayed and have positive bounds
-            if (!node.isDisplayed() || node.getBounds().width <= 0 || node.getBounds().height <= 0) {
+            // Filter 1: Must be displayed. For native nodes with bounds, bounds must be positive.
+            if (!node.isDisplayed()) {
+                continue;
+            }
+            boolean isHtml = xpathGenerator.isHtmlNode(node);
+            if (!isHtml && (node.getBounds().width <= 0 || node.getBounds().height <= 0)) {
                 continue;
             }
 
@@ -168,21 +172,21 @@ public class HeuristicMatcher {
         if (expectedTag != null && !expectedTag.isEmpty() && (tag.contains(expectedTag.toLowerCase()) || className.contains(expectedTag.toLowerCase()))) {
             score = 1.0;
         } else if ("TAP".equalsIgnoreCase(action) || "CLICK".equalsIgnoreCase(action)) {
-            if (tag.contains("button") || className.contains("button")) {
+            if (tag.contains("button") || className.contains("button") || "a".equals(tag)) {
                 score = 1.0;
             } else if (tag.contains("imageview") || className.contains("imageview")) {
                 score = node.isClickable() ? 0.90 : 0.60;
-            } else if (tag.contains("textview") || className.contains("textview")) {
+            } else if (tag.contains("textview") || className.contains("textview") || "span".equals(tag) || "p".equals(tag)) {
                 // If TextView is clickable, 0.85. If not clickable but wrapped by a clickable container (React Native CButton / TouchableOpacity), 0.85.
                 boolean hasClickableParent = hasClickableAncestor(node);
                 score = (node.isClickable() || hasClickableParent) ? 0.85 : 0.60;
-            } else if (tag.contains("viewgroup") || className.contains("viewgroup") || tag.contains("view") || className.contains("view")) {
+            } else if (tag.contains("viewgroup") || className.contains("viewgroup") || tag.contains("view") || className.contains("view") || "div".equals(tag)) {
                 score = node.isClickable() ? 0.90 : 0.75;
             } else if (node.isClickable()) {
                 score = 0.80;
             }
         } else if ("SET_TEXT".equalsIgnoreCase(action) || "INPUT".equalsIgnoreCase(action) || "CLEAR_TEXT".equalsIgnoreCase(action)) {
-            if (tag.contains("edittext") || className.contains("edittext") || tag.contains("textfield")) {
+            if (tag.contains("edittext") || className.contains("edittext") || tag.contains("textfield") || "input".equals(tag) || "textarea".equals(tag)) {
                 score = 1.0;
             } else if (tag.contains("viewgroup") || className.contains("viewgroup")) {
                 score = 0.70;

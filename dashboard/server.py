@@ -25,13 +25,20 @@ CURRENT_CONFIG = {
 }
 DASHBOARD_DIR = Path(__file__).resolve().parent
 
-# File paths
+# Universal Audit Path Resolution (Environment Variable, Project Root, or Sibling Repositories)
 AUDIT_CANDIDATES = [
+    Path(os.environ.get("LOCARA_AUDIT_LOG")) if os.environ.get("LOCARA_AUDIT_LOG") else None,
     DASHBOARD_DIR.parent / "Include" / "evidence" / "locara_audit.json",
     DASHBOARD_DIR.parent / "Include" / "evidence" / "healing_audit.json",
-    DASHBOARD_DIR.parent.parent / "Revamp_M-Smile" / "Include" / "evidence" / "locara_audit.json",
-    DASHBOARD_DIR.parent.parent / "Revamp_M-Smile" / "Include" / "evidence" / "healing_audit.json"
 ]
+if DASHBOARD_DIR.parent.parent.exists():
+    for sibling in DASHBOARD_DIR.parent.parent.iterdir():
+        if sibling.is_dir() and sibling != DASHBOARD_DIR.parent:
+            cand = sibling / "Include" / "evidence" / "locara_audit.json"
+            if cand.exists():
+                AUDIT_CANDIDATES.append(cand)
+AUDIT_CANDIDATES = [p for p in AUDIT_CANDIDATES if p is not None]
+
 REPORT_FILE = DASHBOARD_DIR.parent / "Include" / "evidence" / "healing_report.html"
 CONFIG_FILE = DASHBOARD_DIR.parent / "locara.properties" if (DASHBOARD_DIR.parent / "locara.properties").exists() else DASHBOARD_DIR.parent / "zero-healing.properties"
 

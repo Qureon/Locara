@@ -5,11 +5,11 @@
 ### Adaptive Locator Intelligence
 *An intelligent self-healing engine for resilient test automation.*
 
-[![Version](https://img.shields.io/badge/version-1.5.0-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara)
+[![Version](https://img.shields.io/badge/version-1.6.0-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-36%2F36%20passing-10B981?style=flat-square)](build.gradle)
+[![Tests](https://img.shields.io/badge/tests-52%2F52%20passing-10B981?style=flat-square)](build.gradle)
 [![Java](https://img.shields.io/badge/java-17%20%7C%2021%20%7C%2024-orange?style=flat-square&logo=openjdk)](build.gradle)
-[![Katalon](https://img.shields.io/badge/katalon-8.x%20%7C%209.x%20%7C%2010.x-00B0FF?style=flat-square)](https://katalon.com)
+[![Katalon](https://img.shields.io/badge/katalon-8.x%20%7C%209.x%20%7C%2010.x%20%7C%2011.x-00B0FF?style=flat-square)](https://katalon.com)
 [![Appium](https://img.shields.io/badge/appium-2.x%20%7C%201.x-662d91?style=flat-square&logo=appium)](https://appium.io)
 
 [Releases](https://github.com/Qureon/Locara/releases) • [Documentation](docs/) • [Mission Control Dashboard](dashboard/) • [MIT License](LICENSE)
@@ -30,13 +30,17 @@ Fitur bawaan self-healing pada tool konvensional biasanya hanya mampu mencocokka
 Locara menerapkan prinsip **In-Flight Zero-Interruption**:
 1. **In-Flight Dynamic Hotfix (<50ms)**: Saat locator target gagal ditemukan, Locara menganalisis dump XML layar aktif (`driver.getPageSource()`), menghitung vektor kemiripan heuristik (*Jaro-Winkler, Levenshtein, Resource-ID, Text, Content-Desc*), menyuntikkan XPath baru ke memori, dan melanjutkan eksekusi tanpa tes berstatus *FAIL*.
 2. **Zero-Code Change via Groovy Metaprogramming**: Pengujian tetap menulis kode standar Katalon `Mobile.tap(...)` dan `Mobile.setText(...)`. Seluruh interceptor bekerja transparan di latar belakang.
-3. **Instant .rs Synthesizer**: Membuat dan memperbarui berkas XML `.rs` resmi Katalon Studio (`WebElementEntity`) langsung di storage lokal, lengkap dengan backup otomatis.
+3. **Instant .rs Synthesizer**: Membuat dan memperbarui berkas XML `.rs` resmi Katalon Studio (`MobileElementEntity` & `WebElementEntity`) langsung di storage lokal, lengkap dengan backup otomatis.
 4. **Enterprise Safety Guard**: Proteksi polaritas bahaya (*Danger Polarity Lockout*), auto-dismiss keyboard virtual (*The Golden Triad*), dan *Auto-Scroll Viewport Fallback* untuk tombol di bawah lipatan layar.
 5. **Visual Bounding Box Evidence**: Menghasilkan screenshot UAT bergaris tepi merah dengan badge skor akurasi untuk kelengkapan audit compliance.
 6. **100% Backward Compatibility**: Sepenuhnya kompatibel dengan proyek yang sebelumnya menggunakan namespace `com.zerohealing.*`.
 7. **Universal 2D Spatial Alignment (v1.5.0)**: Menemukan target input atau dropdown berdasarkan kedekatan geometris sumbu X & Y (Left-to-Right & Top-to-Bottom) saat elemen kehilangan test-tag atau ID.
 8. **Universal Field Relationship Extraction (v1.5.0)**: Membedah form transaksi dan struk belanja menjadi pasangan terstruktur `Key -> Value` secara otomatis.
 9. **Autonomous Overlay & Permission Airbag (v1.5.0)**: Menetralisir dialog izin sistem OS (`permissioncontroller`) dan modal banner tak terduga secara instan tanpa menghentikan eksekusi test suite.
+10. **Universal Hybrid Mobile & WebView Engine (v1.6.0)**: Deteksi otomatis dan self-healing penuh pada embedded WebView HTML DOM (Cordova, Capacitor, Ionic, React Native WebViews) tanpa dependensi eksternal.
+11. **Concurrency & Parallel Execution Hardening (v1.6.0)**: Dukungan eksekusi paralel multi-thread (Katalon 11.4+) dengan lock ledger thread-safe dan thread tracing.
+12. **Universal Semantic Synonym Tensor (v1.6.0)**: Kamus sinonim dwibahasa (ID/EN) 100% offline, zero-network untuk penyesuaian otomatis saat elemen berubah kata (misal *Masuk* $\leftrightarrow$ *Login*, *Lanjut* $\leftrightarrow$ *Next*).
+13. **Framework Keyword Hub (v1.6.0)**: Intersepsi cerdas untuk keyword baru Katalon 11.7.0 (`Mobile.assertElement*` dan `Mobile.isElement*`) melalui klasifikasi intensi aksi atomik.
 
 ---
 

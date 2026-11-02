@@ -5,7 +5,7 @@ package com.qureon.locara.core.framework;
  */
 public enum AppFramework {
     UNIVERSAL("Universal App-Agnostic (Umum)", "Universal"),
-    REACT_NATIVE("React Native (Revamp M-Smile)", "RN"),
+    REACT_NATIVE("React Native (Hermes / Fabric)", "RN"),
     KMP_COMPOSE("Kotlin Multiplatform / Compose (KMP)", "KMP"),
     JETPACK_COMPOSE("Jetpack Compose (Modern Native Kotlin)", "Compose"),
     NATIVE_ANDROID("Native Android (Classic Kotlin / Java XML)", "Android XML"),

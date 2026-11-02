@@ -39,9 +39,10 @@ public class FrameworkDetector {
             return new FrameworkFingerprint(AppFramework.JETPACK_COMPOSE, 0.95, "Jetpack Compose ComposeView node signature identified", 0.0);
         }
 
-        // 4. Hybrid / WebView (Cordova, Capacitor, Ionic)
-        if (xml.contains("android.webkit.WebView") || xml.contains("org.chromium.content.browser")) {
-            return new FrameworkFingerprint(AppFramework.WEBVIEW_HYBRID, 0.95, "Android WebView / Chromium container detected", 0.0);
+        // 4. Hybrid / WebView (Cordova, Capacitor, Ionic, React Native WebViews, or raw HTML DOM)
+        if (WebViewContextDetector.isHtml(xml) || xml.contains("android.webkit.WebView") || xml.contains("org.chromium.content.browser") ||
+                (nodes != null && nodes.stream().anyMatch(n -> "html".equalsIgnoreCase(n.getTag()) || "body".equalsIgnoreCase(n.getTag())))) {
+            return new FrameworkFingerprint(AppFramework.WEBVIEW_HYBRID, 0.98, "Hybrid WebView / Chromium DOM container detected", 0.0);
         }
 
         // 5. React Native Detection
