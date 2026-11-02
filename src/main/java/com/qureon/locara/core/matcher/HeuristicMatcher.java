@@ -133,11 +133,27 @@ public class HeuristicMatcher {
             }
 
             // Calculate Weighted Total Score
-            double totalScore = (textScore * wText) +
-                    (idScore * wId) +
-                    (descScore * wDesc) +
-                    (classScore * wClass) +
-                    (proximityScore * wProx);
+            double totalSemanticWeight = wText + wId + wDesc;
+            double maxSemantic = Math.max(textScore, Math.max(idScore, descScore));
+            double totalScore;
+
+            if (maxSemantic >= 0.80 && totalSemanticWeight > 0.0) {
+                // Dominant Semantic Anchor: When a primary semantic vector exhibits extraordinary match
+                // (e.g. 100% exact visible text match or exact aria-label), prevent unmatching technical IDs,
+                // foreign language slugs, or hash tokens from dragging the candidate below confidence threshold.
+                double otherSemanticSum = (textScore + idScore + descScore) - maxSemantic;
+                double blendedSemantic = (maxSemantic * 0.85) + ((otherSemanticSum / 2.0) * 0.15);
+                totalScore = (blendedSemantic * totalSemanticWeight) +
+                        (classScore * wClass) +
+                        (proximityScore * wProx);
+            } else {
+                // Standard multi-vector blending when no single vector is dominant
+                totalScore = (textScore * wText) +
+                        (idScore * wId) +
+                        (descScore * wDesc) +
+                        (classScore * wClass) +
+                        (proximityScore * wProx);
+            }
 
             // Normalized Cap
             totalScore = Math.min(1.0, Math.max(0.0, totalScore));
@@ -185,13 +201,13 @@ public class HeuristicMatcher {
             } else if (node.isClickable()) {
                 score = 0.80;
             }
-        } else if ("SET_TEXT".equalsIgnoreCase(action) || "INPUT".equalsIgnoreCase(action) || "CLEAR_TEXT".equalsIgnoreCase(action)) {
+        } else if ("SET_TEXT".equalsIgnoreCase(action) || "INPUT".equalsIgnoreCase(action) || "CLEAR_TEXT".equalsIgnoreCase(action) || "FILL".equalsIgnoreCase(action)) {
             if (tag.contains("edittext") || className.contains("edittext") || tag.contains("textfield") || "input".equals(tag) || "textarea".equals(tag)) {
                 score = 1.0;
             } else if (tag.contains("viewgroup") || className.contains("viewgroup")) {
                 score = 0.70;
             }
-        } else if ("GET_TEXT".equalsIgnoreCase(action) || "READ".equalsIgnoreCase(action)) {
+        } else if ("GET_TEXT".equalsIgnoreCase(action) || "READ".equalsIgnoreCase(action) || "VISIBLE".equalsIgnoreCase(action) || "PRESENT".equalsIgnoreCase(action) || "LOCATOR".equalsIgnoreCase(action)) {
             if (tag.contains("textview") || className.contains("textview")) {
                 score = 1.0;
             } else if (tag.contains("edittext") || className.contains("edittext")) {

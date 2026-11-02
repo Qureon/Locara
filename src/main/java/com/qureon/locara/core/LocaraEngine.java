@@ -90,6 +90,9 @@ public class LocaraEngine {
         } else if (target == com.qureon.locara.core.model.AppTarget.UMUM) {
             fingerprint = new com.qureon.locara.core.framework.FrameworkFingerprint(
                     com.qureon.locara.core.framework.AppFramework.UNIVERSAL, 1.0, "Enforced Profile: Umum (Universal App-Agnostic)", 0.0);
+        } else if (target == com.qureon.locara.core.model.AppTarget.WEB) {
+            fingerprint = new com.qureon.locara.core.framework.FrameworkFingerprint(
+                    com.qureon.locara.core.framework.AppFramework.PLAYWRIGHT_WEB, 1.0, "Enforced Profile: Playwright Modern Web (HTML5/ARIA)", 0.0);
         } else {
             fingerprint = frameworkDetector.detect(nodes, xmlPageSource);
         }

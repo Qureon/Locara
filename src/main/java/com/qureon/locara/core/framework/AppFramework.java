@@ -11,6 +11,7 @@ public enum AppFramework {
     NATIVE_ANDROID("Native Android (Classic Kotlin / Java XML)", "Android XML"),
     FLUTTER("Flutter (Dart Canvas)", "Flutter"),
     WEBVIEW_HYBRID("Hybrid WebView (Cordova / Capacitor / Ionic)", "WebView"),
+    PLAYWRIGHT_WEB("Playwright Modern Web (HTML5 / WAI-ARIA)", "Playwright"),
     IOS_XCUITEST("iOS Native (Swift / SwiftUI / UIKit)", "iOS"),
     UNKNOWN("Generic Mobile Hierarchy", "Generic");
 

@@ -1,0 +1,33 @@
+{
+  "name": "@qureon/playwright-locara",
+  "version": "1.7.3",
+  "description": "Locara by Qureon: Autonomous Self-Healing & Semantic Recovery Engine for Playwright Test, MCP, and Azure Playwright Testing",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "playwright test",
+    "lint": "eslint src --ext .ts"
+  },
+  "keywords": [
+    "playwright",
+    "self-healing",
+    "locara",
+    "qureon",
+    "automation",
+    "testing",
+    "mcp",
+    "azure-playwright-testing",
+    "accessibility"
+  ],
+  "author": "Qureon Open Source",
+  "license": "Apache-2.0",
+  "peerDependencies": {
+    "@playwright/test": ">=1.40.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0"
+  }
+}

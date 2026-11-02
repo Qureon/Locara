@@ -11,7 +11,8 @@ public enum AppTarget {
     AUTO("Adaptive Auto-Detection", "AUTO"),
     UMUM("Universal App-Agnostic (Umum)", "UMUM"),
     REVAMP("React Native (Revamp M-Smile)", "REVAMP"),
-    KMP("Kotlin Multiplatform (KMP Compose)", "KMP");
+    KMP("Kotlin Multiplatform (KMP Compose)", "KMP"),
+    WEB("Playwright Modern Web (HTML5 / SPA / ARIA)", "WEB");
 
     private final String description;
     private final String tag;
@@ -32,6 +33,7 @@ public enum AppTarget {
     public static AppTarget fromString(String val) {
         if (val == null) return AUTO;
         String s = val.trim().toUpperCase();
+        if (s.contains("PLAYWRIGHT") || s.contains("WEB")) return WEB;
         if (s.contains("REVAMP") || s.contains("REACT")) return REVAMP;
         if (s.contains("KMP") || s.contains("COMPOSE")) return KMP;
         if (s.contains("UMUM") || s.contains("UNIVERSAL") || s.contains("GENERIC")) return UMUM;

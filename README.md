@@ -5,12 +5,13 @@
 ### Adaptive Locator Intelligence & Universal Self-Healing Engine
 *An autonomous, offline-first self-healing engine for resilient mobile & hybrid test automation.*
 
-[![Version](https://img.shields.io/badge/version-1.7.2-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
+[![Version](https://img.shields.io/badge/version-1.7.3-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-54%2F54%20passing-10B981?style=flat-square)](build.gradle)
+[![Tests](https://img.shields.io/badge/tests-58%2F58%20passing-10B981?style=flat-square)](build.gradle)
 [![Java](https://img.shields.io/badge/java-17%20%7C%2021%20%7C%2024-orange?style=flat-square&logo=openjdk)](build.gradle)
 [![Katalon](https://img.shields.io/badge/katalon-8.x%20%7C%209.x%20%7C%2010.x%20%7C%2011.x%20(11.7.0%2B%20Ready)-00B0FF?style=flat-square)](https://katalon.com)
 [![Appium](https://img.shields.io/badge/appium-2.x%20%7C%201.x-662d91?style=flat-square&logo=appium)](https://appium.io)
+[![Playwright](https://img.shields.io/badge/playwright-v1.40%2B%20%7C%20MCP%20%7C%20Azure-2EAD33?style=flat-square&logo=playwright)](integrations/playwright/)
 
 [Releases](https://github.com/Qureon/Locara/releases) • [Architecture & Flow](docs/ARCHITECTURE_AND_FLOW.md) • [User Tutorial Guide](docs/USER_TUTORIAL_GUIDE.md) • [Mission Control Dashboard](dashboard/) • [MIT License](LICENSE)
 
@@ -168,15 +169,54 @@ healedElement.click();
 
 ---
 
-### Mode 4: Standalone CLI Quick-Recon
+### Mode 4: Standalone Playwright Web (TypeScript & Java / MCP / Azure)
+Tersedia integrasi multi-bahasa untuk ekosistem modern Microsoft Playwright Web:
+
+#### A. Modern TypeScript / JavaScript (`@playwright/test`)
+```typescript
+import { test, expect } from '@qureon/playwright-locara';
+
+test('Web Checkout with Auto-Healing', async ({ page, locara }) => {
+  await page.goto('https://checkout.bankmega.com');
+
+  // Klik tombol bermutasi dengan pemulihan semantik instan
+  await locara.click('#btn-broken-old-checkout', 'Bayar Sekarang');
+
+  // Isi form input kredensial
+  await locara.fill('input#user_input', 'mega_user_01', 'Masukkan User ID');
+
+  // Self-healing locator
+  const badge = await locara.locator('.status-badge', 'Konfirmasi Pembayaran');
+  await expect(badge).toBeVisible();
+});
+```
+
+#### B. Java Playwright (`com.microsoft.playwright.Page`)
+```java
+import com.microsoft.playwright.Page;
+import com.qureon.locara.playwright.PlaywrightLocara;
+
+// 1. Click dengan auto-healing WAI-ARIA
+PlaywrightLocara.click(page, "#btn-broken-id", "Bayar Sekarang");
+
+// 2. Fill input text dengan auto-healing
+PlaywrightLocara.fill(page, "input.user", "mega_user_01", "Masukkan User ID");
+
+// 3. Healed Locator
+Locator healed = (Locator) PlaywrightLocara.locator(page, "#broken-selector", "Bayar Sekarang");
+```
+
+---
+
+### Mode 5: Standalone CLI Quick-Recon
 Jalankan evaluasi heuristik dan inspeksi langsung dari terminal:
 
 ```bash
 # 1. Evaluasi & generate file .rs dari berkas XML dump
-java -jar locara-1.6.0.jar --xml dump.xml --hint "Lanjut Transfer" --out "Object Repository/Transfer/btn_Lanjut.rs"
+java -jar locara-1.7.0.jar --xml dump.xml --hint "Lanjut Transfer" --out "Object Repository/Transfer/btn_Lanjut.rs"
 
-# 2. Inspeksi seluruh elemen interaktif dalam XML
-java -jar locara-1.6.0.jar --xml dump.xml --inspect
+# 2. Inspeksi seluruh elemen interaktif dalam XML / HTML
+java -jar locara-1.7.0.jar --xml dump.xml --inspect
 ```
 
 ---

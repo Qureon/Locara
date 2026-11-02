@@ -44,6 +44,11 @@ public class FrameworkTuningProfile {
                 // Jetpack Compose: Text and semantics contentDescription are primary
                 return new FrameworkTuningProfile(AppFramework.JETPACK_COMPOSE, 0.35, 0.15, 0.35, 0.05, 0.10);
 
+            case PLAYWRIGHT_WEB:
+            case WEBVIEW_HYBRID:
+                // Modern Web / Playwright: WAI-ARIA labels, data-testid, and innerText dominant
+                return new FrameworkTuningProfile(AppFramework.PLAYWRIGHT_WEB, 0.30, 0.25, 0.30, 0.10, 0.05);
+
             case UNIVERSAL:
             case NATIVE_ANDROID:
             default:
