@@ -107,6 +107,7 @@ public final class StringSimilarity {
         double jw = jaroWinkler(candidate, target);
         double lev = levenshteinRatio(candidate, target);
         double tok = tokenOverlap(candidate, target);
+        double syn = UniversalSemanticDictionary.calculateSemanticAffinity(candidate, target);
 
         // Contains bonus: If target text is directly contained in candidate or vice versa (min 3 chars)
         String cNorm = normalize(candidate);
@@ -119,7 +120,10 @@ public final class StringSimilarity {
             }
         }
 
-        double raw = (0.50 * jw) + (0.25 * lev) + (0.25 * tok) + containsBonus;
+        double raw = (0.45 * jw) + (0.25 * lev) + (0.15 * tok) + (0.15 * syn) + containsBonus;
+        if (syn >= 0.99) {
+            raw = Math.max(raw, 0.88);
+        }
         return Math.min(1.0, Math.max(0.0, raw));
     }
 
@@ -137,19 +141,25 @@ public final class StringSimilarity {
                     continue;
                 }
                 set.add(norm);
-                // Banking compound word expansion
+                // General mobile compound word expansion
                 if (norm.equals("topup")) {
                     set.add("top");
                     set.add("up");
                 } else if (norm.equals("estatement")) {
                     set.add("e");
                     set.add("statement");
-                } else if (norm.equals("msmile")) {
+                } else if (norm.equals("ewallet")) {
+                    set.add("e");
+                    set.add("wallet");
+                } else if (norm.equals("mbanking")) {
                     set.add("m");
-                    set.add("smile");
-                } else if (norm.equals("mmoney")) {
-                    set.add("m");
-                    set.add("money");
+                    set.add("banking");
+                } else if (norm.equals("signin")) {
+                    set.add("sign");
+                    set.add("in");
+                } else if (norm.equals("signup")) {
+                    set.add("sign");
+                    set.add("up");
                 }
             }
         }

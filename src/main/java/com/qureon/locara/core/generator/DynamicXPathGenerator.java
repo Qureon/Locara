@@ -22,6 +22,22 @@ public class DynamicXPathGenerator {
      * Generates the most deterministic and minimal XPath for the given candidate node,
      * taking into account the intended UI action (e.g., TAP vs GET_TEXT).
      */
+    private static final java.util.Set<String> HTML_TAGS = new java.util.HashSet<>(java.util.Arrays.asList(
+            "html", "body", "div", "span", "p", "a", "button", "input", "select", "option",
+            "textarea", "form", "table", "tr", "td", "th", "tbody", "thead", "ul", "ol", "li",
+            "h1", "h2", "h3", "h4", "h5", "h6", "label", "img", "nav", "header", "footer", "section", "article"
+    ));
+
+    public boolean isHtmlNode(UIElementNode node) {
+        if (node == null) return false;
+        String tag = node.getTag().toLowerCase();
+        return HTML_TAGS.contains(tag) || node.getAttributes().containsKey("data-testid") || node.getAttributes().containsKey("role");
+    }
+
+    /**
+     * Generates the most deterministic and minimal XPath for the given candidate node,
+     * taking into account the intended UI action (e.g., TAP vs GET_TEXT).
+     */
     public String generateOptimalXPath(UIElementNode targetNode, List<UIElementNode> allNodes, String action) {
         if (targetNode == null) return "";
 
@@ -30,6 +46,55 @@ public class DynamicXPathGenerator {
         String text = targetNode.getText();
         String contentDesc = targetNode.getContentDesc();
 
+        // --- HYBRID WEBVIEW / HTML DOM STRATEGIES ---
+        if (isHtmlNode(targetNode)) {
+            // HTML Strategy 1: data-testid (Universal Modern Standard: React, Angular, Vue, Ionic)
+            String testId = targetNode.getAttribute("data-testid");
+            if (!testId.isEmpty()) {
+                String xpath = String.format("//%s[@data-testid='%s']", tag, testId);
+                if (isUnique(xpath, targetNode, allNodes)) return xpath;
+                String wild = String.format("//*[@data-testid='%s']", testId);
+                if (isUnique(wild, targetNode, allNodes)) return wild;
+            }
+
+            // HTML Strategy 2: id attribute
+            String idAttr = targetNode.getAttribute("id");
+            if (!idAttr.isEmpty()) {
+                String xpath = String.format("//%s[@id='%s']", tag, idAttr);
+                if (isUnique(xpath, targetNode, allNodes)) return xpath;
+                String wild = String.format("//*[@id='%s']", idAttr);
+                if (isUnique(wild, targetNode, allNodes)) return wild;
+            }
+
+            // HTML Strategy 3: name attribute (Form inputs)
+            String nameAttr = targetNode.getAttribute("name");
+            if (!nameAttr.isEmpty()) {
+                String xpath = String.format("//%s[@name='%s']", tag, nameAttr);
+                if (isUnique(xpath, targetNode, allNodes)) return xpath;
+            }
+
+            // HTML Strategy 4: aria-label
+            String ariaLabel = targetNode.getAttribute("aria-label");
+            if (!ariaLabel.isEmpty()) {
+                String xpath = String.format("//%s[@aria-label=%s]", tag, toXPathLiteral(ariaLabel));
+                if (isUnique(xpath, targetNode, allNodes)) return xpath;
+            }
+
+            // HTML Strategy 5: Visible Text
+            if (!text.isEmpty()) {
+                String xpath = String.format("//%s[text()=%s]", tag, toXPathLiteral(text));
+                if (isUnique(xpath, targetNode, allNodes)) return xpath;
+                String normXpath = String.format("//%s[normalize-space(text())=%s]", tag, toXPathLiteral(text));
+                if (isUnique(normXpath, targetNode, allNodes)) return normXpath;
+            }
+
+            // Fallback: structural XPath from HTML DOM
+            if (!targetNode.getXpath().isEmpty()) {
+                return targetNode.getXpath();
+            }
+        }
+
+        // --- NATIVE MOBILE XML STRATEGIES (Android UIAutomator2 / iOS XCUITest) ---
         // Strategy 1: Resource-ID + Text combination (Ultra Robust)
         if (!resourceId.isEmpty() && !text.isEmpty()) {
             String xpath = String.format("//%s[@resource-id='%s' and @text=%s]", tag, resourceId, toXPathLiteral(text));
@@ -125,7 +190,26 @@ public class DynamicXPathGenerator {
     }
 
     private boolean matchesSimpleXPath(String xpath, UIElementNode node) {
-        // Quick evaluator for standard formats
+        // HTML DOM attribute evaluators
+        if (xpath.contains("@data-testid=")) {
+            String testId = extractAttr(xpath, "@data-testid=");
+            return node.getAttribute("data-testid").equals(testId);
+        } else if (xpath.contains("@id=")) {
+            String id = extractAttr(xpath, "@id=");
+            return node.getAttribute("id").equals(id) || node.getResourceId().equals(id);
+        } else if (xpath.contains("@name=")) {
+            String name = extractAttr(xpath, "@name=");
+            return node.getAttribute("name").equals(name);
+        } else if (xpath.contains("@aria-label=")) {
+            String aria = extractAttr(xpath, "@aria-label=");
+            return node.getAttribute("aria-label").equals(aria) || node.getContentDesc().equals(aria);
+        } else if (xpath.contains("text()=") || xpath.contains("normalize-space(text())=")) {
+            String text = xpath.contains("normalize-space(text())=") ?
+                    extractAttr(xpath, "normalize-space(text())=") : extractAttr(xpath, "text()=");
+            return node.getText().equals(text);
+        }
+
+        // Native Mobile attribute evaluators
         if (xpath.contains("@resource-id=") && xpath.contains("@text=")) {
             String resId = extractAttr(xpath, "@resource-id=");
             String text = extractAttr(xpath, "@text=");

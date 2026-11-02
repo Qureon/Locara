@@ -16,30 +16,32 @@ import java.time.format.DateTimeFormatter;
  */
 public class HealingAuditLedger {
     private static final DateTimeFormatter ISO_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+    private static final Object FILE_LOCK = new Object();
 
     public HealingAuditLedger() {}
 
-    public synchronized void recordEvent(HealContext context,
-                                         HealCandidate candidate,
-                                         File generatedRs,
-                                         String status,
-                                         HealConfig config) {
+    public void recordEvent(HealContext context,
+                            HealCandidate candidate,
+                            File generatedRs,
+                            String status,
+                            HealConfig config) {
         recordEvent(context, candidate, generatedRs, status, config, null);
     }
 
-    public synchronized void recordEvent(HealContext context,
-                                         HealCandidate candidate,
-                                         File generatedRs,
-                                         String status,
-                                         HealConfig config,
-                                         com.qureon.locara.core.framework.FrameworkFingerprint fingerprint) {
+    public void recordEvent(HealContext context,
+                            HealCandidate candidate,
+                            File generatedRs,
+                            String status,
+                            HealConfig config,
+                            com.qureon.locara.core.framework.FrameworkFingerprint fingerprint) {
         if (!config.isAuditLedgerEnabled()) return;
 
-        File projectDir = new File(config.getKatalonProjectPath());
-        File evidenceDir = new File(projectDir, config.getAuditLogFolder());
-        if (!evidenceDir.exists()) {
-            evidenceDir.mkdirs();
-        }
+        synchronized (FILE_LOCK) {
+            File projectDir = new File(config.getKatalonProjectPath());
+            File evidenceDir = new File(projectDir, config.getAuditLogFolder());
+            if (!evidenceDir.exists()) {
+                evidenceDir.mkdirs();
+            }
 
         File jsonLogFile = new File(evidenceDir, "locara_audit.json");
         File mdLogFile = new File(evidenceDir, "locara_audit.md");
@@ -55,10 +57,12 @@ public class HealingAuditLedger {
         String action = context.getAction() != null && !context.getAction().isEmpty() ? context.getAction() : "TAP";
         String eventId = java.util.UUID.randomUUID().toString().substring(0, 8);
 
+        String threadName = Thread.currentThread().getName();
+
         // Append to JSON Lines with Locale.US and full schema keys for dashboard
         String jsonEntry = String.format(
                 java.util.Locale.US,
-                "{\"id\":\"%s\",\"timestamp\":\"%s\",\"screen\":\"%s\",\"action\":\"%s\",\"hint\":\"%s\",\"targetHint\":\"%s\",\"origLocator\":\"%s\",\"status\":\"%s\",\"confidence\":%.4f,\"framework\":\"%s\",\"healedXPath\":\"%s\",\"healedLocator\":\"%s\",\"rsFile\":\"%s\",\"generatedRs\":\"%s\",\"reason\":\"%s\"}\n",
+                "{\"id\":\"%s\",\"timestamp\":\"%s\",\"screen\":\"%s\",\"action\":\"%s\",\"hint\":\"%s\",\"targetHint\":\"%s\",\"origLocator\":\"%s\",\"status\":\"%s\",\"confidence\":%.4f,\"framework\":\"%s\",\"healedXPath\":\"%s\",\"healedLocator\":\"%s\",\"rsFile\":\"%s\",\"generatedRs\":\"%s\",\"reason\":\"%s\",\"thread\":\"%s\"}\n",
                 eventId,
                 now,
                 escapeJson(context.getScreenName()),
@@ -73,7 +77,8 @@ public class HealingAuditLedger {
                 escapeJson(healedXPath),
                 escapeJson(rsPath),
                 escapeJson(rsPath),
-                escapeJson(reason)
+                escapeJson(reason),
+                escapeJson(threadName)
         );
 
         try {
@@ -130,6 +135,7 @@ public class HealingAuditLedger {
                     java.nio.file.StandardOpenOption.APPEND
             );
         } catch (IOException ignored) {}
+        }
     }
 
     private String escapeJson(String s) {
