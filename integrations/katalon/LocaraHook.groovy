@@ -1,4 +1,4 @@
-package com.qureon.locara.katalon
+package core
 
 import java.lang.reflect.Field
 import java.util.ArrayList
@@ -18,7 +18,6 @@ import com.kms.katalon.core.mobile.keyword.builtin.TapKeyword
 import com.kms.katalon.core.model.FailureHandling
 import com.kms.katalon.core.testobject.TestObject
 import com.kms.katalon.core.util.KeywordUtil
-import com.qureon.locara.katalon.Locara
 
 /**
  * 🚀 LocaraHook — Native Engine Level Interceptor for Katalon Studio.
@@ -31,7 +30,29 @@ class LocaraHook {
 
     private static volatile boolean installed = false
 
+    private static Class<?> cachedLocaraClass = null
+    private static volatile boolean checkedLocara = false
+
+    static Class<?> getLocaraClass() {
+        if (!checkedLocara) {
+            try {
+                cachedLocaraClass = Class.forName("com.qureon.locara.katalon.Locara")
+            } catch (Throwable ignored) {
+                cachedLocaraClass = null
+            }
+            checkedLocara = true
+        }
+        return cachedLocaraClass
+    }
+
+    static boolean isLocaraPresent() {
+        return getLocaraClass() != null
+    }
+
     static boolean isHealingEnabled() {
+        if (!isLocaraPresent()) {
+            return false
+        }
         // 1. Check GlobalVariable if defined in Katalon Execution Profile
         try {
             def gvClass = Class.forName("internal.GlobalVariable")
@@ -90,6 +111,7 @@ class LocaraHook {
 
     static synchronized void install() {
         if (installed) return
+        if (!isLocaraPresent()) return
 
         if (!isHealingEnabled()) {
             KeywordUtil.logInfo("[Locara by Qureon] Engine is DISABLED via configuration. Preserving 100% native Katalon execution.")
@@ -258,7 +280,8 @@ class LocaraTapKeyword implements IKeyword {
 
             IN_FLIGHT.set(true)
             try {
-                boolean healed = Locara.healAndTap(to, timeout, objId)
+                def locara = LocaraHook.getLocaraClass()
+                boolean healed = locara != null && (locara.healAndTap(to, timeout, objId) as boolean)
                 if (healed) {
                     KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight self-healing succeeded for '${objId}'!")
                     return null
@@ -310,7 +333,8 @@ class LocaraSetTextKeyword implements IKeyword {
 
             IN_FLIGHT.set(true)
             try {
-                boolean healed = Locara.healAndSetText(to, text, objId)
+                def locara = LocaraHook.getLocaraClass()
+                boolean healed = locara != null && (locara.healAndSetText(to, text, objId) as boolean)
                 if (healed) {
                     KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight self-healing succeeded for '${objId}'!")
                     return null
@@ -361,7 +385,8 @@ class LocaraGetTextKeyword implements IKeyword {
 
             IN_FLIGHT.set(true)
             try {
-                String healedText = Locara.healAndGetText(to, timeout, objId)
+                def locara = LocaraHook.getLocaraClass()
+                String healedText = locara != null ? (locara.healAndGetText(to, timeout, objId) as String) : null
                 if (healedText != null) {
                     KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight self-healing succeeded for getText('${objId}') -> '${healedText}'!")
                     return healedText
@@ -412,13 +437,19 @@ class LocaraVerifyElementTextKeyword implements IKeyword {
 
             IN_FLIGHT.set(true)
             try {
-                String actualText = Locara.healAndGetText(to, 10, objId)
+                def locara = LocaraHook.getLocaraClass()
+                String actualText = locara != null ? (locara.healAndGetText(to, 10, objId) as String) : null
                 if (actualText != null) {
                     if (actualText.equals(expectedText) || actualText.contains(expectedText) || expectedText.contains(actualText)) {
                         KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight self-healing succeeded for verifyElementText('${objId}') -> Match!")
                         return true
                     }
-                    double similarity = com.qureon.locara.core.matcher.StringSimilarity.compositeScore(actualText, expectedText)
+                    double similarity = 0.0
+                    try {
+                        Class<?> simClass = Class.forName("com.qureon.locara.core.matcher.StringSimilarity")
+                        def simMethod = simClass.getMethod("compositeScore", String.class, String.class)
+                        similarity = (double) simMethod.invoke(null, actualText, expectedText)
+                    } catch (Throwable ignored) {}
                     if (similarity >= 0.70) {
                         KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight self-healing succeeded for verifyElementText('${objId}'): Semantic match (${Math.round(similarity * 100)}%) between '${actualText}' and '${expectedText}'")
                         return true
@@ -476,7 +507,8 @@ class LocaraWaitForElementPresentKeyword implements IKeyword {
 
         IN_FLIGHT.set(true)
         try {
-            boolean healed = Locara.healAndVerifyPresent(to, timeout, objId)
+            def locara = LocaraHook.getLocaraClass()
+            boolean healed = locara != null && (locara.healAndVerifyPresent(to, timeout, objId) as boolean)
             if (healed) {
                 KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight probe healing succeeded for waitForElementPresent('${objId}')!")
                 return true
@@ -528,7 +560,8 @@ class LocaraVerifyElementPresentKeyword implements IKeyword {
 
         IN_FLIGHT.set(true)
         try {
-            boolean healed = Locara.healAndVerifyPresent(to, timeout, objId)
+            def locara = LocaraHook.getLocaraClass()
+            boolean healed = locara != null && (locara.healAndVerifyPresent(to, timeout, objId) as boolean)
             if (healed) {
                 KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight probe healing succeeded for verifyElementPresent('${objId}')!")
                 return true
@@ -583,7 +616,8 @@ class LocaraVerifyElementVisibleKeyword implements IKeyword {
 
         IN_FLIGHT.set(true)
         try {
-            boolean healed = Locara.healAndVerifyVisible(to, timeout, objId)
+            def locara = LocaraHook.getLocaraClass()
+            boolean healed = locara != null && (locara.healAndVerifyVisible(to, timeout, objId) as boolean)
             if (healed) {
                 KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight visibility healing succeeded for verifyElementVisible('${objId}')!")
                 return true

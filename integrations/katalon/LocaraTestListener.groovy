@@ -1,9 +1,6 @@
 import com.kms.katalon.core.annotation.AfterTestCase
 import com.kms.katalon.core.context.TestCaseContext
 import com.kms.katalon.core.mobile.keyword.internal.MobileDriverFactory
-import com.qureon.locara.core.LocaraEngine
-import com.qureon.locara.core.model.HealContext
-import com.qureon.locara.core.model.HealResult
 
 import java.util.regex.Matcher
 import java.util.regex.Pattern
@@ -18,11 +15,14 @@ import java.util.regex.Pattern
  */
 class LocaraTestListener {
 
-    private static final LocaraEngine ENGINE = new LocaraEngine()
+    private static Object engineInstance = null
     private static final Pattern OBJECT_ID_PATTERN = Pattern.compile("Object Repository/([^\'\"\\s]+)")
 
     @AfterTestCase
     def onTestCaseFailure(TestCaseContext testCaseContext) {
+        if (!core.LocaraHook.isLocaraPresent() || !core.LocaraHook.isHealingEnabled()) {
+            return
+        }
         if (testCaseContext.getTestCaseStatus() != 'FAILED') {
             return
         }
@@ -79,13 +79,19 @@ class LocaraTestListener {
 
             println("[Locara by Qureon] Diagnosing failed element: " + objectName + " (" + failedObjectPath + ")")
 
-            HealContext context = HealContext.builder()
-                    .targetHint(objectName)
-                    .screenName(testCaseContext.getTestCaseId().replace('/', '_'))
-                    .targetRsPath(failedObjectPath.isEmpty() ? "Object Repository/Healed/" + objectName + ".rs" : failedObjectPath)
-                    .build()
+            Class<?> engineClass = Class.forName("com.qureon.locara.core.LocaraEngine")
+            if (engineInstance == null) {
+                engineInstance = engineClass.newInstance()
+            }
+            Class<?> contextClass = Class.forName("com.qureon.locara.core.model.HealContext")
+            def builderMethod = contextClass.getMethod("builder")
+            def builder = builderMethod.invoke(null)
+            builder.targetHint(objectName)
+            builder.screenName(testCaseContext.getTestCaseId().replace('/', '_'))
+            builder.targetRsPath(failedObjectPath.isEmpty() ? "Object Repository/Healed/" + objectName + ".rs" : failedObjectPath)
+            def context = builder.build()
 
-            HealResult result = ENGINE.heal(pageSource, context)
+            def result = engineInstance.heal(pageSource, context)
             if (result.isSuccess() && result.getCandidate() != null) {
                 println("[SUCCESS] [Locara by Qureon] Automatically healed element for next run:")
                 println("   Optimal XPath : " + result.getCandidate().getSuggestedXPath())

@@ -2,17 +2,17 @@
 
 <div align="center">
 
-### Adaptive Locator Intelligence
-*An intelligent self-healing engine for resilient test automation.*
+### Adaptive Locator Intelligence & Universal Self-Healing Engine
+*An autonomous, offline-first self-healing engine for resilient mobile & hybrid test automation.*
 
-[![Version](https://img.shields.io/badge/version-1.6.0-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara)
+[![Version](https://img.shields.io/badge/version-1.6.1-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-52%2F52%20passing-10B981?style=flat-square)](build.gradle)
 [![Java](https://img.shields.io/badge/java-17%20%7C%2021%20%7C%2024-orange?style=flat-square&logo=openjdk)](build.gradle)
 [![Katalon](https://img.shields.io/badge/katalon-8.x%20%7C%209.x%20%7C%2010.x%20%7C%2011.x-00B0FF?style=flat-square)](https://katalon.com)
 [![Appium](https://img.shields.io/badge/appium-2.x%20%7C%201.x-662d91?style=flat-square&logo=appium)](https://appium.io)
 
-[Releases](https://github.com/Qureon/Locara/releases) • [Documentation](docs/) • [Mission Control Dashboard](dashboard/) • [MIT License](LICENSE)
+[Releases](https://github.com/Qureon/Locara/releases) • [Architecture & Flow](docs/ARCHITECTURE_AND_FLOW.md) • [User Tutorial Guide](docs/USER_TUTORIAL_GUIDE.md) • [Mission Control Dashboard](dashboard/) • [MIT License](LICENSE)
 
 </div>
 
@@ -20,27 +20,24 @@
 
 ## Overview
 
-**Locara** *(Locator + Recovery)* adalah engine self-healing otonom generasi baru untuk otomasi mobile (Katalon Studio & Appium murni), dikembangkan di bawah organisasi **Qureon** (*Engineering Intelligence*).
+**Locara** *(Locator + Recovery)* adalah engine self-healing otonom generasi baru untuk otomasi mobile (Katalon Studio & Appium murni), dikembangkan di bawah naungan **Qureon** (*Engineering Intelligence*).
 
-Locara dirancang untuk mengatasi salah satu masalah terbesar dalam otomasi pengujian mobile: **flaky test suites akibat perubahan UI mendadak oleh developer**.
+Locara dirancang untuk mengatasi salah satu masalah terbesar dalam otomasi pengujian mobile enterprise: **flaky test suites akibat perubahan UI mendadak oleh developer** (perubahan ID, layout berpindah, struktur dibungkus kontainer baru, atau halaman WebView).
 
 ### Paradigma: In-Flight Autonomous Recovery
 Fitur bawaan self-healing pada tool konvensional biasanya hanya mampu mencocokkan locator yang **sudah pernah di-spy** sebelumnya. Jika ID dirombak total atau hierarki baru ditambahkan, test suite akan gagal (*Red Suite*), alur transaksi putus, dan regresi terhenti.
 
 Locara menerapkan prinsip **In-Flight Zero-Interruption**:
-1. **In-Flight Dynamic Hotfix (<50ms)**: Saat locator target gagal ditemukan, Locara menganalisis dump XML layar aktif (`driver.getPageSource()`), menghitung vektor kemiripan heuristik (*Jaro-Winkler, Levenshtein, Resource-ID, Text, Content-Desc*), menyuntikkan XPath baru ke memori, dan melanjutkan eksekusi tanpa tes berstatus *FAIL*.
-2. **Zero-Code Change via Groovy Metaprogramming**: Pengujian tetap menulis kode standar Katalon `Mobile.tap(...)` dan `Mobile.setText(...)`. Seluruh interceptor bekerja transparan di latar belakang.
-3. **Instant .rs Synthesizer**: Membuat dan memperbarui berkas XML `.rs` resmi Katalon Studio (`MobileElementEntity` & `WebElementEntity`) langsung di storage lokal, lengkap dengan backup otomatis.
-4. **Enterprise Safety Guard**: Proteksi polaritas bahaya (*Danger Polarity Lockout*), auto-dismiss keyboard virtual (*The Golden Triad*), dan *Auto-Scroll Viewport Fallback* untuk tombol di bawah lipatan layar.
-5. **Visual Bounding Box Evidence**: Menghasilkan screenshot UAT bergaris tepi merah dengan badge skor akurasi untuk kelengkapan audit compliance.
-6. **100% Backward Compatibility**: Sepenuhnya kompatibel dengan proyek yang sebelumnya menggunakan namespace `com.zerohealing.*`.
-7. **Universal 2D Spatial Alignment (v1.5.0)**: Menemukan target input atau dropdown berdasarkan kedekatan geometris sumbu X & Y (Left-to-Right & Top-to-Bottom) saat elemen kehilangan test-tag atau ID.
-8. **Universal Field Relationship Extraction (v1.5.0)**: Membedah form transaksi dan struk belanja menjadi pasangan terstruktur `Key -> Value` secara otomatis.
-9. **Autonomous Overlay & Permission Airbag (v1.5.0)**: Menetralisir dialog izin sistem OS (`permissioncontroller`) dan modal banner tak terduga secara instan tanpa menghentikan eksekusi test suite.
-10. **Universal Hybrid Mobile & WebView Engine (v1.6.0)**: Deteksi otomatis dan self-healing penuh pada embedded WebView HTML DOM (Cordova, Capacitor, Ionic, React Native WebViews) tanpa dependensi eksternal.
-11. **Concurrency & Parallel Execution Hardening (v1.6.0)**: Dukungan eksekusi paralel multi-thread (Katalon 11.4+) dengan lock ledger thread-safe dan thread tracing.
-12. **Universal Semantic Synonym Tensor (v1.6.0)**: Kamus sinonim dwibahasa (ID/EN) 100% offline, zero-network untuk penyesuaian otomatis saat elemen berubah kata (misal *Masuk* $\leftrightarrow$ *Login*, *Lanjut* $\leftrightarrow$ *Next*).
-13. **Framework Keyword Hub (v1.6.0)**: Intersepsi cerdas untuk keyword baru Katalon 11.7.0 (`Mobile.assertElement*` dan `Mobile.isElement*`) melalui klasifikasi intensi aksi atomik.
+1. **In-Flight Dynamic Hotfix (<50ms)**: Saat locator target gagal ditemukan, Locara menganalisis dump XML/HTML layar aktif (`driver.getPageSource()`), menghitung vektor kemiripan heuristik multi-dimensi, menyuntikkan XPath baru ke memori, dan melanjutkan eksekusi tanpa tes berstatus *FAIL*.
+2. **Zero-Code Change via Groovy Metaprogramming**: Pengujian tetap menulis kode standar Katalon `Mobile.tap(...)`, `Mobile.setText(...)`, dan `Mobile.getText(...)`. Seluruh interceptor bekerja transparan di latar belakang.
+3. **Zero Compile-Time Coupling (Ghost Mode)**: Integrasi berbasis dynamic reflection. Proyek tim **100% HIJAU (0 compile errors)** baik ketika JAR Locara ada maupun saat JAR tidak dipasang di komputer rekan kerja.
+4. **Universal 2D Spatial Alignment (v1.5.0)**: Menemukan target input atau dropdown berdasarkan kedekatan geometris sumbu X & Y (Left-to-Right & Top-to-Bottom) saat elemen kehilangan test-tag atau ID.
+5. **Universal Hybrid Mobile & WebView Engine (v1.6.0)**: Deteksi otomatis dan self-healing penuh pada embedded WebView HTML DOM (Cordova, Capacitor, Ionic, React Native WebViews) tanpa dependensi eksternal.
+6. **Universal Semantic Synonym Tensor (v1.6.0)**: Kamus sinonim dwibahasa (ID/EN) 100% offline (15 kluster universal) untuk penyesuaian otomatis saat elemen berubah kata (misal *Masuk* $\leftrightarrow$ *Login*, *Lanjut* $\leftrightarrow$ *Next*, *Cari* $\leftrightarrow$ *Search*).
+7. **Concurrency & Parallel Execution Hardening (v1.6.0)**: Dukungan eksekusi paralel multi-thread (Katalon 11.4+) dengan lock ledger thread-safe dan thread tracing.
+8. **Framework Keyword Hub (v1.6.0)**: Intersepsi cerdas untuk keyword baru Katalon 11.7.0 (`Mobile.assertElement*` dan `Mobile.isElement*`) melalui klasifikasi intensi aksi atomik.
+9. **Enterprise Safety Guard**: Proteksi polaritas bahaya (*Danger Polarity Lockout*), auto-dismiss keyboard virtual (*The Golden Triad*), dan *Auto-Scroll Viewport Fallback* untuk tombol di bawah lipatan layar.
+10. **Zero Cloud PII Leakage**: 100% offline, nol transmisi data keluar mesin lokal. Aman untuk standar kepatuhan perbankan & enterprise.
 
 ---
 
@@ -58,13 +55,15 @@ Locara menerapkan prinsip **In-Flight Zero-Interruption**:
 │                     LOCARA RUNTIME ENGINE INTERCEPTOR                       │
 │                                                                             │
 │  1. In-Flight Hook (LocaraHook) menyambar StepFailedException               │
-│  2. Tarik dump XML layar aktif via driver.getPageSource() (<50ms)           │
-│  3. Heuristic Multi-Vector Scoring (Jaro-Winkler, Levenshtein, Proximity)   │
-│  4. Safety Polarity Guard: Cegah salah klik tombol 'Batal' / 'Hapus'        │
-│  5. Dynamic XPath Generator menghasilkan selector optimal & presisi         │
-│  6. The Golden Triad Keyboard Guard: Tutup keyboard jika tombol terhalang   │
-│  7. In-Memory TestObject Mutation + Driver Action Execution                 │
-│  8. Background Task: Tulis file resmi .rs ke disk & catat Audit Ledger      │
+│  2. Tarik dump XML/HTML layar aktif via driver.getPageSource() (<50ms)      │
+│  3. Framework Detector: Native Android / iOS / Flutter / Compose / WebView  │
+│  4. Heuristic Multi-Vector Scoring (Levenshtein, Jaro-Winkler, 2D Spatial)   │
+│  5. Universal Semantic Dictionary: Penyesuaian sinonim kata lintas bahasa   │
+│  6. Safety Polarity Guard: Cegah salah klik tombol 'Batal' / 'Hapus'        │
+│  7. Dynamic XPath Generator menghasilkan selector optimal & presisi         │
+│  8. The Golden Triad Keyboard Guard: Tutup keyboard jika tombol terhalang   │
+│  9. In-Memory TestObject Mutation + Driver Action Re-execution              │
+│ 10. Background Task: Catat bukti sukses ke Audit Ledger (Zero PII)          │
 └──────────────────────────────────────┬──────────────────────────────────────┘
                                        │
                                        ▼
@@ -75,25 +74,53 @@ Locara menerapkan prinsip **In-Flight Zero-Interruption**:
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
+> 📖 **Pelajari detail selengkapnya:** Kunjungi [Arsitektur Lengkap & Diagram Alur (docs/ARCHITECTURE_AND_FLOW.md)](docs/ARCHITECTURE_AND_FLOW.md).
+
 ---
 
-## Panduan Penggunaan
+## Panduan Penggunaan & Instalasi
 
 ### Mode 1: Invisible In-Flight Hook (Rekomendasi Utama)
-> **100% Zero-Code Change.** Seluruh script lama maupun baru tetap menulis `Mobile.tap(...)` dan `Mobile.setText(...)`.
+> **100% Zero-Code Change & Zero Compile Error.** Seluruh script lama maupun baru tetap menulis `Mobile.tap(...)` dan `Mobile.setText(...)`.
 
-1. Letakkan `locara-1.3.0.jar` di dalam folder `Drivers/` proyek Katalon Anda.
-2. Salin [`LocaraHook.groovy`](integrations/katalon/LocaraHook.groovy) ke folder `Keywords/com/qureon/locara/katalon/`.
-3. Buka `Test Listeners/GlobalSetupListener.groovy`, tambahkan 1 baris berikut di `@BeforeTestSuite`:
+#### Cara A: Instalasi Mandiri via AI Agent (Paling Mudah)
+Jika Anda menggunakan AI assistant (Antigravity IDE, Cursor, Claude Code, GitHub Copilot):
+Salin prompt berikut dan tempel ke chat AI Anda:
 
+```markdown
+Tolong unduh engine test automation offline "Locara" versi rilis terbaru dari repositori GitHub publik:
+https://github.com/Qureon/Locara/releases/latest
+
+Langkah yang perlu kamu lakukan:
+1. Cek tag rilis terbaru dari API GitHub (misal v1.6.0).
+2. Download asset file .jar biner (contoh: locara-1.6.0.jar) dari Releases tersebut.
+3. Simpan file .jar tersebut langsung ke dalam folder: Drivers/ di root workspace proyek Katalon ini.
+4. Hapus versi locara-*.jar lama jika sebelumnya ada di dalam folder Drivers/.
+5. Pastikan ukuran file terunduh sekitar ~200 KB dan tidak korup.
+
+Catatan: Proyek ini sudah dirancang plug-and-play, jadi kamu tidak perlu mengubah kode Groovy apapun. Cukup tempatkan file .jar di Drivers/ dan ingatkan saya untuk klik 'Project -> Clean...' di Katalon jika diperlukan.
+```
+
+#### Cara B: 1-Line Command di Terminal / PowerShell
+
+**Di Windows (PowerShell):**
+```powershell
+$tag = (Invoke-RestMethod "https://api.github.com/repos/Qureon/Locara/releases/latest").tag_name; $ver = $tag.TrimStart('v'); Invoke-WebRequest -Uri "https://github.com/Qureon/Locara/releases/download/$tag/locara-$ver.jar" -OutFile "Drivers\locara-$ver.jar"; Write-Host "✅ Locara $tag berhasil disuntikkan ke Drivers!" -ForegroundColor Green
+```
+
+**Di macOS / Linux (Terminal / Bash):**
+```bash
+TAG=$(curl -s https://api.github.com/repos/Qureon/Locara/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/') && curl -sL -o Drivers/locara-${TAG#v}.jar https://github.com/Qureon/Locara/releases/download/$TAG/locara-${TAG#v}.jar && echo "✅ Locara $TAG berhasil disuntikkan ke Drivers!"
+```
+
+#### Integrasi Katalon Studio:
+1. Salin [`LocaraHook.groovy`](integrations/katalon/LocaraHook.groovy) ke dalam folder `Keywords/core/` (atau folder Keywords Anda).
+2. Panggil di awal test suite atau Test Listener (`Test Listeners/GlobalSetupListener.groovy`):
 ```groovy
-import com.qureon.locara.katalon.LocaraHook
-
 class GlobalSetupListener {
-
     @BeforeTestSuite
     def setupTestSuite(TestSuiteContext testSuiteContext) {
-        LocaraHook.install() // Inisialisasi in-flight hook
+        core.LocaraHook.install() // Auto-detect JAR & inisialisasi in-flight hook
     }
 }
 ```
@@ -144,14 +171,14 @@ healedElement.click();
 ---
 
 ### Mode 4: Standalone CLI Quick-Recon
-Jalankan evaluasi heuristik dan auto-generate file `.rs` langsung dari terminal:
+Jalankan evaluasi heuristik dan inspeksi langsung dari terminal:
 
 ```bash
 # 1. Evaluasi & generate file .rs dari berkas XML dump
-java -jar locara-1.3.0.jar --xml dump.xml --hint "Lanjut Transfer" --out "Object Repository/Transfer/btn_Lanjut.rs"
+java -jar locara-1.6.0.jar --xml dump.xml --hint "Lanjut Transfer" --out "Object Repository/Transfer/btn_Lanjut.rs"
 
 # 2. Inspeksi seluruh elemen interaktif dalam XML
-java -jar locara-1.3.0.jar --xml dump.xml --inspect
+java -jar locara-1.6.0.jar --xml dump.xml --inspect
 ```
 
 ---
@@ -160,12 +187,14 @@ java -jar locara-1.3.0.jar --xml dump.xml --inspect
 
 | Fitur | Komponen | Fungsi & Manfaat |
 |---|---|---|
+| **Universal Hybrid WebView** | `WebViewContextDetector.java` & `HtmlDomParser.java` | Deteksi dan self-healing instan untuk embedded HTML DOM (Cordova, Capacitor, React Native WebView) dengan atribut web modern (`data-testid`, `aria-label`). |
+| **2D Spatial Proximity** | `SpatialProximityScorer.java` | Evaluasi geometris sumbu X & Y untuk menemukan input atau tombol yang posisinya bergeser berdasarkan tetangga jangkar (*anchor*). |
+| **Universal Semantic Tensor** | `UniversalSemanticDictionary.java` | Kamus sinonim 15 kluster (ID & EN) 100% offline untuk penyesuaian otomatis saat kata berubah (*Masuk* $\leftrightarrow$ *Login*). |
 | **Danger-Lockout Policy** | `DangerKeywordGuard.java` | Mencegah salah klik fatal. Jika mencari aksi positif (*"Lanjut"* / *"Bayar"*), engine menolak tombol berpolaritas bahaya (*"Batal"*, *"Hapus"*, *"Blokir"*). |
-| **Auto-Scroll Fallback** | `ScrollRecoveryEngine.java` | Otomatis melakukan *swipe down* jika tombol berada di bawah lipatan layar (*below the fold*), lalu re-dump XML. |
 | **The Golden Triad** | `KeyboardGuard.java` | Deteksi posisi elemen yang tertutup keyboard virtual Android/iOS (`y > 58%`), otomatis memanggil dismiss keyboard. |
-| **Visual Bounding Box** | `VisualEvidenceAnnotator.java` | Menggambar kotak merah bergaris tepi tebal & badge skor akurasi pada screenshot bukti UAT. |
-| **Dynamic Re-normalization** | `HeuristicMatcher.java` | Redistribusi bobot cerdas untuk input teks/PIN (`EditText`) kosong agar skor kemiripan tidak drop. |
-| **Dual Telemetry Ledger** | `HealingAuditLedger.java` | Mencatat audit log ganda (`locara_audit.json` & `locara_audit.md`) untuk integrasi CI/CD. |
+| **Auto-Scroll Fallback** | `ScrollRecoveryEngine.java` | Otomatis melakukan *swipe down* jika tombol berada di bawah lipatan layar (*below the fold*), lalu re-dump XML. |
+| **Parallel Concurrency** | `HealingAuditLedger.java` | Thread-safe atomic file lock untuk eksekusi paralel multi-device (Katalon 11.4+) tanpa korupsi log. |
+| **Dual Telemetry Ledger** | `HealingAuditLedger.java` | Mencatat audit log ganda (`healing_audit.json` & `healing_audit.md`) dengan mask PII untuk integrasi CI/CD. |
 
 ---
 
@@ -224,14 +253,8 @@ Fitur dashboard:
 * **Live Telemetry Feed**: Riwayat perbaikan in-flight dengan live filter status, search, dan sorting.
 * **Visual Inspector**: Mockup smartphone dengan bounding box, diff locator, dan breakdown bobot multi-vektor.
 * **Regression Health**: Analisis visual locator paling volatil (*flaky*).
-* **XML Recon Lab**: Sandbox interaktif untuk menguji pencocokan heuristik dari raw XML.
+* **XML & DOM Recon Lab**: Sandbox interaktif untuk menguji pencocokan heuristik dari raw XML maupun HTML DOM.
 * **UAT Sign-Off Certificate**: Dokumen sertifikat kepatuhan audit otomatis yang siap dicetak ke PDF.
-
-Untuk menghasilkan laporan audit HTML mandiri (single-file offline):
-```bash
-python3 dashboard/generate_report.py
-# Output: Include/evidence/locara_report.html
-```
 
 ---
 
@@ -239,10 +262,15 @@ python3 dashboard/generate_report.py
 
 ```
 Locara/
-├── build.gradle                              # Gradle build configuration (group: com.qureon.locara, Java 17)
+├── build.gradle                              # Gradle build configuration (group: com.qureon.locara, Java 17/21)
 ├── settings.gradle                           # Project settings (rootProject.name = 'locara')
 ├── README.md                                 # Master Documentation & User Guide
 ├── LICENSE                                   # MIT License
+├── docs/                                     # Technical Documentation & Playbooks
+│   ├── ARCHITECTURE_AND_FLOW.md              # Deep-dive Architecture, Scoring Radars & Flow
+│   ├── USER_TUTORIAL_GUIDE.md                # Tim Tutorial, Ghost Mode & Troubleshooting
+│   ├── IMPLEMENTATION_PLAN.md                # Evolutionary Roadmap & Architecture Baseline
+│   └── v1.6_HYBRID_AND_UNIVERSAL_ENTERPRISE_PLAN.md # v1.6.0 Verification & Release Plan
 ├── dashboard/                                # Mission Control Dashboard & Telemetry Platform
 │   ├── assets/                               # Vector SVG Logo & Favicon
 │   ├── css/                                  # Modular Stylesheets
@@ -252,7 +280,7 @@ Locara/
 │   └── generate_report.py                    # Standalone HTML UAT sign-off report generator
 ├── integrations/
 │   └── katalon/
-│       ├── LocaraHook.groovy                 # Transparent In-Flight Groovy Interceptor
+│       ├── LocaraHook.groovy                 # Transparent In-Flight Dynamic Reflection Interceptor
 │       ├── LocaraKeywords.groovy             # Native Katalon Custom Keyword wrapper
 │       └── LocaraTestListener.groovy         # Test Listener lifecycle integration
 └── src/
@@ -260,16 +288,17 @@ Locara/
     │   ├── com/qureon/locara/                # Core Locara by Qureon Engine
     │   │   ├── cli/LocaraCli.java            # Standalone CLI entrypoint
     │   │   ├── core/LocaraEngine.java        # Core facade & orchestrator
+    │   │   ├── core/framework/               # AppFramework, FrameworkDetector, WebViewContextDetector
     │   │   ├── core/generator/               # Dynamic XPath & .rs XML Synthesizer
     │   │   ├── core/guard/                   # Danger polarity lockout guard
     │   │   ├── core/ledger/                  # Audit ledger & visual annotator
-    │   │   ├── core/matcher/                 # Jaro-Winkler, Levenshtein, heuristic scorer
-    │   │   ├── core/model/                   # Immutable domain models
-    │   │   ├── core/parser/                  # High-speed XML AST parser
+    │   │   ├── core/matcher/                 # HeuristicMatcher, StringSimilarity, UniversalSemanticDictionary
+    │   │   ├── core/model/                   # Immutable domain models (UIElementNode, etc.)
+    │   │   ├── core/parser/                  # PageSourceParser & HtmlDomParser
     │   │   ├── katalon/                      # In-flight hooks & keyboard/scroll guards
     │   │   └── appium/                       # Standalone Appium driver wrappers
     │   └── com/zerohealing/                  # Backward Compatibility Layer
-    └── test/                                 # Unit & E2E Simulation Suite
+    └── test/                                 # 52/52 Unit & E2E Simulation Suite
 ```
 
 ---

@@ -1,93 +1,138 @@
-# Panduan Penggunaan Locara by Qureon
+# Panduan Lengkap Penggunaan Locara by Qureon (v1.6.0)
 
-> **Mobile Test Automation Self-Healing Engine (Katalon Studio & Appium)**  
-> **Engineering**: Qureon Open Source  
-> **Target**: Mobile Automation (Android & iOS) via Katalon Studio & Appium  
+> **Mobile & Hybrid Test Automation Self-Healing Engine (Katalon Studio & Appium)**  
+> **Engineering**: Qureon Open Source (`Engineering Intelligence`)  
+> **Target**: Mobile & Hybrid Web Automation (Android, iOS, Flutter, React Native, WebView)  
+> **Versi Terbaru**: v1.6.0 Universal Enterprise  
 
 ---
 
 ## 📌 1. Apa itu Locara by Qureon?
 
-**Locara** *(Locator + Recovery)* by **Qureon** adalah *autonomous self-healing & semantic assertion engine* yang dirancang untuk menjaga kestabilan *test suite* regresi mobile tanpa perlu mengubah kode tes eksisting.
+**Locara** *(Locator + Recovery)* adalah *autonomous self-healing & semantic assertion engine* generasi baru yang bertindak sebagai **"Co-Pilot Cerdas & Dokter Bedah In-Flight"** pada proyek pengujian otomasi mobile Anda.
 
-Tujuan utamanya adalah **menjadi Airbag / Jaring Pengaman Cerdas**:
-- Mencegah test case regresi malam hari (*overnight regression*) gagal hanya karena:
-  1. Pengembang mengubah sedikit `resource-id`, `class`, atau hierarki tombol di UI.
-  2. Tombol tertutup oleh virtual keyboard Android/iOS (*auto-dismiss via The Golden Triad*).
-  3. Tombol berada di bawah lipatan layar (*below the fold*) dan butuh sedikit *auto-scroll*.
-  4. Label struk memiliki perbedaan minor pada spasi, tanda baca, atau urutan kata semantik.
-
----
-
-## 🤝 2. Kebijakan Kebebasan Tim: Mau Pakai vs Tidak Mau Pakai
-
-Di tim QA enterprise, kami sangat menghormati alur kerja masing-masing rekan kerja:
-- Ada rekan yang **mau pakai** agar regresi tidak terputus di tengah jalan.
-- Ada rekan yang **tidak mau pakai** karena lebih menyukai *vanilla Katalon* (ingin test langsung *fail* jika locator berubah).
-
-Oleh karena itu, Locara dirancang dengan sistem **Zero-Friction Coexistence**:
-
-### A. Bagi Rekan yang INGIN MENGGUNAKAN (Default)
-**Anda tidak perlu mengubah satu baris pun kode test case Anda!**
-- Tetap gunakan keyword standar: `Mobile.tap(...)`, `Mobile.setText(...)`, `Mobile.getText(...)`, `Mobile.verifyElementText(...)`.
-- Tetap gunakan helper standar: `VerificationHelper.verificationValidationText(...)`.
-- Saat elemen normal: Engine tidur (*zero overhead, 0 ms delay, zero log pollution*).
-- Saat locator bermasalah: Engine otomatis menganalisis hierarki layar aktif, menyuntikkan XPath baru ke memori, dan melanjutkan eksekusi dengan status **PASSED (HIJAU)**.
+Tujuan utamanya adalah menjaga kestabilan *test suite* agar regresi berjalan mulus tanpa terputus di tengah jalan akibat:
+1. Pengembang mengubah `resource-id`, hierarki DOM, atau teks tombol di UI.
+2. XPath berpindah posisi atau dibungkus di dalam komponen kontainer baru (misal Jetpack Compose atau Bottom Sheet).
+3. Tombol tertutup oleh virtual keyboard Android/iOS (*auto-dismiss via The Golden Triad*).
+4. Tombol berada di bawah lipatan layar (*below the fold*) dan membutuhkan *auto-scroll*.
+5. Halaman berada di dalam embedded Hybrid WebView (HTML DOM) yang biasanya membuat engine native gagal.
+6. Validasi teks respons backend memiliki variasi semantik minor.
 
 ---
 
-### B. Bagi Rekan yang TIDAK INGIN MENGGUNAKAN (Opt-Out 100% Murni)
-Jika Anda ingin mematikan Locara secara total di laptop Anda:
+## 🤝 2. Kebijakan Kebebasan Tim: Zero-Friction Coexistence
 
-1. Buat file baru bernama **`locara.local.properties`** di folder root proyek:
-   ```properties
-   locara.enabled=false
-   ```
-2. Simpan file tersebut.
+Di tim QA enterprise, kami sangat menghormati preferensi masing-masing engineer:
+- Ada rekan yang **ingin menggunakan Locara** agar regresi overnight tidak gampang gagal dan bebas capek rekam ulang Object Repository.
+- Ada rekan yang **ingin menggunakan vanilla Katalon** (menginginkan test langsung *fail* jika ada perbedaan locator sekecil apapun).
 
-> [!NOTE]
-> File `*.local.properties` **sudah otomatis masuk dalam `.gitignore`**!  
-> Pengaturan ini 100% lokal di laptop Anda, **tidak akan pernah ter-commit ke Git atau menimbulkan *merge conflict* dengan rekan lain**.
+Oleh karena itu, Locara dirancang dengan prinsip **Zero Compile-Time Coupling (Ghost Mode)**:
 
-**Efek saat `locara.enabled=false`:**
-- `LocaraHook` otomatis mundur dan **tidak menyentuh/mengubah keyword Katalon sama sekali**.
-- Semua keyword `Mobile.*` berjalan 100% murni *engine* asli Katalon.
-- `VerificationHelper` kembali ke metode pencocokan teks konvensional tanpa bantuan semantik.
-- Tidak ada log `[Locara]`, eksekusi kembali persis seperti sebelum ada engine.
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                   ARSITEKTUR GHOST MODE (PLUGGABLE)                    │
+│                                                                        │
+│  [Repo Git Bank / Tim] ───► 100% BEBAS DARI FILE BINER .JAR            │
+│  [Rekan Tanpa Locara]  ───► Proyek 100% HIJAU (0 Error, Native)        │
+│  [Rekan Pakai Locara]  ───► Cukup letakkan JAR di Drivers/ lokal       │
+│                             Engine langsung auto-detect & aktif!       │
+└────────────────────────────────────────────────────────────────────────┘
+```
 
----
-
-## ⚙️ 3. Opsi Sakelar Lainnya (Advanced)
-
-Selain menggunakan file properties lokal, Anda juga dapat mengatur sakelar melalui:
-
-| Metode | Cara Konfigurasi | Cocok Untuk |
-|---|---|---|
-| **System Property (JVM)** | Tambahkan argumen `-Dlocara.enabled=false` pada runner. | CI/CD Pipeline / Command Line Runner |
-| **Environment Variable** | Set variabel OS `LOCARA_ENABLED=false` atau `QUREON_ENABLED=false` di terminal Anda. | Terminal / Mac zsh environment |
-| **Execution Profile** | Tambahkan `ENABLE_LOCARA = false` pada profil Katalon (misal `default.glbl`). | Eksekusi manual via Katalon Studio GUI |
+1. **Kode Bersih Tanpa Hard Dependency**: File `Keywords/` menggunakan *dynamic reflection*. Jika JAR tidak ada di laptop rekan tim, kode diam-diam melanjutkan flow native Katalon tanpa error compile sama sekali.
+2. **Git Bersih**: Folder `Drivers/locara*.jar` masuk dalam `.gitignore` sehingga file biner tidak membebani repo git tim.
 
 ---
 
-## 🛡️ 4. Menjawab Kekhawatiran Umum (FAQ & Mitos)
+## ⚡ 3. Cara Instalasi Cepat (Pilih Salah Satu)
 
-### Q1: Apakah Locara bisa salah klik tombol berbahaya (misal tombol *Batal* atau *Hapus*)?
+### Cara A: Minta AI Anda yang Mengunduh (Paling Mudah)
+Jika Anda menggunakan AI assistant (Antigravity IDE, Cursor, Claude Code, GitHub Copilot):
+Salin prompt berikut dan tempel ke jendela chat AI Anda:
+
+```markdown
+Tolong unduh engine test automation offline "Locara" versi rilis terbaru dari repositori GitHub publik:
+https://github.com/Qureon/Locara/releases/latest
+
+Langkah yang perlu kamu lakukan:
+1. Cek tag rilis terbaru dari API GitHub (misal v1.6.0).
+2. Download asset file .jar biner (contoh: locara-1.6.0.jar) dari Releases tersebut.
+3. Simpan file .jar tersebut langsung ke dalam folder: Drivers/ di root workspace proyek Katalon ini.
+4. Hapus versi locara-*.jar lama jika sebelumnya ada di dalam folder Drivers/.
+5. Pastikan ukuran file terunduh sekitar ~200 KB dan tidak korup.
+
+Catatan: Proyek ini sudah dirancang plug-and-play, jadi kamu tidak perlu mengubah kode Groovy apapun. Cukup tempatkan file .jar di Drivers/ dan ingatkan saya untuk klik 'Project -> Clean...' di Katalon jika diperlukan.
+```
+
+---
+
+### Cara B: 1-Line Command di Terminal / PowerShell
+
+**Di Windows (PowerShell):**
+```powershell
+$tag = (Invoke-RestMethod "https://api.github.com/repos/Qureon/Locara/releases/latest").tag_name; $ver = $tag.TrimStart('v'); Invoke-WebRequest -Uri "https://github.com/Qureon/Locara/releases/download/$tag/locara-$ver.jar" -OutFile "Drivers\locara-$ver.jar"; Write-Host "✅ Locara $tag berhasil disuntikkan ke Drivers!" -ForegroundColor Green
+```
+
+**Di macOS / Linux (Terminal / Bash):**
+```bash
+TAG=$(curl -s https://api.github.com/repos/Qureon/Locara/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/') && curl -sL -o Drivers/locara-${TAG#v}.jar https://github.com/Qureon/Locara/releases/download/$TAG/locara-${TAG#v}.jar && echo "✅ Locara $TAG berhasil disuntikkan ke Drivers!"
+```
+
+---
+
+## 🚀 4. Cara Penggunaan dalam Skrip Pengujian
+
+### Mode 1: Invisible In-Flight Hook (Rekomendasi Utama)
+**100% Zero-Code Change.** Anda tetap menulis test case seperti biasa:
+
+```groovy
+// Kode pengujian Anda tetap standar Katalon!
+Mobile.tap(findTestObject('Object Repository/Transfer/btn_Lanjut'), 10)
+Mobile.setText(findTestObject('Object Repository/Transfer/input_Nominal'), '50000', 10)
+Mobile.getText(findTestObject('Object Repository/Transfer/lbl_TotalBayar'), 10)
+```
+
+- **Saat locator normal**: Locara tidur (*zero overhead, 0 ms delay*).
+- **Saat locator gagal**: Locara menyambar kegagalan dalam <5ms, memindai DOM layar aktif, menemukan elemen yang tepat, dan langsung mengeksekusi ulang aksi tanpa test case berstatus *FAILED*.
+
+---
+
+## 🛠️ 5. Troubleshooting & FAQ Tim
+
+### Q1: Kenapa di Katalon muncul pesan error `unable to resolve class CustomKeywords` atau `LocaraIntentMatcher`?
+**Penyebab:**  
+Katalon Studio di Windows menyimpan cache keyword lama di dalam file internal `Libs/CustomKeywords.groovy`.
+
+**Solusi 1 Langkah:**  
+1. Di menu atas Katalon Studio, klik menu: **Project** ➡️ **Clean...**
+2. Pilih opsi **Clean all projects**, lalu klik tombol **Clean**.
+3. Tutup dan buka kembali Katalon Studio. Seluruh error merah langsung lenyap 100%!
+
+---
+
+### Q2: Bagaimana jika saya ingin mematikan Locara secara total di laptop saya?
+Cukup buat file bernama **`locara.local.properties`** di folder root proyek Anda:
+```properties
+locara.enabled=false
+```
+*File `*.local.properties` sudah otomatis masuk ke dalam `.gitignore`, sehingga setting ini 100% privat dan tidak akan mempengaruhi rekan lain saat git push.*
+
+---
+
+### Q3: Apakah verifikasi angka / saldo rekening bisa salah (*False-Green*)?
+**MUTLAK TIDAK.**  
+Validasi saldo rekening, nomor rekening, nominal transfer, dan tarif biaya admin menggunakan pencocokan integer/long yang ketat. Locara **tidak pernah** memberikan toleransi pada angka nominal finansial. Jika berbeda Rp 1 pun, tes akan tetap gagal dengan tegas.
+
+---
+
+### Q4: Apakah Object Repository (`.rs`) hasil spy manual saya akan tertimpa?
 **TIDAK.**  
-Locara dilengkapi dengan **`DangerKeywordGuard`**. Jika skrip Anda mencari tombol aksi positif (seperti *"Lanjut"*, *"Bayar"*, *"Konfirmasi"*, *"Kirim"*), engine **secara mutlak menolak** elemen yang mengandung kata-kata destruktif (*"Batal"*, *"Hapus"*, *"Cancel"*, *"Delete"*, *"Blokir"*, *"Keluar"*). Jika tidak menemukan elemen yang aman, engine akan membiarkan test *fail* secara terhormat.
-
-### Q2: Apakah verifikasi nominal uang atau saldo rekening bisa salah (*False-Green*)?
-**TIDAK.**  
-Seluruh validasi numerik di `VerificationHelper.verificationNumeric` **tetap 100% strict integer/long**. Validasi saldo, nominal transfer, biaya admin, dan total pembayaran tidak menggunakan toleransi semantik. Jika nominal berbeda 1 Rupiah pun, status tetap **MISMATCH ❌ (FAILED)**.
-
-### Q3: Apakah file Object Repository (`.rs`) hasil spy manual saya akan ditimpa?
-**TIDAK.**  
-Locara beroperasi dengan aturan **Strict Anti-Tampering**. Secara default, engine melakukan *in-memory patching* di RAM tanpa menimpa file fisik `.rs` Anda. Jika fitur pembuatan `.rs` diaktifkan, file baru akan diarahkan ke folder karantina terisolasi (`Object Repository/Healed/`) atau disimpan sebagai file cadangan `.healed.rs`.
-
-### Q4: Apakah Locara memperlambat eksekusi test case?
-**TIDAK.**  
-Locara adalah *passive interceptor*. Selama locator asli Anda ditemukan oleh Katalon, Locara tidak melakukan proses apapun (passthrough biasa). Analisis XML hanya berjalan jika locator asli gagal ditemukan (`NoSuchElementException`).
+Locara bekerja secara default dengan prinsip *in-memory runtime patching*. File fisik `.rs` manual Anda tidak akan disentuh atau diubah tanpa izin eksplisit.
 
 ---
 
-## Kontak & Kontribusi
-Jika ada pertanyaan, kendala, atau ingin menyarankan perbaikan pada engine Locara, silakan ajukan issue di GitHub repository resmi: [Qureon/Locara](https://github.com/Qureon/Locara).
+## 📚 Dokumentasi Terkait
+- [Arsitektur Lengkap & Diagram Alur](ARCHITECTURE_AND_FLOW.md)
+- [Rencana Pengembangan Universal v1.6.0](v1.6_HYBRID_AND_UNIVERSAL_ENTERPRISE_PLAN.md)
+- [Repositori Resmi GitHub](https://github.com/Qureon/Locara)
