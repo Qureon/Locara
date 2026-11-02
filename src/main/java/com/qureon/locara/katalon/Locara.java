@@ -76,6 +76,15 @@ public class Locara {
         System.out.println("[Locara by Qureon] Overwrite existing .rs files directly: " + (enable ? "ENABLED" : "DISABLED (quarantine as .healed.rs)"));
     }
 
+    public static void setScrollRecoveryEnabled(boolean enable) {
+        ENGINE.getConfig().setScrollRecoveryEnabled(enable);
+        System.out.println("[Locara by Qureon] Auto-scroll recovery: " + (enable ? "ENABLED" : "DISABLED"));
+    }
+
+    public static boolean isScrollRecoveryEnabled() {
+        return ENGINE.getConfig().isScrollRecoveryEnabled();
+    }
+
     public static LocaraEngine getEngine() {
         return ENGINE;
     }
@@ -336,24 +345,8 @@ public class Locara {
                 } catch (Exception ignored) {}
             }
 
-            // Auto-Scroll Fallback: If not found, attempt scroll recovery
-            if (!result.isSuccess()) {
-                try {
-                    java.util.List<com.qureon.locara.core.model.UIElementNode> nodes = new com.qureon.locara.core.parser.PageSourceParser().parse(pageSource);
-                    if (SCROLL_ENGINE.hasScrollableContainer(nodes)) {
-                        for (int attempt = 1; attempt <= SCROLL_ENGINE.getMaxScrollAttempts(); attempt++) {
-                            boolean scrolled = SCROLL_ENGINE.performScrollDown(driver);
-                            if (!scrolled) break;
-
-                            pageSource = KatalonDriverBridge.getPageSource(driver);
-                            if (pageSource != null) {
-                                result = ENGINE.heal(pageSource, context);
-                                if (result.isSuccess()) break;
-                            }
-                        }
-                    }
-                } catch (Exception ignored) {}
-            }
+            // Note: Presence checks (waitForElementPresent, verifyElementPresent, isElementPresent)
+            // are strictly read-only probes. They MUST NEVER mutate or scroll the viewport.
 
             if (!result.isSuccess() || result.getCandidate() == null) {
                 return false;
@@ -464,10 +457,10 @@ public class Locara {
         HealResult result = ENGINE.heal(pageSource, context);
 
         // Auto-Scroll Fallback: If not found, attempt scroll recovery on scrollable containers
-        if (!result.isSuccess()) {
+        if (!result.isSuccess() && ENGINE.getConfig().isScrollRecoveryEnabled()) {
             try {
                 java.util.List<com.qureon.locara.core.model.UIElementNode> nodes = new com.qureon.locara.core.parser.PageSourceParser().parse(pageSource);
-                if (SCROLL_ENGINE.hasScrollableContainer(nodes)) {
+                if (SCROLL_ENGINE.isScrollEligible(effectiveHint, rsPath, action, nodes)) {
                     for (int attempt = 1; attempt <= SCROLL_ENGINE.getMaxScrollAttempts(); attempt++) {
                         System.out.println("[Locara by Qureon] 📜 Target '" + hint + "' not found in active viewport. Attempting auto-scroll recovery #" + attempt + "...");
                         boolean scrolled = SCROLL_ENGINE.performScrollDown(driver);
@@ -482,6 +475,8 @@ public class Locara {
                             }
                         }
                     }
+                } else if (SCROLL_ENGINE.isOverlayOrDialogTarget(effectiveHint, rsPath)) {
+                    System.out.println("[Locara by Qureon] 🛡️ Target '" + hint + "' identified as Transient Popup / Overlay / Permission Dialog. Auto-scroll strictly inhibited to preserve screen state.");
                 }
             } catch (Exception ignored) {}
         }

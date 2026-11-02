@@ -27,6 +27,7 @@ public class HealConfig {
 
     private AppTarget appTarget = AppTarget.AUTO;
     private boolean enabled = true;
+    private boolean scrollRecoveryEnabled = true;
 
     public HealConfig() {}
 
@@ -71,6 +72,10 @@ public class HealConfig {
             config.backupExistingRs = Boolean.parseBoolean(props.getProperty("healing.rs.backup", "true"));
             config.auditLedgerEnabled = Boolean.parseBoolean(props.getProperty("healing.audit.enabled", "true"));
             config.adaptiveFrameworkWeights = Boolean.parseBoolean(props.getProperty("healing.framework.adaptive", "true"));
+            String scrollProp = props.getProperty("locara.scroll.enabled",
+                    props.getProperty("qureon.scroll.enabled",
+                    props.getProperty("healing.scroll.enabled", "true")));
+            config.scrollRecoveryEnabled = Boolean.parseBoolean(scrollProp);
             String targetProp = props.getProperty("locara.target", props.getProperty("healing.target", "AUTO"));
             config.appTarget = AppTarget.fromString(targetProp);
             config.katalonProjectPath = props.getProperty("healing.project.path", config.katalonProjectPath);
@@ -83,6 +88,11 @@ public class HealConfig {
         if (sysEnabled != null) {
             config.enabled = Boolean.parseBoolean(sysEnabled);
         }
+        String sysScroll = System.getProperty("locara.scroll.enabled",
+                System.getProperty("healing.scroll.enabled"));
+        if (sysScroll != null) {
+            config.scrollRecoveryEnabled = Boolean.parseBoolean(sysScroll);
+        }
 
         // 4. Environment variable override
         String envEnabled = System.getenv("LOCARA_ENABLED");
@@ -91,9 +101,17 @@ public class HealConfig {
         if (envEnabled != null) {
             config.enabled = Boolean.parseBoolean(envEnabled);
         }
+        String envScroll = System.getenv("LOCARA_SCROLL_ENABLED");
+        if (envScroll == null) envScroll = System.getenv("HEALING_SCROLL_ENABLED");
+        if (envScroll != null) {
+            config.scrollRecoveryEnabled = Boolean.parseBoolean(envScroll);
+        }
 
         return config;
     }
+
+    public boolean isScrollRecoveryEnabled() { return scrollRecoveryEnabled; }
+    public void setScrollRecoveryEnabled(boolean val) { this.scrollRecoveryEnabled = val; }
 
     public AppTarget getAppTarget() { return appTarget; }
     public void setAppTarget(AppTarget target) { this.appTarget = target != null ? target : AppTarget.AUTO; }

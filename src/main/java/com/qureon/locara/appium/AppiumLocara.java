@@ -22,6 +22,15 @@ public class AppiumLocara {
         return ENGINE;
     }
 
+    public static void setScrollRecoveryEnabled(boolean enable) {
+        ENGINE.getConfig().setScrollRecoveryEnabled(enable);
+        System.out.println("[AppiumLocara] Auto-scroll recovery: " + (enable ? "ENABLED" : "DISABLED"));
+    }
+
+    public static boolean isScrollRecoveryEnabled() {
+        return ENGINE.getConfig().isScrollRecoveryEnabled();
+    }
+
     /**
      * Taps an element on raw Appium driver. If original locator fails, autonomously heals and clicks.
      *
@@ -95,10 +104,10 @@ public class AppiumLocara {
         HealResult result = ENGINE.heal(pageSource, context);
 
         // Auto-Scroll recovery if not in current viewport
-        if (!result.isSuccess()) {
+        if (!result.isSuccess() && ENGINE.getConfig().isScrollRecoveryEnabled()) {
             try {
                 java.util.List<com.qureon.locara.core.model.UIElementNode> nodes = new com.qureon.locara.core.parser.PageSourceParser().parse(pageSource);
-                if (SCROLL_ENGINE.hasScrollableContainer(nodes)) {
+                if (SCROLL_ENGINE.isScrollEligible(targetHint, locatorOrXPath, "FIND", nodes)) {
                     for (int attempt = 1; attempt <= SCROLL_ENGINE.getMaxScrollAttempts(); attempt++) {
                         System.out.println("[AppiumLocara] Scrolling down to find '" + targetHint + "' (attempt #" + attempt + ")...");
                         boolean scrolled = SCROLL_ENGINE.performScrollDown(driver);
@@ -110,6 +119,8 @@ public class AppiumLocara {
                             if (result.isSuccess()) break;
                         }
                     }
+                } else if (SCROLL_ENGINE.isOverlayOrDialogTarget(targetHint, locatorOrXPath)) {
+                    System.out.println("[AppiumLocara] 🛡️ Target '" + targetHint + "' is an overlay/dialog. Auto-scroll strictly inhibited.");
                 }
             } catch (Exception ignored) {}
         }
@@ -139,10 +150,10 @@ public class AppiumLocara {
         HealResult result = ENGINE.heal(pageSource, context);
 
         // Auto-Scroll recovery if not in current viewport
-        if (!result.isSuccess()) {
+        if (!result.isSuccess() && ENGINE.getConfig().isScrollRecoveryEnabled()) {
             try {
                 java.util.List<com.qureon.locara.core.model.UIElementNode> nodes = new com.qureon.locara.core.parser.PageSourceParser().parse(pageSource);
-                if (SCROLL_ENGINE.hasScrollableContainer(nodes)) {
+                if (SCROLL_ENGINE.isScrollEligible(targetHint, locatorOrXPath, action, nodes)) {
                     for (int attempt = 1; attempt <= SCROLL_ENGINE.getMaxScrollAttempts(); attempt++) {
                         System.out.println("[AppiumLocara] Scrolling down to find '" + targetHint + "' (attempt #" + attempt + ")...");
                         boolean scrolled = SCROLL_ENGINE.performScrollDown(driver);
@@ -154,6 +165,8 @@ public class AppiumLocara {
                             if (result.isSuccess()) break;
                         }
                     }
+                } else if (SCROLL_ENGINE.isOverlayOrDialogTarget(targetHint, locatorOrXPath)) {
+                    System.out.println("[AppiumLocara] 🛡️ Target '" + targetHint + "' is an overlay/dialog. Auto-scroll strictly inhibited.");
                 }
             } catch (Exception ignored) {}
         }

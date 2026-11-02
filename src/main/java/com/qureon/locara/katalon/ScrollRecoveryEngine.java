@@ -22,8 +22,68 @@ public class ScrollRecoveryEngine {
         this.maxScrollAttempts = maxScrollAttempts;
     }
 
+    private static final java.util.Set<String> OVERLAY_AND_DIALOG_KEYWORDS = new java.util.HashSet<>(java.util.Arrays.asList(
+            "popup", "pop_up", "pop up", "pop-up", "pop",
+            "modal", "dialog", "alert", "prompt", "overlay", "airbag",
+            "izin", "perizinan", "permission", "permissions", "notifikasi", "notification", "notif",
+            "lokasi", "location", "alamat", "address", "gps",
+            "allow", "izinkan", "deny", "tolak", "block", "jangan izinkan",
+            "batal", "cancel", "tutup", "close", "dismiss", "later", "nanti",
+            "bottomsheet", "bottom_sheet", "snackbar", "toast", "banner", "promo",
+            "system_dialog", "runtime_permission", "grant_permissions"
+    ));
+
     public int getMaxScrollAttempts() {
         return maxScrollAttempts;
+    }
+
+    /**
+     * Identifies whether the target hint or Object Repository path represents a transient
+     * pop-up modal, permission request, notification dialog, or system overlay.
+     * Overlays reside on separate floating window layers and MUST NEVER trigger viewport scrolling.
+     */
+    public boolean isOverlayOrDialogTarget(String hint, String targetRsPath) {
+        String combined = ((hint != null ? hint : "") + " " + (targetRsPath != null ? targetRsPath : "")).toLowerCase();
+        if (combined.contains("permissioncontroller") || combined.contains("permission_allow_button")
+                || combined.contains("com.android.permissioncontroller") || combined.contains("com.google.android.gms.location")
+                || combined.contains("pop up") || combined.contains("pop-up") || combined.contains("bottom sheet")) {
+            return true;
+        }
+
+        String[] tokens = combined.split("[\\s_\\-./]+");
+        for (String token : tokens) {
+            if (OVERLAY_AND_DIALOG_KEYWORDS.contains(token)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Evaluates whether scroll recovery is safe and eligible for the given action and target.
+     * Prevents "ngide" scrolling when probing conditional elements, checking presence, or hunting for pop-ups.
+     */
+    public boolean isScrollEligible(String hint, String targetRsPath, String action, List<UIElementNode> nodes) {
+        if (action == null || action.trim().isEmpty()) {
+            return false;
+        }
+
+        String act = action.trim().toUpperCase();
+
+        // 1. Presence checks, probes, assertions, and checkpoints MUST NEVER scroll (strictly read-only)
+        if (act.contains("VERIFY") || act.contains("WAIT") || act.startsWith("IS_")
+                || act.contains("ASSERT") || act.contains("PRESENT") || act.contains("VISIBLE")
+                || act.contains("PROBE") || act.contains("CHECKPOINT") || act.contains("GET_TEXT")) {
+            return false;
+        }
+
+        // 2. Overlays, Modals, System Permission Dialogs MUST NEVER scroll
+        if (isOverlayOrDialogTarget(hint, targetRsPath)) {
+            return false;
+        }
+
+        // 3. Must have an active scrollable container in the current view
+        return hasScrollableContainer(nodes);
     }
 
     /**
