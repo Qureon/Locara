@@ -1,5 +1,7 @@
 package com.qureon.locara.core.sanitizer;
 
+import com.qureon.locara.core.generator.DynamicXPathGenerator;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -107,14 +109,14 @@ public class LocaraOrSanitizer {
         String reason = null;
 
         if (contentDesc != null && !contentDesc.trim().isEmpty()) {
-            optimalXPath = "//*[@content-desc = '" + escapeXPath(contentDesc.trim()) + "']";
+            optimalXPath = "//*[@content-desc = " + DynamicXPathGenerator.toXPathLiteral(contentDesc.trim()) + "]";
             reason = "Synthesized from content-desc";
         } else if (text != null && !text.trim().isEmpty()) {
             String cleanText = text.trim();
-            optimalXPath = "//*[contains(@text, '" + escapeXPath(cleanText) + "') or contains(@content-desc, '" + escapeXPath(cleanText) + "')]";
+            optimalXPath = "//*[contains(@text, " + DynamicXPathGenerator.toXPathLiteral(cleanText) + ") or contains(@content-desc, " + DynamicXPathGenerator.toXPathLiteral(cleanText) + ")]";
             reason = "Synthesized from text attribute";
         } else if (resourceId != null && !resourceId.trim().isEmpty() && !resourceId.contains(":id/")) {
-            optimalXPath = "//*[@resource-id = '" + escapeXPath(resourceId.trim()) + "']";
+            optimalXPath = "//*[@resource-id = " + DynamicXPathGenerator.toXPathLiteral(resourceId.trim()) + "]";
             reason = "Synthesized from clean resource-id";
         } else {
             return new SanitizeResult(rsFile, true, false, null, null, "Brittle hierarchy, but lacks text/content-desc properties to safely synthesize relative XPath");
@@ -161,10 +163,6 @@ public class LocaraOrSanitizer {
             map.put(m.group(1).trim(), m.group(2));
         }
         return map;
-    }
-
-    private static String escapeXPath(String val) {
-        return val.replace("'", "\\'");
     }
 
     private void collectRsFiles(File dir, List<File> accumulator) {

@@ -110,13 +110,19 @@ public final class StringSimilarity {
         double syn = UniversalSemanticDictionary.calculateSemanticAffinity(candidate, target);
 
         // Contains bonus: If target text is directly contained in candidate or vice versa (min 3 chars)
+        // Guard against asymmetric single-word inclusion (e.g. "Zaku" vs "Selamat datang Di Zaku" length ratio 0.18)
         String cNorm = normalize(candidate);
         String tNorm = normalize(target);
         double containsBonus = 0.0;
         if (!cNorm.isEmpty() && !tNorm.isEmpty() && cNorm.length() >= 3 && tNorm.length() >= 3) {
-            if (cNorm.contains(tNorm) || tNorm.contains(cNorm) ||
-                (!cClean.isEmpty() && !tClean.isEmpty() && (cClean.contains(tClean) || tClean.contains(cClean)))) {
-                containsBonus = 0.15;
+            int minLen = Math.min(cNorm.length(), tNorm.length());
+            int maxLen = Math.max(cNorm.length(), tNorm.length());
+            double lenRatio = (double) minLen / maxLen;
+            if (lenRatio >= 0.60) {
+                if (cNorm.contains(tNorm) || tNorm.contains(cNorm) ||
+                    (!cClean.isEmpty() && !tClean.isEmpty() && (cClean.contains(tClean) || tClean.contains(cClean)))) {
+                    containsBonus = 0.15;
+                }
             }
         }
 

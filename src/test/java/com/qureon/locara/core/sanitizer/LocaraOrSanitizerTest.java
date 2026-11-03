@@ -61,4 +61,34 @@ public class LocaraOrSanitizerTest {
         File backupFile = new File(rsFile.getAbsolutePath() + ".bak");
         assertTrue(backupFile.exists(), "Backup file (.bak) should be generated");
     }
+
+    @Test
+    @DisplayName("LocaraOrSanitizer should properly escape single quotes in text without invalid backslash escaping")
+    void testSanitizeRsWithQuotesInText() throws Exception {
+        String xmlWithQuotes = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                "<MobileElementEntity>\n" +
+                "   <name>01. TextView - Don't show again</name>\n" +
+                "   <webElementProperties>\n" +
+                "      <isSelected>false</isSelected>\n" +
+                "      <matchCondition>equals</matchCondition>\n" +
+                "      <name>text</name>\n" +
+                "      <type>Main</type>\n" +
+                "      <value>Don't show again</value>\n" +
+                "   </webElementProperties>\n" +
+                "   <locator>//hierarchy/android.widget.TextView[1]</locator>\n" +
+                "   <locatorStrategy>XPATH</locatorStrategy>\n" +
+                "</MobileElementEntity>";
+
+        File rsFile = new File(tempDir.toFile(), "test_quotes.rs");
+        Files.writeString(rsFile.toPath(), xmlWithQuotes);
+
+        LocaraOrSanitizer sanitizer = new LocaraOrSanitizer();
+        LocaraOrSanitizer.SanitizeSummary summary = sanitizer.scanAndSanitize(tempDir.toFile(), true, false);
+
+        assertEquals(1, summary.getTotalSanitized());
+
+        String updated = Files.readString(rsFile.toPath());
+        assertFalse(updated.contains("\\'"), "Must NEVER produce invalid XPath \\' escaping");
+        assertTrue(updated.contains("\"Don't show again\""), "Must safely wrap text with quotes in double quotes");
+    }
 }

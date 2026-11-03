@@ -75,4 +75,23 @@ public class LocaraIntentMatcherTest {
 
         assertFalse(result.isMatched(), "Unrelated screen texts must NOT match negative error codes");
     }
+
+    @Test
+    public void shouldRejectSingleWordMatchingFullSentenceAsFalsePositive() {
+        // Specifically reproducing Rio's incident: Dashboard menu icon "Zaku" vs Portal Title "Selamat datang Di Zaku"
+        double zakuScore = LocaraIntentMatcher.calculateIntentScore("Zaku", "Selamat datang Di Zaku");
+        assertTrue(zakuScore < 0.70, "Single token 'Zaku' must NOT match 'Selamat datang Di Zaku' with high confidence. Actual score: " + zakuScore);
+
+        // Account tab icon vs Delete account confirmation prompt
+        double accountScore = LocaraIntentMatcher.calculateIntentScore("Akun", "Apakah Anda yakin ingin menghapus akun ini secara permanen?");
+        assertTrue(accountScore < 0.70, "Single token 'Akun' must NOT match long confirmation prompt. Actual: " + accountScore);
+
+        // Form field label vs full validation error
+        double phoneScore = LocaraIntentMatcher.calculateIntentScore("Nomor Handphone", "No handphone tidak valid karena kurang dari 10 digit");
+        assertTrue(phoneScore < 0.70, "Field label must NOT match negative error message. Actual: " + phoneScore);
+
+        // Single button text 'Login' vs error dialog
+        double loginScore = LocaraIntentMatcher.calculateIntentScore("Login", "Login gagal silakan coba beberapa saat lagi");
+        assertTrue(loginScore < 0.70, "Single button text 'Login' must not match error dialog. Actual: " + loginScore);
+    }
 }

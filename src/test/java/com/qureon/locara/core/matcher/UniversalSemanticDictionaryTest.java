@@ -28,6 +28,20 @@ public class UniversalSemanticDictionaryTest {
         assertFalse(UniversalSemanticDictionary.isSynonym("hapus", "simpan"));
         assertFalse(UniversalSemanticDictionary.isSynonym("login", "logout"));
         assertFalse(UniversalSemanticDictionary.isSynonym("cari", "bayar"));
+
+        // Critical Banking Isolation Invariant: General OK/Confirmation must NEVER be synonymous with Financial Payment
+        assertFalse(UniversalSemanticDictionary.isSynonym("ok", "bayar"), "OK must NOT be treated as synonym of Bayar");
+        assertFalse(UniversalSemanticDictionary.isSynonym("setuju", "bayar"), "Setuju must NOT be treated as synonym of Bayar");
+        assertFalse(UniversalSemanticDictionary.isSynonym("selesai", "bayar"), "Selesai must NOT be treated as synonym of Bayar");
+        assertFalse(UniversalSemanticDictionary.isSynonym("done", "pay"), "Done must NOT be treated as synonym of Pay");
+
+        // Verify correct clustered associations
+        assertTrue(UniversalSemanticDictionary.isSynonym("bayar", "pay"));
+        assertTrue(UniversalSemanticDictionary.isSynonym("bayar", "checkout"));
+        assertTrue(UniversalSemanticDictionary.isSynonym("bayar", "transfer"));
+        assertTrue(UniversalSemanticDictionary.isSynonym("ok", "setuju"));
+        assertTrue(UniversalSemanticDictionary.isSynonym("ok", "confirm"));
+        assertTrue(UniversalSemanticDictionary.isSynonym("selesai", "done"));
     }
 
     @Test

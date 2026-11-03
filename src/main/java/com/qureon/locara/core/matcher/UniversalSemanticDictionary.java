@@ -18,8 +18,17 @@ public final class UniversalSemanticDictionary {
         // Universal Concept 0: Next / Forward / Progression
         registerCluster("lanjut", "lanjutkan", "next", "continue", "berikutnya", "proceed", "selanjutnya", "forward");
 
-        // Universal Concept 1: Confirmation / Submit / Action Execution
-        registerCluster("konfirmasi", "confirm", "kirim", "send", "submit", "bayar", "pay", "checkout", "proses", "process", "selesai", "done", "finish", "ok", "setuju", "agree");
+        // Universal Concept 1: Confirmation / General Affirmative Action
+        registerCluster("konfirmasi", "confirm", "ok", "oke", "setuju", "agree", "ya", "yes", "siap", "mengerti", "paham");
+
+        // Universal Concept 15: Financial Payment / Transaction Execution (Strictly Isolated)
+        registerCluster("bayar", "bayarkan", "pay", "payment", "checkout", "transfer", "kirim uang", "top up sekarang");
+
+        // Universal Concept 16: Task Completion / Done
+        registerCluster("selesai", "done", "finish", "beres", "tuntas");
+
+        // Universal Concept 17: Submission / Dispatch
+        registerCluster("kirim", "send", "submit", "proses", "process", "ajukan", "apply");
 
         // Universal Concept 2: Authentication / Sign In
         registerCluster("masuk", "login", "sign in", "signin", "log in", "logon");

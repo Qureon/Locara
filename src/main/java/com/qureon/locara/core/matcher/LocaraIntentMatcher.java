@@ -122,9 +122,23 @@ public final class LocaraIntentMatcher {
 
         if (actualNorm.isEmpty() || expectedNorm.isEmpty()) return 0.0;
 
-        // 1. Direct or Substring match
+        // 1. Direct match
         if (actualNorm.equals(expectedNorm)) return 1.0;
-        if (actualNorm.contains(expectedNorm) || expectedNorm.contains(actualNorm)) return 0.95;
+
+        // Substring match with strict word boundary and length ratio guards
+        // Prevents single-token false positives (e.g. "zaku" matching "selamat datang di zaku")
+        int minLen = Math.min(actualNorm.length(), expectedNorm.length());
+        int maxLen = Math.max(actualNorm.length(), expectedNorm.length());
+        double lengthRatio = (double) minLen / maxLen;
+
+        if (minLen >= 4 && lengthRatio >= 0.70) {
+            String paddedActual = " " + actualNorm + " ";
+            String paddedExpected = " " + expectedNorm + " ";
+            if (paddedActual.contains(paddedExpected) || paddedExpected.contains(paddedActual) ||
+                actualNorm.contains(expectedNorm) || expectedNorm.contains(actualNorm)) {
+                return 0.95;
+            }
+        }
 
         // 2. Concept cluster match
         for (Map.Entry<String, List<String>> entry : CONCEPT_CLUSTERS.entrySet()) {
@@ -151,8 +165,18 @@ public final class LocaraIntentMatcher {
     private static boolean isInCluster(String text, List<String> clusterTerms) {
         Set<String> textWords = new HashSet<>(Arrays.asList(text.split("\\s+")));
         for (String term : clusterTerms) {
-            if (text.equals(term) || text.contains(term) || term.contains(text)) {
+            if (text.equals(term)) {
                 return true;
+            }
+            int minLen = Math.min(text.length(), term.length());
+            int maxLen = Math.max(text.length(), term.length());
+            double ratio = (double) minLen / maxLen;
+
+            // Only allow substring matching within clusters if length ratio is substantial (>= 0.70)
+            if (minLen >= 4 && ratio >= 0.70) {
+                if (text.contains(term) || term.contains(text)) {
+                    return true;
+                }
             }
             // Check term word inclusion ratio: does the sentence contain the cluster term's keywords?
             String[] termWords = term.split("\\s+");
@@ -168,7 +192,7 @@ public final class LocaraIntentMatcher {
                     return true;
                 }
             }
-            if (StringSimilarity.tokenOverlap(text, term) >= 0.60) {
+            if (StringSimilarity.tokenOverlap(text, term) >= 0.70) {
                 return true;
             }
         }

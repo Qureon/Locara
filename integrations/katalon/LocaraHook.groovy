@@ -440,7 +440,9 @@ class LocaraVerifyElementTextKeyword implements IKeyword {
                 def locara = LocaraHook.getLocaraClass()
                 String actualText = locara != null ? (locara.healAndGetText(to, 10, objId) as String) : null
                 if (actualText != null) {
-                    if (actualText.equals(expectedText) || actualText.contains(expectedText) || expectedText.contains(actualText)) {
+                    String actClean = actualText.trim()
+                    String expClean = expectedText != null ? expectedText.trim() : ""
+                    if (!expClean.isEmpty() && (actClean.equals(expClean) || actClean.contains(expClean))) {
                         KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight self-healing succeeded for verifyElementText('${objId}') -> Match!")
                         return true
                     }
@@ -448,9 +450,9 @@ class LocaraVerifyElementTextKeyword implements IKeyword {
                     try {
                         Class<?> simClass = Class.forName("com.qureon.locara.core.matcher.StringSimilarity")
                         def simMethod = simClass.getMethod("compositeScore", String.class, String.class)
-                        similarity = (double) simMethod.invoke(null, actualText, expectedText)
+                        similarity = (double) simMethod.invoke(null, actClean, expClean)
                     } catch (Throwable ignored) {}
-                    if (similarity >= 0.70) {
+                    if (similarity >= 0.80) {
                         KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight self-healing succeeded for verifyElementText('${objId}'): Semantic match (${Math.round(similarity * 100)}%) between '${actualText}' and '${expectedText}'")
                         return true
                     }

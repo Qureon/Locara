@@ -330,7 +330,7 @@ public class Locara {
                     for (com.qureon.locara.core.model.UIElementNode node : nodes) {
                         if (node.hasText()) {
                             double score = com.qureon.locara.core.matcher.LocaraIntentMatcher.calculateIntentScore(node.getText(), effectiveHint);
-                            if (score > bestScore && score >= 0.70) {
+                            if (score > bestScore && score >= 0.85) {
                                 bestScore = score;
                                 bestNode = node;
                             }

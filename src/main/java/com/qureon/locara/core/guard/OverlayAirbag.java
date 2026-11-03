@@ -29,6 +29,16 @@ public class OverlayAirbag {
             "izinkan"
     );
 
+    private static final List<String> REJECT_BUTTON_TERMS = Arrays.asList(
+            "don't allow",
+            "dont allow",
+            "deny",
+            "jangan izinkan",
+            "tolak",
+            "tidak pernah",
+            "never"
+    );
+
     private static final List<String> DISMISS_MODAL_TERMS = Arrays.asList(
             "nanti saja",
             "tutup",
@@ -77,12 +87,17 @@ public class OverlayAirbag {
             String resId = node.getResourceId().toLowerCase();
             String text = node.getText().toLowerCase().trim();
 
-            if (resId.contains("permission_allow_button") || resId.contains("permission_allow_foreground_only_button")) {
+            // Explicit deny guard: NEVER click deny/reject buttons
+            if (resId.contains("permission_deny_button") || resId.contains("deny") || REJECT_BUTTON_TERMS.contains(text)) {
+                continue;
+            }
+
+            if (resId.contains("permission_allow_button") || resId.contains("permission_allow_foreground_only_button") || resId.contains("permission_allow_one_time_button")) {
                 return node;
             }
 
             for (String pkg : PERMISSION_PACKAGES) {
-                if (resId.startsWith(pkg) && (ALLOW_BUTTON_TERMS.contains(text) || node.isClickable())) {
+                if (resId.startsWith(pkg) && ALLOW_BUTTON_TERMS.contains(text)) {
                     return node;
                 }
             }
