@@ -19,11 +19,15 @@ public final class DangerKeywordGuard {
             "keluar", "exit", "logout", "blokir", "block", "tolak", "reject", "reset"
     )));
 
+    private static final Set<String> FINANCIAL_KEYWORDS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            "bayar", "bayarkan", "pembayaran", "pay", "payment", "checkout", "transfer", "beli", "buy",
+            "topup", "top up", "debet", "debit", "tarik", "kirim uang"
+    )));
+
     private static final Set<String> POSITIVE_KEYWORDS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-            "lanjut", "next", "continue", "bayar", "pay", "kirim", "send",
+            "lanjut", "next", "continue", "kirim", "send",
             "proses", "process", "submit", "konfirmasi", "confirm", "setuju",
-            "agree", "ok", "ya", "yes", "simpan", "save",
-            "transfer", "topup", "debet", "debit", "tarik", "beli", "buy"
+            "agree", "ok", "ya", "yes", "simpan", "save"
     )));
 
     private DangerKeywordGuard() {}
@@ -37,12 +41,22 @@ public final class DangerKeywordGuard {
 
         Set<String> targetTokens = StringSimilarity.tokenize(targetHint);
 
-        boolean targetIsPositive = containsAny(targetTokens, POSITIVE_KEYWORDS);
+        boolean targetIsFinancial = containsAny(targetTokens, FINANCIAL_KEYWORDS);
+        boolean targetIsPositive = containsAny(targetTokens, POSITIVE_KEYWORDS) || targetIsFinancial;
         boolean targetIsDanger = containsAny(targetTokens, DANGER_KEYWORDS);
 
         Set<String> nodeTokens = extractNodeTokens(candidateNode);
+        boolean nodeHasFinancial = containsAny(nodeTokens, FINANCIAL_KEYWORDS);
         boolean nodeHasDanger = containsAny(nodeTokens, DANGER_KEYWORDS);
-        boolean nodeHasPositive = containsAny(nodeTokens, POSITIVE_KEYWORDS);
+        boolean nodeHasPositive = containsAny(nodeTokens, POSITIVE_KEYWORDS) || nodeHasFinancial;
+
+        // Rule 0 (Strict Bank Mega Financial Isolation Invariant):
+        // A financial transaction action (e.g. 'Bayar', 'Transfer', 'Checkout', 'Beli')
+        // MUST NEVER be clicked if the target hint did not explicitly request a financial action
+        // (e.g. looking for 'OK', 'Lanjut', 'Tutup', 'Simpan', 'Informasi').
+        if (nodeHasFinancial && !targetIsFinancial) {
+            return true;
+        }
 
         // If candidate shares danger intention when target explicitly asks for danger: safe!
         if (targetIsDanger && nodeHasDanger) {

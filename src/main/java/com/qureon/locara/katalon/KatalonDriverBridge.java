@@ -73,7 +73,8 @@ public class KatalonDriverBridge {
                     locatorValue = node.getResourceId();
                 } else if (node.hasText()) {
                     strategyName = "ATTRIBUTES";
-                    locatorValue = "//*[@class = '" + node.getClassName() + "' and (@text = '" + node.getText() + "' or . = '" + node.getText() + "')]";
+                    String textLit = com.qureon.locara.core.generator.DynamicXPathGenerator.toXPathLiteral(node.getText());
+                    locatorValue = "//*[@class = '" + node.getClassName() + "' and (@text = " + textLit + " or . = " + textLit + ")]";
                 }
             }
 

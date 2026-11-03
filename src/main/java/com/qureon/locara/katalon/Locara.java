@@ -41,7 +41,8 @@ public class Locara {
         return new LocaraEngine(config);
     }
 
-    private static com.qureon.locara.core.model.AppTarget currentTarget = com.qureon.locara.core.model.AppTarget.AUTO;
+    private static volatile com.qureon.locara.core.model.AppTarget defaultTarget = com.qureon.locara.core.model.AppTarget.AUTO;
+    private static final ThreadLocal<com.qureon.locara.core.model.AppTarget> threadTarget = new ThreadLocal<>();
 
     /**
      * Sets the high-level application optimization profile.
@@ -52,13 +53,16 @@ public class Locara {
      * - AppTarget.AUTO   : Adaptive runtime fingerprinting (Default)
      */
     public static void setAppTarget(com.qureon.locara.core.model.AppTarget target) {
-        currentTarget = target != null ? target : com.qureon.locara.core.model.AppTarget.AUTO;
-        ENGINE.getConfig().setAppTarget(currentTarget);
-        System.out.println("[Locara by Qureon] Active Target Profile: " + currentTarget.getDescription());
+        com.qureon.locara.core.model.AppTarget active = target != null ? target : com.qureon.locara.core.model.AppTarget.AUTO;
+        defaultTarget = active;
+        threadTarget.set(active);
+        ENGINE.getConfig().setAppTarget(active);
+        System.out.println("[Locara by Qureon] Active Target Profile: " + active.getDescription());
     }
 
     public static com.qureon.locara.core.model.AppTarget getAppTarget() {
-        return currentTarget;
+        com.qureon.locara.core.model.AppTarget target = threadTarget.get();
+        return target != null ? target : defaultTarget;
     }
 
     public static void setProfileUmum() { setAppTarget(com.qureon.locara.core.model.AppTarget.UMUM); }

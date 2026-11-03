@@ -280,10 +280,12 @@ public class KatalonRsSynthesizer {
         if (node == null) return "";
         String cls = node.getClassName();
         if (node.hasText()) {
-            return "//*[@class = '" + cls + "' and (@text = '" + node.getText() + "' or . = '" + node.getText() + "')]";
+            String textLit = DynamicXPathGenerator.toXPathLiteral(node.getText());
+            return "//*[@class = '" + cls + "' and (@text = " + textLit + " or . = " + textLit + ")]";
         }
         if (node.hasContentDesc()) {
-            return "//*[@class = '" + cls + "' and @content-desc = '" + node.getContentDesc() + "']";
+            String descLit = DynamicXPathGenerator.toXPathLiteral(node.getContentDesc());
+            return "//*[@class = '" + cls + "' and @content-desc = " + descLit + "]";
         }
         if (node.hasResourceId()) {
             return "//*[@class = '" + cls + "' and @resource-id = '" + node.getResourceId() + "']";

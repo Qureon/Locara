@@ -132,8 +132,16 @@ public class OverlayAirbag {
     private boolean clickNode(Object driver, UIElementNode node) {
         try {
             Class<?> byClass = Class.forName("org.openqa.selenium.By");
-            String xpath = node.hasResourceId() ? "//*[@resource-id='" + node.getResourceId() + "']" :
-                    (node.hasText() ? "//*[@text='" + node.getText() + "']" : "//*[@content-desc='" + node.getContentDesc() + "']");
+            String xpath;
+            if (node.hasResourceId()) {
+                xpath = "//*[@resource-id='" + node.getResourceId() + "']";
+            } else if (node.hasText()) {
+                xpath = "//*[@text=" + com.qureon.locara.core.generator.DynamicXPathGenerator.toXPathLiteral(node.getText()) + "]";
+            } else if (node.hasContentDesc()) {
+                xpath = "//*[@content-desc=" + com.qureon.locara.core.generator.DynamicXPathGenerator.toXPathLiteral(node.getContentDesc()) + "]";
+            } else {
+                return false;
+            }
 
             Method xpathMethod = byClass.getMethod("xpath", String.class);
             Object by = xpathMethod.invoke(null, xpath);

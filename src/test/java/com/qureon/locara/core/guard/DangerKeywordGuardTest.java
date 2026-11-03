@@ -124,4 +124,53 @@ public class DangerKeywordGuardTest {
         // Neutral target matching neutral node is safe
         assertFalse(DangerKeywordGuard.isPolarityViolation("Tabungan Saya", safeTabunganBtn));
     }
+
+    @Test
+    @DisplayName("Should strictly reject financial action candidates when target is generic/neutral (Bank Mega Zero-Loss Invariant)")
+    void testStrictFinancialCommitmentIsolation() {
+        UIElementNode bayarBtn = new UIElementNode(
+                "android.widget.Button",
+                "com.bankmega.msmile:id/btn_pay",
+                "Bayar",
+                "Bayar Tagihan",
+                "android.widget.Button",
+                "//android.widget.Button",
+                new Rectangle(100, 2000, 300, 100),
+                true, true, true, false, false, 2
+        );
+
+        UIElementNode transferBtn = new UIElementNode(
+                "android.widget.Button",
+                "com.bankmega.msmile:id/btn_transfer",
+                "Transfer",
+                "Transfer Saldo",
+                "android.widget.Button",
+                "//android.widget.Button",
+                new Rectangle(100, 2000, 300, 100),
+                true, true, true, false, false, 2
+        );
+
+        UIElementNode checkoutBtn = new UIElementNode(
+                "android.widget.Button",
+                "com.bankmega.msmile:id/btn_checkout",
+                "Checkout",
+                "Checkout Keranjang",
+                "android.widget.Button",
+                "//android.widget.Button",
+                new Rectangle(100, 2000, 300, 100),
+                true, true, true, false, false, 2
+        );
+
+        // When script looks for neutral/affirmation (e.g. 'OK', 'Lanjut', 'Tutup', 'Simpan'),
+        // selecting financial commitment buttons MUST be rejected!
+        assertTrue(DangerKeywordGuard.isPolarityViolation("OK", bayarBtn), "Generic 'OK' must NEVER match 'Bayar'");
+        assertTrue(DangerKeywordGuard.isPolarityViolation("Lanjut", transferBtn), "Generic 'Lanjut' must NEVER match 'Transfer'");
+        assertTrue(DangerKeywordGuard.isPolarityViolation("Tutup Dialog", bayarBtn), "Dismissal must NEVER match 'Bayar'");
+        assertTrue(DangerKeywordGuard.isPolarityViolation("Simpan Dokumen", checkoutBtn), "Generic save must NEVER match 'Checkout'");
+
+        // When target DOES explicitly request financial action, it is allowed
+        assertFalse(DangerKeywordGuard.isPolarityViolation("Bayar Sekarang", bayarBtn), "Explicit pay target should allow Pay button");
+        assertFalse(DangerKeywordGuard.isPolarityViolation("Transfer Saldo", transferBtn), "Explicit transfer target should allow Transfer button");
+        assertFalse(DangerKeywordGuard.isPolarityViolation("Konfirmasi Pembayaran", bayarBtn), "Confirmation with payment intent should allow Pay button");
+    }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@qureon/playwright-locara",
-  "version": "1.8.0",
+  "version": "1.7.0",
   "description": "Locara by Qureon: Autonomous Self-Healing & Semantic Recovery Engine for Playwright Test, MCP, and Azure Playwright Testing",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
