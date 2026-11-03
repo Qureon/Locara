@@ -317,6 +317,12 @@
     color: var(--emerald);
 }
 
+.guard-pill.danger {
+    background: var(--danger-subtle);
+    border-color: var(--danger-border);
+    color: var(--danger);
+}
+
 /* ------------------------------------------------------------------------------
    TAB 3: REGRESSION HEALTH & ANALYTICS
    ------------------------------------------------------------------------------ */

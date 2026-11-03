@@ -60,7 +60,7 @@ public class DynamicXPathGenerator {
             UIElementNode parent = targetNode.getParent();
             String parentId = parent.getResourceId().isEmpty() ? parent.getAttribute("id") : parent.getResourceId();
             if (!parentId.isEmpty()) {
-                ranked.put("xpath:idRelative", String.format("//*[@id='%s']//%s", parentId, tag));
+                ranked.put("xpath:idRelative", String.format("//*[@id=%s]//%s", toXPathLiteral(parentId), tag));
             } else if (!parent.getTag().isEmpty()) {
                 ranked.put("xpath:idRelative", String.format("//%s/%s", parent.getTag(), tag));
             }
@@ -92,25 +92,25 @@ public class DynamicXPathGenerator {
             // HTML Strategy 1: data-testid (Universal Modern Standard: React, Angular, Vue, Ionic)
             String testId = targetNode.getAttribute("data-testid");
             if (!testId.isEmpty()) {
-                String xpath = String.format("//%s[@data-testid='%s']", tag, testId);
+                String xpath = String.format("//%s[@data-testid=%s]", tag, toXPathLiteral(testId));
                 if (isUnique(xpath, targetNode, allNodes)) return xpath;
-                String wild = String.format("//*[@data-testid='%s']", testId);
+                String wild = String.format("//*[@data-testid=%s]", toXPathLiteral(testId));
                 if (isUnique(wild, targetNode, allNodes)) return wild;
             }
 
             // HTML Strategy 2: id attribute
             String idAttr = targetNode.getAttribute("id");
             if (!idAttr.isEmpty()) {
-                String xpath = String.format("//%s[@id='%s']", tag, idAttr);
+                String xpath = String.format("//%s[@id=%s]", tag, toXPathLiteral(idAttr));
                 if (isUnique(xpath, targetNode, allNodes)) return xpath;
-                String wild = String.format("//*[@id='%s']", idAttr);
+                String wild = String.format("//*[@id=%s]", toXPathLiteral(idAttr));
                 if (isUnique(wild, targetNode, allNodes)) return wild;
             }
 
             // HTML Strategy 3: name attribute (Form inputs)
             String nameAttr = targetNode.getAttribute("name");
             if (!nameAttr.isEmpty()) {
-                String xpath = String.format("//%s[@name='%s']", tag, nameAttr);
+                String xpath = String.format("//%s[@name=%s]", tag, toXPathLiteral(nameAttr));
                 if (isUnique(xpath, targetNode, allNodes)) return xpath;
             }
 
@@ -138,7 +138,7 @@ public class DynamicXPathGenerator {
         // --- NATIVE MOBILE XML STRATEGIES (Android UIAutomator2 / iOS XCUITest) ---
         // Strategy 1: Resource-ID + Text combination (Ultra Robust)
         if (!resourceId.isEmpty() && !text.isEmpty()) {
-            String xpath = String.format("//%s[@resource-id='%s' and @text=%s]", tag, resourceId, toXPathLiteral(text));
+            String xpath = String.format("//%s[@resource-id=%s and @text=%s]", tag, toXPathLiteral(resourceId), toXPathLiteral(text));
             if (isUnique(xpath, targetNode, allNodes)) {
                 return xpath;
             }
@@ -146,12 +146,12 @@ public class DynamicXPathGenerator {
 
         // Strategy 2: Resource-ID alone (if unique)
         if (!resourceId.isEmpty()) {
-            String xpath = String.format("//%s[@resource-id='%s']", tag, resourceId);
+            String xpath = String.format("//%s[@resource-id=%s]", tag, toXPathLiteral(resourceId));
             if (isUnique(xpath, targetNode, allNodes)) {
                 return xpath;
             }
             // Or wildcard tag with unique resource-id
-            String anyTagXPath = String.format("//*[@resource-id='%s']", resourceId);
+            String anyTagXPath = String.format("//*[@resource-id=%s]", toXPathLiteral(resourceId));
             if (isUnique(anyTagXPath, targetNode, allNodes)) {
                 return anyTagXPath;
             }
@@ -190,7 +190,7 @@ public class DynamicXPathGenerator {
         if (targetNode.getParent() != null) {
             UIElementNode parent = targetNode.getParent();
             if (!parent.getResourceId().isEmpty()) {
-                String parentXPath = String.format("//*[@resource-id='%s']//%s", parent.getResourceId(), tag);
+                String parentXPath = String.format("//*[@resource-id=%s]//%s", toXPathLiteral(parent.getResourceId()), tag);
                 if (isUnique(parentXPath, targetNode, allNodes)) {
                     return parentXPath;
                 }
@@ -231,6 +231,40 @@ public class DynamicXPathGenerator {
     }
 
     private boolean matchesSimpleXPath(String xpath, UIElementNode node) {
+        if (xpath == null || node == null) return false;
+
+        // Strategy 6: Parent relative descendant XPath //*[@resource-id='...']//tag
+        int descendantIdx = xpath.indexOf("]//");
+        if (xpath.startsWith("//*[") && descendantIdx != -1) {
+            String parentResId = extractAttr(xpath, "@resource-id=");
+            if (parentResId.isEmpty()) {
+                parentResId = extractAttr(xpath, "@id=");
+            }
+            String childTag = xpath.substring(descendantIdx + 3).trim();
+            if (!matchesTag(childTag, node)) {
+                return false;
+            }
+            UIElementNode ancestor = node.getParent();
+            while (ancestor != null) {
+                if (ancestor.getResourceId().equals(parentResId) || ancestor.getAttribute("id").equals(parentResId)) {
+                    return true;
+                }
+                ancestor = ancestor.getParent();
+            }
+            return false;
+        }
+
+        // Verify tag constraint for single-element XPaths starting with //<tag>[
+        if (xpath.startsWith("//")) {
+            int bracketIdx = xpath.indexOf('[');
+            if (bracketIdx > 2) {
+                String expectedTag = xpath.substring(2, bracketIdx).trim();
+                if (!matchesTag(expectedTag, node)) {
+                    return false;
+                }
+            }
+        }
+
         // HTML DOM attribute evaluators
         if (xpath.contains("@data-testid=")) {
             String testId = extractAttr(xpath, "@data-testid=");
@@ -268,11 +302,37 @@ public class DynamicXPathGenerator {
         return xpath.equals(node.getXpath());
     }
 
+    private boolean matchesTag(String expectedTag, UIElementNode node) {
+        if (expectedTag == null || expectedTag.isEmpty() || "*".equals(expectedTag)) {
+            return true;
+        }
+        return expectedTag.equalsIgnoreCase(node.getTag()) || expectedTag.equalsIgnoreCase(node.getClassName());
+    }
+
     private String extractAttr(String xpath, String prefix) {
         int start = xpath.indexOf(prefix);
         if (start == -1) return "";
         start += prefix.length();
         if (start >= xpath.length()) return "";
+        if (xpath.startsWith("concat(", start)) {
+            int closeParen = xpath.indexOf(')', start + 7);
+            if (closeParen == -1) return "";
+            String inner = xpath.substring(start + 7, closeParen);
+            StringBuilder sb = new StringBuilder();
+            int i = 0;
+            while (i < inner.length()) {
+                char c = inner.charAt(i);
+                if (c == '\'' || c == '"') {
+                    int endQuote = inner.indexOf(c, i + 1);
+                    if (endQuote == -1) break;
+                    sb.append(inner, i + 1, endQuote);
+                    i = endQuote + 1;
+                } else {
+                    i++;
+                }
+            }
+            return sb.toString();
+        }
         char delimiter = xpath.charAt(start);
         if (delimiter != '\'' && delimiter != '"') return "";
         start++;

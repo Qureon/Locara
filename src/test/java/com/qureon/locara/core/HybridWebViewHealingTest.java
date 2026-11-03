@@ -45,7 +45,9 @@ public class HybridWebViewHealingTest {
         assertNotNull(nodes);
         assertFalse(nodes.isEmpty());
 
-        LocaraEngine engine = new LocaraEngine(new HealConfig());
+        HealConfig config = new HealConfig();
+        config.setAuditLedgerEnabled(false);
+        LocaraEngine engine = new LocaraEngine(config);
         HealContext context = HealContext.builder()
                 .targetHint("Konfirmasi Pembayaran")
                 .action("TAP")

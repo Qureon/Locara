@@ -39,7 +39,7 @@ public class HtmlDomParser {
     private static final Pattern STYLE_PATTERN = Pattern.compile("<style\\b[^>]*>.*?</style>", Pattern.DOTALL | Pattern.CASE_INSENSITIVE);
     private static final Pattern COMMENT_PATTERN = Pattern.compile("<!--.*?-->", Pattern.DOTALL);
     private static final Pattern ATTR_PATTERN = Pattern.compile("([a-zA-Z0-9_:-]+)(?:\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s>]+)))?");
-    private static final Pattern TAG_PATTERN = Pattern.compile("</?([a-zA-Z0-9:-]+)((?:\\s+[^>/]+)*)\\s*(/?)>", Pattern.DOTALL);
+    private static final Pattern TAG_PATTERN = Pattern.compile("</?([a-zA-Z0-9:-]+)((?:\\s+(?:\"[^\"]*\"|'[^']*'|/(?!>)|[^>/\"'])*)?)\\s*(/?)>", Pattern.DOTALL);
 
     public HtmlDomParser() {}
 
@@ -60,7 +60,7 @@ public class HtmlDomParser {
         // 2. Tokenize tags and construct elements
         Matcher matcher = TAG_PATTERN.matcher(sanitized);
         Deque<HtmlElementBuilder> stack = new ArrayDeque<>();
-        Map<String, Integer> globalTagCounts = new HashMap<>();
+        Map<String, Integer> rootTagCounts = new HashMap<>();
 
         int lastEnd = 0;
 
@@ -87,14 +87,13 @@ public class HtmlDomParser {
                 // Pop stack until matching tag found
                 while (!stack.isEmpty()) {
                     HtmlElementBuilder popped = stack.pop();
+                    UIElementNode node = popped.build();
+                    flattenedNodes.add(node);
+                    if (!stack.isEmpty()) {
+                        stack.peek().addChild(node);
+                    }
                     if (popped.tagName.equalsIgnoreCase(tagName)) {
-                        UIElementNode node = popped.build();
-                        flattenedNodes.add(node);
                         break;
-                    } else {
-                        // Tag was not explicitly closed in HTML; still record it
-                        UIElementNode unclosed = popped.build();
-                        flattenedNodes.add(unclosed);
                     }
                 }
             } else {
@@ -102,9 +101,10 @@ public class HtmlDomParser {
                 Map<String, String> attributes = parseAttributes(rawAttrs);
                 int depth = stack.size() + 1;
 
-                // Compute XPath index
-                int tagIndex = globalTagCounts.getOrDefault(tagName, 0) + 1;
-                globalTagCounts.put(tagName, tagIndex);
+                // Compute sibling XPath index per parent
+                Map<String, Integer> siblingCounts = stack.isEmpty() ? rootTagCounts : stack.peek().childTagCounts;
+                int tagIndex = siblingCounts.getOrDefault(tagName, 0) + 1;
+                siblingCounts.put(tagName, tagIndex);
 
                 String parentXpath = stack.isEmpty() ? "" : stack.peek().xpath;
                 String currentXpath;
@@ -124,9 +124,6 @@ public class HtmlDomParser {
                         stack.peek().addChild(node);
                     }
                 } else {
-                    if (!stack.isEmpty()) {
-                        stack.peek().addChildBuilder(builder);
-                    }
                     stack.push(builder);
                 }
             }
@@ -134,7 +131,12 @@ public class HtmlDomParser {
 
         // Flush remaining unclosed tags
         while (!stack.isEmpty()) {
-            flattenedNodes.add(stack.pop().build());
+            HtmlElementBuilder popped = stack.pop();
+            UIElementNode node = popped.build();
+            flattenedNodes.add(node);
+            if (!stack.isEmpty()) {
+                stack.peek().addChild(node);
+            }
         }
 
         return flattenedNodes;
@@ -164,6 +166,7 @@ public class HtmlDomParser {
         final int depth;
         final StringBuilder textContent = new StringBuilder();
         final List<UIElementNode> builtChildren = new ArrayList<>();
+        final Map<String, Integer> childTagCounts = new HashMap<>();
 
         HtmlElementBuilder(String tagName, Map<String, String> attributes, String xpath, int depth) {
             this.tagName = tagName;
@@ -183,16 +186,22 @@ public class HtmlDomParser {
             builtChildren.add(child);
         }
 
-        void addChildBuilder(HtmlElementBuilder childBuilder) {
-            // Placeholder for tree structure tracking
-        }
-
         UIElementNode build() {
             String id = attributes.getOrDefault("id", attributes.getOrDefault("name", ""));
             String className = attributes.getOrDefault("class", "");
             
-            // Priority for visible text: innerText > placeholder > value > title
+            // Priority for visible text: innerText > child text (for interactive tags) > placeholder > value > title
             String text = textContent.toString().trim();
+            if (text.isEmpty() && (CLICKABLE_TAGS.contains(tagName) || "label".equals(tagName) || "span".equals(tagName)) && !builtChildren.isEmpty()) {
+                StringBuilder childText = new StringBuilder();
+                for (UIElementNode child : builtChildren) {
+                    if (!child.getText().isEmpty()) {
+                        if (childText.length() > 0) childText.append(" ");
+                        childText.append(child.getText());
+                    }
+                }
+                text = childText.toString().trim();
+            }
             if (text.isEmpty() && attributes.containsKey("placeholder")) {
                 text = attributes.get("placeholder").trim();
             }

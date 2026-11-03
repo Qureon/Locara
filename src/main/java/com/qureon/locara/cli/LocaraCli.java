@@ -48,6 +48,7 @@ public class LocaraCli {
                 runInspectFieldsMode(xmlContent);
             } catch (Exception e) {
                 System.err.println("❌ Error reading XML file: " + e.getMessage());
+                System.exit(1);
             }
             return;
         }
@@ -136,6 +137,7 @@ public class LocaraCli {
         HealConfig config = new HealConfig();
         if (outPath != null && !outPath.isEmpty()) {
             config.setKatalonProjectPath(new File(".").getAbsolutePath());
+            config.setAutoGenerateRs(true);
         }
 
         LocaraEngine engine = new LocaraEngine(config);
@@ -240,7 +242,7 @@ public class LocaraCli {
     }
 
     private static void printUsage() {
-        System.out.println("Locara by Qureon CLI v1.8.1 — Autonomous Mobile Recon & Synthesizer");
+        System.out.println("Locara by Qureon CLI v1.8.2 — Autonomous Mobile Recon & Synthesizer");
         System.out.println("Usage:");
         System.out.println("  locara --xml <path> --hint <hint> [options]");
         System.out.println("  locara sanitize-or --path <path> [--fix] [--no-backup]");

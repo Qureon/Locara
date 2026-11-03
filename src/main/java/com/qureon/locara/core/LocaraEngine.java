@@ -60,6 +60,9 @@ public class LocaraEngine {
      * 5. Logs to the immutable audit ledger.
      */
     public HealResult heal(String xmlPageSource, HealContext context) {
+        if (context == null) {
+            context = new HealContext.Builder().build();
+        }
         if (xmlPageSource == null || xmlPageSource.trim().isEmpty()) {
             ledger.recordEvent(context, null, null, "EMPTY_PAGE_SOURCE", config);
             return new HealResult(false, null, null, "XML Page Source is empty or null");
@@ -79,33 +82,20 @@ public class LocaraEngine {
         }
 
         // Framework Fingerprinting Detection / Profile Enforcement
-        com.qureon.locara.core.framework.FrameworkFingerprint fingerprint;
-        com.qureon.locara.core.model.AppTarget target = config.getAppTarget();
-        if (target == com.qureon.locara.core.model.AppTarget.REVAMP) {
-            fingerprint = new com.qureon.locara.core.framework.FrameworkFingerprint(
-                    com.qureon.locara.core.framework.AppFramework.REACT_NATIVE, 1.0, "Enforced Profile: Revamp (React Native)", 0.50);
-        } else if (target == com.qureon.locara.core.model.AppTarget.KMP) {
-            fingerprint = new com.qureon.locara.core.framework.FrameworkFingerprint(
-                    com.qureon.locara.core.framework.AppFramework.KMP_COMPOSE, 1.0, "Enforced Profile: KMP (Compose Multiplatform)", 0.0);
-        } else if (target == com.qureon.locara.core.model.AppTarget.UMUM) {
-            fingerprint = new com.qureon.locara.core.framework.FrameworkFingerprint(
-                    com.qureon.locara.core.framework.AppFramework.UNIVERSAL, 1.0, "Enforced Profile: Umum (Universal App-Agnostic)", 0.0);
-        } else if (target == com.qureon.locara.core.model.AppTarget.WEB) {
-            fingerprint = new com.qureon.locara.core.framework.FrameworkFingerprint(
-                    com.qureon.locara.core.framework.AppFramework.PLAYWRIGHT_WEB, 1.0, "Enforced Profile: Playwright Modern Web (HTML5/ARIA)", 0.0);
-        } else {
-            fingerprint = frameworkDetector.detect(nodes, xmlPageSource);
-        }
+        com.qureon.locara.core.framework.FrameworkFingerprint fingerprint = resolveFingerprint(nodes, xmlPageSource);
 
         List<HealCandidate> candidates = matcher.findCandidates(nodes, context, config, fingerprint);
-        if (candidates.isEmpty()) {
+        if (candidates.isEmpty() && 0.85 >= config.getMinConfidenceThreshold()) {
             // Spatial Proximity Fallback: Infer target input/value element based on visual 2D layout alignment
-            java.util.Optional<UIElementNode> spatialNode = spatialEngine.findTargetByLabel(context.getTargetHint(), nodes);
+            String cleanedHint = HeuristicMatcher.cleanSemanticHint(context.getTargetHint());
+            java.util.Optional<UIElementNode> spatialNode = spatialEngine.findTargetByLabel(cleanedHint, nodes);
             if (spatialNode.isPresent()) {
                 UIElementNode sNode = spatialNode.get();
-                String sXPath = xpathGenerator.generateOptimalXPath(sNode, nodes, context.getAction());
-                HealCandidate sCand = new HealCandidate(sNode, sXPath, 0.85, "SPATIAL_ALIGNMENT_PROXIMITY");
-                candidates = java.util.Collections.singletonList(sCand);
+                if (!com.qureon.locara.core.guard.DangerKeywordGuard.isPolarityViolation(cleanedHint, sNode)) {
+                    String sXPath = xpathGenerator.generateOptimalXPath(sNode, nodes, context.getAction());
+                    HealCandidate sCand = new HealCandidate(sNode, sXPath, 0.85, "SPATIAL_ALIGNMENT_PROXIMITY");
+                    candidates = java.util.Collections.singletonList(sCand);
+                }
             }
         }
 
@@ -156,7 +146,29 @@ public class LocaraEngine {
      * Inspects the hierarchy and returns all ranked candidate matches without mutating state or writing files.
      */
     public List<HealCandidate> inspectOnly(String xmlPageSource, HealContext context) throws Exception {
+        if (context == null) {
+            context = new HealContext.Builder().build();
+        }
         List<UIElementNode> nodes = parser.parse(xmlPageSource);
-        return matcher.findCandidates(nodes, context, config);
+        com.qureon.locara.core.framework.FrameworkFingerprint fingerprint = resolveFingerprint(nodes, xmlPageSource);
+        return matcher.findCandidates(nodes, context, config, fingerprint);
+    }
+
+    private com.qureon.locara.core.framework.FrameworkFingerprint resolveFingerprint(List<UIElementNode> nodes, String xmlPageSource) {
+        com.qureon.locara.core.model.AppTarget target = config.getAppTarget();
+        if (target == com.qureon.locara.core.model.AppTarget.REVAMP) {
+            return new com.qureon.locara.core.framework.FrameworkFingerprint(
+                    com.qureon.locara.core.framework.AppFramework.REACT_NATIVE, 1.0, "Enforced Profile: Revamp (React Native)", 0.50);
+        } else if (target == com.qureon.locara.core.model.AppTarget.KMP) {
+            return new com.qureon.locara.core.framework.FrameworkFingerprint(
+                    com.qureon.locara.core.framework.AppFramework.KMP_COMPOSE, 1.0, "Enforced Profile: KMP (Compose Multiplatform)", 0.0);
+        } else if (target == com.qureon.locara.core.model.AppTarget.UMUM) {
+            return new com.qureon.locara.core.framework.FrameworkFingerprint(
+                    com.qureon.locara.core.framework.AppFramework.UNIVERSAL, 1.0, "Enforced Profile: Umum (Universal App-Agnostic)", 0.0);
+        } else if (target == com.qureon.locara.core.model.AppTarget.WEB) {
+            return new com.qureon.locara.core.framework.FrameworkFingerprint(
+                    com.qureon.locara.core.framework.AppFramework.PLAYWRIGHT_WEB, 1.0, "Enforced Profile: Playwright Modern Web (HTML5/ARIA)", 0.0);
+        }
+        return frameworkDetector.detect(nodes, xmlPageSource);
     }
 }

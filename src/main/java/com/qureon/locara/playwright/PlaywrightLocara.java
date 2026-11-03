@@ -72,6 +72,7 @@ public class PlaywrightLocara {
         }
 
         // 2. Self-Healing Execution
+        if (!ENGINE.getConfig().isEnabled()) return false;
         return executeHealing(page, selectorOrXPath, targetHint, "CLICK", null);
     }
 
@@ -101,6 +102,7 @@ public class PlaywrightLocara {
             System.out.println("[PlaywrightLocara] Standard locator failed: '" + selectorOrXPath + "' -> Initiating autonomous healing...");
         }
 
+        if (!ENGINE.getConfig().isEnabled()) return false;
         return executeHealing(page, selectorOrXPath, targetHint, "FILL", text);
     }
 
@@ -230,7 +232,7 @@ public class PlaywrightLocara {
                 originalSelector, healedXPath, confidence * 100.0));
 
         // Format selector for Playwright (Playwright accepts raw xpath starting with // or xpath=...)
-        String playwrightSelector = healedXPath.startsWith("//") ? "xpath=" + healedXPath : healedXPath;
+        String playwrightSelector = toPlaywrightSelector(healedXPath);
 
         try {
             Object healedLocator = findLocator(page, playwrightSelector);
@@ -257,6 +259,9 @@ public class PlaywrightLocara {
      * Resolves the healed selector string without executing an immediate click or fill.
      */
     public static String healSelector(Object page, String originalSelector, String targetHint, String action) {
+        if (!ENGINE.getConfig().isEnabled()) {
+            return null;
+        }
         String htmlContent = extractHtmlContent(page);
         if (htmlContent == null || htmlContent.trim().isEmpty()) {
             return null;
@@ -273,14 +278,26 @@ public class PlaywrightLocara {
         HealResult result = ENGINE.heal(htmlContent, context);
         if (result.isSuccess() && result.getCandidate() != null) {
             String xpath = result.getCandidate().getSuggestedXPath();
-            return xpath.startsWith("//") ? "xpath=" + xpath : xpath;
+            return toPlaywrightSelector(xpath);
         }
         return null;
+    }
+
+    private static String toPlaywrightSelector(String xpath) {
+        if (xpath == null || xpath.isEmpty()) return "";
+        if (xpath.startsWith("xpath=")) return xpath;
+        if (xpath.startsWith("//") || xpath.startsWith("/") || xpath.startsWith("(/")) {
+            return "xpath=" + xpath;
+        }
+        return xpath;
     }
 
     // --- Reflection Helpers for Playwright Page & Locator ---
 
     private static Object findLocator(Object page, String selector) {
+        if (page == null || selector == null || selector.trim().isEmpty()) {
+            return null;
+        }
         try {
             Method locatorMethod = page.getClass().getMethod("locator", String.class);
             return locatorMethod.invoke(page, selector);

@@ -32,6 +32,26 @@ class LocaraKeywords {
     }
 
     @Keyword(keywordObject = 'Locara')
+    static String getText(TestObject testObject, String hint) {
+        return Locara.getText(testObject, hint)
+    }
+
+    @Keyword(keywordObject = 'Locara')
+    static String getText(TestObject testObject, int timeoutSeconds, String hint) {
+        return Locara.getText(testObject, timeoutSeconds, hint)
+    }
+
+    @Keyword(keywordObject = 'Locara')
+    static boolean clearText(TestObject testObject, String hint) {
+        return Locara.clearText(testObject, hint)
+    }
+
+    @Keyword(keywordObject = 'Locara')
+    static boolean clearText(TestObject testObject, int timeoutSeconds, String hint) {
+        return Locara.clearText(testObject, timeoutSeconds, hint)
+    }
+
+    @Keyword(keywordObject = 'Locara')
     static boolean isElementPresent(TestObject testObject, String hint) {
         return Locara.isElementPresent(testObject, hint)
     }
@@ -39,5 +59,20 @@ class LocaraKeywords {
     @Keyword(keywordObject = 'Locara')
     static boolean assertElementPresent(TestObject testObject, String hint) {
         return Locara.assertElementPresent(testObject, hint)
+    }
+
+    @Keyword(keywordObject = 'Locara')
+    static boolean smartTap(TestObject testObject, int timeoutSeconds = 10) {
+        return Locara.tap(testObject, timeoutSeconds, testObject != null ? testObject.getObjectId() : "")
+    }
+
+    @Keyword(keywordObject = 'Locara')
+    static boolean smartSetText(TestObject testObject, String text, int timeoutSeconds = 10) {
+        return Locara.setText(testObject, text, testObject != null ? testObject.getObjectId() : "")
+    }
+
+    @Keyword(keywordObject = 'Locara')
+    static void setTargetProfile(String profileName) {
+        Locara.setAppTarget(com.qureon.locara.core.model.AppTarget.fromString(profileName))
     }
 }

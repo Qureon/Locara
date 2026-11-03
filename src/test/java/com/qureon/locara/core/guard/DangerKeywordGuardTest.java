@@ -1,6 +1,5 @@
-package com.qureon.locara.core;
+package com.qureon.locara.core.guard;
 
-import com.qureon.locara.core.guard.DangerKeywordGuard;
 import com.qureon.locara.core.model.UIElementNode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -172,5 +171,51 @@ public class DangerKeywordGuardTest {
         assertFalse(DangerKeywordGuard.isPolarityViolation("Bayar Sekarang", bayarBtn), "Explicit pay target should allow Pay button");
         assertFalse(DangerKeywordGuard.isPolarityViolation("Transfer Saldo", transferBtn), "Explicit transfer target should allow Transfer button");
         assertFalse(DangerKeywordGuard.isPolarityViolation("Konfirmasi Pembayaran", bayarBtn), "Confirmation with payment intent should allow Pay button");
+    }
+
+    @Test
+    @DisplayName("Should block mixed-polarity destructive buttons ('Ya, Hapus', 'Konfirmasi Batal') when target is positive")
+    void testMixedPolarityDestructiveLockoutAndWordBoundaries() {
+        UIElementNode yaHapusBtn = new UIElementNode(
+                "android.widget.Button",
+                "com.bankmega.msmile:id/btn_confirm_delete",
+                "Ya, Hapus",
+                "Konfirmasi Penghapusan",
+                "android.widget.Button",
+                "//android.widget.Button",
+                new Rectangle(100, 2000, 300, 100),
+                true, true, true, false, false, 2
+        );
+
+        UIElementNode kirimUangBtn = new UIElementNode(
+                "android.widget.Button",
+                "com.bankmega.msmile:id/btnKirimUang",
+                "Kirim Uang",
+                "Kirim Uang Sekarang",
+                "android.widget.Button",
+                "//android.widget.Button",
+                new Rectangle(100, 2000, 300, 100),
+                true, true, true, false, false, 2
+        );
+
+        UIElementNode promoMenarikNode = new UIElementNode(
+                "android.widget.TextView",
+                "com.bankmega.msmile:id/tv_promo",
+                "Promo Menarik Untuk Beliau",
+                "Promo Menarik",
+                "android.widget.TextView",
+                "//android.widget.TextView",
+                new Rectangle(100, 500, 300, 100),
+                true, true, true, false, false, 2
+        );
+
+        assertTrue(DangerKeywordGuard.isPolarityViolation("Lanjut", yaHapusBtn),
+                "Positive target 'Lanjut' MUST block mixed-polarity destructive button 'Ya, Hapus'");
+        assertTrue(DangerKeywordGuard.isPolarityViolation("OK", kirimUangBtn),
+                "Generic 'OK' MUST block financial 'Kirim Uang' button");
+        assertFalse(DangerKeywordGuard.isPolarityViolation("Kirim Uang", kirimUangBtn),
+                "Explicit 'Kirim Uang' target should allow 'Kirim Uang' button");
+        assertFalse(DangerKeywordGuard.isPolarityViolation("Promo", promoMenarikNode),
+                "Substrings like 'menarik' or 'beliau' must NOT trigger false-positive financial lockout");
     }
 }

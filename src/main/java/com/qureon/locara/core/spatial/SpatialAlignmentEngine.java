@@ -62,6 +62,7 @@ public class SpatialAlignmentEngine {
         double bestSim = 0.0;
 
         for (UIElementNode node : allNodes) {
+            if (!node.isDisplayed()) continue;
             if (node.hasText()) {
                 double sim = StringSimilarity.compositeScore(node.getText(), labelHint);
                 if (sim > bestSim && sim >= 0.70) {
@@ -101,7 +102,7 @@ public class SpatialAlignmentEngine {
         double bestScore = 0.0;
 
         for (UIElementNode cand : allNodes) {
-            if (cand == ref || cand.getBounds() == null) continue;
+            if (cand == ref || !cand.isDisplayed() || cand.getBounds() == null) continue;
 
             Rectangle cBounds = cand.getBounds();
             int cX1 = cBounds.x;
@@ -169,10 +170,15 @@ public class SpatialAlignmentEngine {
         List<SpatialPair> pairs = new ArrayList<>();
         if (allNodes == null || allNodes.isEmpty()) return pairs;
 
-        // Collect all potential label nodes (nodes with non-empty text)
+        // Collect all potential non-button nodes with valid bounds
+        List<UIElementNode> candidateNodes = new ArrayList<>();
         List<UIElementNode> labelNodes = new ArrayList<>();
         for (UIElementNode node : allNodes) {
-            if (node.hasText() && !node.getText().trim().isEmpty() && node.getBounds().width > 0) {
+            if (!node.isDisplayed() || node.getBounds() == null || node.getBounds().width <= 0) continue;
+            String tagLower = node.getTag() != null ? node.getTag().toLowerCase() : "";
+            if (tagLower.contains("button")) continue;
+            candidateNodes.add(node);
+            if (node.hasText() && !node.getText().trim().isEmpty()) {
                 labelNodes.add(node);
             }
         }
@@ -180,12 +186,33 @@ public class SpatialAlignmentEngine {
         Set<UIElementNode> claimedValues = new HashSet<>();
 
         for (UIElementNode label : labelNodes) {
-            Optional<UIElementNode> matchedVal = findAlignedNode(label, allNodes, AlignmentMode.LEFT_TO_RIGHT);
+            if (claimedValues.contains(label)) continue;
+
+            Optional<UIElementNode> matchedVal = findAlignedNode(label, candidateNodes, AlignmentMode.LEFT_TO_RIGHT);
+            AlignmentMode usedMode = AlignmentMode.LEFT_TO_RIGHT;
+
+            if (!matchedVal.isPresent()) {
+                // Check tight vertical label-above-value stacking (common in mobile banking confirmation cards)
+                Rectangle rBounds = label.getBounds();
+                int rX1 = rBounds.x;
+                int rY2 = rBounds.y + rBounds.height;
+                for (UIElementNode cand : candidateNodes) {
+                    if (cand == label || claimedValues.contains(cand) || !cand.hasText()) continue;
+                    Rectangle cBounds = cand.getBounds();
+                    int vDist = cBounds.y - rY2;
+                    if (vDist >= 0 && vDist <= 40 && Math.abs(cBounds.x - rX1) <= 40) {
+                        matchedVal = Optional.of(cand);
+                        usedMode = AlignmentMode.TOP_TO_BOTTOM;
+                        break;
+                    }
+                }
+            }
+
             if (matchedVal.isPresent()) {
                 UIElementNode val = matchedVal.get();
                 if (!claimedValues.contains(val)) {
                     claimedValues.add(val);
-                    pairs.add(new SpatialPair(label, val, AlignmentMode.LEFT_TO_RIGHT, 0.90));
+                    pairs.add(new SpatialPair(label, val, usedMode, 0.90));
                 }
             }
         }

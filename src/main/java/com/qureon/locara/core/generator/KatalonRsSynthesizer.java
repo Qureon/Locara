@@ -60,17 +60,32 @@ public class KatalonRsSynthesizer {
      * @return File pointer to the generated .rs file.
      */
     public File synthesizeRsFile(HealCandidate candidate, HealContext context, HealConfig config) throws IOException {
-        String rsRelPath = resolveRsRelativePath(context, candidate);
+        String rsRelPath = resolveRsRelativePath(context, candidate, config);
         File projectDir = new File(config.getKatalonProjectPath());
-        File targetFile = new File(projectDir, rsRelPath);
+        File originalFile = new File(projectDir, rsRelPath);
+        File targetFile = originalFile;
+
+        String existingGuid = extractExistingGuid(originalFile);
+        boolean isWeb = false;
+        if (originalFile.exists()) {
+            try {
+                String existing = Files.readString(originalFile.toPath(), StandardCharsets.UTF_8);
+                if (existing.contains("<WebElementEntity>")) {
+                    isWeb = true;
+                }
+            } catch (Exception ignored) {}
+        }
+        if (!isWeb && candidate != null && candidate.getNode() != null && new DynamicXPathGenerator().isHtmlNode(candidate.getNode())) {
+            isWeb = true;
+        }
 
         // Anti-Tampering Protection: If the file already exists on disk and overwrite is NOT explicitly allowed,
         // write to a safe quarantine file (.healed.rs) to prevent destroying original spied locators!
-        if (targetFile.exists() && !config.isAllowOverwriteExistingRs()) {
-            targetFile = new File(targetFile.getParentFile(), targetFile.getName().replace(".rs", ".healed.rs"));
-        } else if (targetFile.exists() && config.isBackupExistingRs()) {
-            File backupFile = new File(targetFile.getParentFile(), targetFile.getName().replace(".rs", ".backup.rs"));
-            Files.copy(targetFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        if (originalFile.exists() && !config.isAllowOverwriteExistingRs()) {
+            targetFile = new File(originalFile.getParentFile(), originalFile.getName().replace(".rs", ".healed.rs"));
+        } else if (originalFile.exists() && config.isBackupExistingRs()) {
+            File backupFile = new File(originalFile.getParentFile(), originalFile.getName().replace(".rs", ".backup.rs"));
+            Files.copy(originalFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
         }
 
         // Ensure parent directories exist
@@ -80,17 +95,6 @@ public class KatalonRsSynthesizer {
         }
 
         String entityName = targetFile.getName().replace(".healed.rs", "").replace(".rs", "");
-        String existingGuid = extractExistingGuid(targetFile);
-
-        boolean isWeb = false;
-        if (targetFile.exists()) {
-            try {
-                String existing = Files.readString(targetFile.toPath(), StandardCharsets.UTF_8);
-                if (existing.contains("<WebElementEntity>")) {
-                    isWeb = true;
-                }
-            } catch (Exception ignored) {}
-        }
 
         String xmlContent = isWeb ?
                 generateWebXmlContent(entityName, candidate, context, existingGuid) :
@@ -295,17 +299,22 @@ public class KatalonRsSynthesizer {
 
     public String buildUiAutomatorLocator(UIElementNode node) {
         if (node == null) return "";
-        String cls = node.getClassName();
+        String cls = escapeJavaString(node.getClassName());
         if (node.hasContentDesc()) {
-            return "new UiSelector().className(\"" + cls + "\").description(\"" + node.getContentDesc() + "\")";
+            return "new UiSelector().className(\"" + cls + "\").description(\"" + escapeJavaString(node.getContentDesc()) + "\")";
         }
         if (node.hasText()) {
-            return "new UiSelector().className(\"" + cls + "\").text(\"" + node.getText() + "\")";
+            return "new UiSelector().className(\"" + cls + "\").text(\"" + escapeJavaString(node.getText()) + "\")";
         }
         if (node.hasResourceId()) {
-            return "new UiSelector().resourceId(\"" + node.getResourceId() + "\")";
+            return "new UiSelector().resourceId(\"" + escapeJavaString(node.getResourceId()) + "\")";
         }
         return "new UiSelector().className(\"" + cls + "\")";
+    }
+
+    private String escapeJavaString(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     public List<PropertyEntry> buildPropertyList(UIElementNode node, MobileStrategy strategy, String xpath) {
@@ -416,8 +425,8 @@ public class KatalonRsSynthesizer {
         return !resId.matches(".*[0-9a-f]{8}-[0-9a-f]{4}-.*");
     }
 
-    private String resolveRsRelativePath(HealContext context, HealCandidate candidate) {
-        if (!context.getTargetRsPath().isEmpty()) {
+    private String resolveRsRelativePath(HealContext context, HealCandidate candidate, HealConfig config) {
+        if (context != null && !context.getTargetRsPath().isEmpty()) {
             String path = context.getTargetRsPath();
             if (!path.endsWith(".rs")) {
                 path += ".rs";
@@ -425,9 +434,9 @@ public class KatalonRsSynthesizer {
             return path;
         }
 
-        String screen = sanitizeFileName(context.getScreenName());
+        String screen = sanitizeFileName(context != null ? context.getScreenName() : "DefaultScreen");
         String objName = "";
-        if (candidate.getNode() != null) {
+        if (candidate != null && candidate.getNode() != null) {
             objName = sanitizeFileName(candidate.getNode().getStrippedResourceId());
             if (objName.isEmpty()) {
                 objName = sanitizeFileName(candidate.getNode().getContentDesc());
@@ -440,7 +449,10 @@ public class KatalonRsSynthesizer {
             objName = "healed_element_" + System.currentTimeMillis();
         }
 
-        return "Object Repository/" + screen + "/" + objName + ".rs";
+        String baseFolder = (config != null && config.getDefaultRsFolder() != null && !config.getDefaultRsFolder().trim().isEmpty())
+                ? config.getDefaultRsFolder().trim()
+                : "Object Repository";
+        return baseFolder + "/" + screen + "/" + objName + ".rs";
     }
 
     private String sanitizeFileName(String name) {

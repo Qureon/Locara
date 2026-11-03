@@ -1,7 +1,10 @@
 package com.qureon.locara.cucumber;
 
+import com.qureon.locara.appium.AppiumLocara;
 import com.qureon.locara.appium.AppiumLocaraTest.MockAppiumDriver;
+import com.qureon.locara.playwright.PlaywrightLocara;
 import com.qureon.locara.playwright.PlaywrightLocaraTest.MockPlaywrightPage;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -11,6 +14,12 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class CucumberLocaraTest {
+
+    @BeforeAll
+    static void disableAuditLedgerForUnitTests() {
+        AppiumLocara.getEngine().getConfig().setAuditLedgerEnabled(false);
+        PlaywrightLocara.getEngine().getConfig().setAuditLedgerEnabled(false);
+    }
 
     @Test
     @DisplayName("CucumberLocara: Gherkin Step parsing for CLICK interaction")

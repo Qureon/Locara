@@ -52,5 +52,13 @@ public class UniversalSemanticDictionaryTest {
 
         double nextScore = StringSimilarity.compositeScore("btn_next", "Lanjut");
         assertTrue(nextScore >= 0.85, "Composite score for 'btn_next' vs 'Lanjut' should be elevated >= 0.85, got: " + nextScore);
+
+        // Multi-cluster word ('reload' belongs to both Top-Up and Refresh clusters)
+        assertTrue(UniversalSemanticDictionary.isSynonym("reload", "topup"), "'reload' should match 'topup' cluster");
+        assertTrue(UniversalSemanticDictionary.isSynonym("reload", "refresh"), "'reload' should also match 'refresh' cluster");
+
+        // Multi-word phrase synonym affinity
+        assertEquals(1.0, UniversalSemanticDictionary.calculateSemanticAffinity("isi ulang", "top up"), 0.001);
+        assertEquals(1.0, UniversalSemanticDictionary.calculateSemanticAffinity("muat ulang", "refresh"), 0.001);
     }
 }

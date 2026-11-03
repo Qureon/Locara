@@ -1,6 +1,5 @@
-package com.qureon.locara.core;
+package com.qureon.locara.core.matcher;
 
-import com.qureon.locara.core.matcher.StringSimilarity;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

@@ -35,4 +35,21 @@ public class FieldRelationshipParserTest {
         assertTrue(doc.getTotalEntry().isPresent());
         assertEquals("Rp 50.000", doc.getTotalEntry().get().getValue());
     }
+
+    @Test
+    @DisplayName("Should extract vertically stacked label-value pairs and exclude side-by-side action buttons")
+    void testVerticalStackedFieldsAndButtonExclusion() {
+        UIElementNode vLbl = new UIElementNode("android.widget.TextView", "tv_lbl_source", "Rekening Sumber", "", "android.widget.TextView", "", new Rectangle(80, 280, 320, 60), false, true, true, false, false, 2);
+        UIElementNode vVal = new UIElementNode("android.widget.TextView", "tv_val_source", "Mega Dana - 1234567890", "", "android.widget.TextView", "", new Rectangle(80, 350, 520, 60), false, true, true, false, false, 2);
+
+        UIElementNode btnCancel = new UIElementNode("android.widget.Button", "btn_cancel", "Batal", "", "android.widget.Button", "", new Rectangle(60, 2150, 420, 140), true, true, true, false, false, 2);
+        UIElementNode btnNext = new UIElementNode("android.widget.Button", "btn_next", "Lanjut", "", "android.widget.Button", "", new Rectangle(540, 2150, 480, 140), true, true, true, false, false, 2);
+
+        FieldRelationshipParser parser = new FieldRelationshipParser();
+        FieldRelationshipParser.ParsedDocument doc = parser.parse(Arrays.asList(vLbl, vVal, btnCancel, btnNext));
+
+        assertEquals(1, doc.getEntries().size(), "Only the label-value pair should be extracted; side-by-side buttons must be excluded");
+        assertEquals("Mega Dana - 1234567890", doc.get("rekening_sumber"));
+        assertNull(doc.get("batal"));
+    }
 }

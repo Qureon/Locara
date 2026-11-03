@@ -1,5 +1,6 @@
 package com.qureon.locara.playwright;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -9,6 +10,11 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class PlaywrightLocaraTest {
+
+    @BeforeAll
+    static void disableAuditLedgerForUnitTests() {
+        PlaywrightLocara.getEngine().getConfig().setAuditLedgerEnabled(false);
+    }
 
     /**
      * Mock Playwright Page implementation for unit testing without requiring

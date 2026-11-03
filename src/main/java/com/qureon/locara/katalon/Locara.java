@@ -34,7 +34,7 @@ public class Locara {
                 break;
             }
         }
-        HealConfig config = targetProp != null ? HealConfig.loadFromProperties(targetProp) : new HealConfig();
+        HealConfig config = HealConfig.loadFromProperties(targetProp);
         if (targetProp != null) {
             System.out.println("[Locara by Qureon] Loaded configuration from: " + targetProp.getAbsolutePath());
         }
@@ -279,10 +279,12 @@ public class Locara {
             System.out.println("[Locara by Qureon] Intercepted clearText failure on: " + hint + " (" + t.getMessage() + ")");
         }
 
+        if (!ENGINE.getConfig().isEnabled()) return false;
         return healAndClearText(testObject, timeoutSeconds, hint);
     }
 
     public static boolean healAndClearText(Object testObject, int timeoutSeconds, String hint) {
+        if (!ENGINE.getConfig().isEnabled()) return false;
         return executeHealing(testObject, hint, "CLEAR_TEXT", "", timeoutSeconds, null);
     }
 
@@ -332,9 +334,11 @@ public class Locara {
                     double bestScore = 0.0;
 
                     for (com.qureon.locara.core.model.UIElementNode node : nodes) {
+                        if (!node.isDisplayed()) continue;
+                        if (com.qureon.locara.core.guard.DangerKeywordGuard.isPolarityViolation(effectiveHint, node)) continue;
                         if (node.hasText()) {
                             double score = com.qureon.locara.core.matcher.LocaraIntentMatcher.calculateIntentScore(node.getText(), effectiveHint);
-                            if (score > bestScore && score >= 0.85) {
+                            if (score > bestScore && score >= Math.max(0.85, ENGINE.getConfig().getMinConfidenceThreshold())) {
                                 bestScore = score;
                                 bestNode = node;
                             }
@@ -620,7 +624,7 @@ public class Locara {
         if (name.contains("/")) {
             name = name.substring(name.lastIndexOf('/') + 1);
         }
-        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(?:^[0-9]+\\.\\s*)?(ViewGroup|TextView|Button|EditText|ImageView|ImageButton|CheckBox|RadioButton|View)\\b", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(name);
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("^(?:[0-9]+\\.\\s*)?(ViewGroup|TextView|Button|EditText|ImageView|ImageButton|CheckBox|RadioButton|View)\\b", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(name);
         if (matcher.find()) {
             return matcher.group(1);
         }

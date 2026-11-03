@@ -81,4 +81,31 @@ public class HtmlDomParserTest {
         assertEquals("quick-transfer-btn", btn.getContentDesc());
         assertEquals("Transfer Cepat", btn.getText());
     }
+
+    @Test
+    @DisplayName("Should parse HTML tags with URL slashes in attributes, nested spans inside buttons, and sibling-relative XPaths")
+    void testHtmlAttributesWithSlashesAndNestedButtonText() {
+        String html = "<form action=\"/api/v1/transfer\">"
+                + "<a id=\"help-link\" href=\"https://bankmega.com/bantuan\">Bantuan</a>"
+                + "<button id=\"btn-nested\" type=\"submit\"><span>Kirim Sekarang</span></button>"
+                + "</form>";
+        HtmlDomParser parser = new HtmlDomParser();
+        List<UIElementNode> nodes = parser.parse(html);
+
+        UIElementNode link = nodes.stream()
+                .filter(n -> "help-link".equals(n.getResourceId()))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(link, "Anchor tag with https:// URL in href must not be dropped by parser");
+        assertEquals("Bantuan", link.getText());
+        assertNotNull(link.getParent(), "Parent-child hierarchy must be linked");
+        assertEquals("form", link.getParent().getTag());
+
+        UIElementNode nestedBtn = nodes.stream()
+                .filter(n -> "btn-nested".equals(n.getResourceId()))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(nestedBtn, "Button with nested span must be parsed");
+        assertEquals("Kirim Sekarang", nestedBtn.getText(), "Interactive button should inherit text from nested child span");
+    }
 }

@@ -11,7 +11,7 @@ import java.util.*;
  */
 public final class UniversalSemanticDictionary {
 
-    private static final Map<String, Integer> WORD_TO_CLUSTER = new HashMap<>();
+    private static final Map<String, Set<Integer>> WORD_TO_CLUSTERS = new HashMap<>();
     private static final List<Set<String>> CLUSTERS = new ArrayList<>();
 
     static {
@@ -77,7 +77,7 @@ public final class UniversalSemanticDictionary {
             String clean = StringSimilarity.normalize(w);
             if (!clean.isEmpty()) {
                 cluster.add(clean);
-                WORD_TO_CLUSTER.put(clean, clusterId);
+                WORD_TO_CLUSTERS.computeIfAbsent(clean, k -> new HashSet<>()).add(clusterId);
             }
         }
         CLUSTERS.add(Collections.unmodifiableSet(cluster));
@@ -95,10 +95,10 @@ public final class UniversalSemanticDictionary {
         if (normA.isEmpty() || normB.isEmpty()) return false;
         if (normA.equals(normB)) return true;
 
-        Integer clusterA = WORD_TO_CLUSTER.get(normA);
-        Integer clusterB = WORD_TO_CLUSTER.get(normB);
+        Set<Integer> clustersA = WORD_TO_CLUSTERS.get(normA);
+        Set<Integer> clustersB = WORD_TO_CLUSTERS.get(normB);
 
-        return clusterA != null && clusterA.equals(clusterB);
+        return clustersA != null && clustersB != null && !Collections.disjoint(clustersA, clustersB);
     }
 
     private static final Set<String> UI_WIDGET_TOKENS = new HashSet<>(Arrays.asList(
@@ -111,6 +111,9 @@ public final class UniversalSemanticDictionary {
      */
     public static double calculateSemanticAffinity(String phraseA, String phraseB) {
         if (phraseA == null || phraseB == null) return 0.0;
+        if (isSynonym(phraseA, phraseB)) {
+            return 1.0;
+        }
         Set<String> rawTokensA = StringSimilarity.tokenize(phraseA);
         Set<String> rawTokensB = StringSimilarity.tokenize(phraseB);
 

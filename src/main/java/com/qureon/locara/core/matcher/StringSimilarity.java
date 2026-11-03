@@ -172,6 +172,27 @@ public final class StringSimilarity {
         if (set.contains("top") && set.contains("up")) {
             set.add("topup");
         }
+        if (set.contains("kirim") && set.contains("uang")) {
+            set.add("kirimuang");
+        }
+        if (set.contains("isi") && set.contains("ulang")) {
+            set.add("isiulang");
+        }
+        if (set.contains("muat") && set.contains("ulang")) {
+            set.add("muatulang");
+        }
+        if (set.contains("buat") && set.contains("akun")) {
+            set.add("buatakun");
+        }
+        if (set.contains("sign") && set.contains("in")) {
+            set.add("signin");
+        }
+        if (set.contains("sign") && set.contains("up")) {
+            set.add("signup");
+        }
+        if (set.contains("log") && set.contains("in")) {
+            set.add("login");
+        }
         return set;
     }
 

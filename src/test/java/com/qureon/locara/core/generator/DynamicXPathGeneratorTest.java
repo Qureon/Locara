@@ -64,4 +64,44 @@ public class DynamicXPathGeneratorTest {
         String textXPath = generator.generateOptimalXPath(textNode, allNodes, "GET_TEXT");
         assertEquals("//android.widget.TextView[@text='Lanjut']", textXPath);
     }
+
+    @Test
+    @DisplayName("Should handle quotes safely with XPath literals and verify Strategy 6 parent-relative uniqueness")
+    void testQuoteEscapingAndParentRelativeUniqueness() {
+        UIElementNode parentContainer = new UIElementNode(
+                "android.view.ViewGroup", "com.bankmega.msmile:id/card_source", "", "", "android.view.ViewGroup",
+                "//hierarchy/android.view.ViewGroup[1]",
+                new Rectangle(0, 100, 1080, 300),
+                false, true, true, false, false, 1
+        );
+        UIElementNode child1 = new UIElementNode(
+                "android.widget.TextView", "", "", "", "android.widget.TextView",
+                "//hierarchy/android.view.ViewGroup[1]/android.widget.TextView[1]",
+                new Rectangle(20, 120, 400, 60),
+                false, true, true, false, false, 2
+        );
+        UIElementNode child2 = new UIElementNode(
+                "android.widget.TextView", "", "", "", "android.widget.TextView",
+                "//hierarchy/android.view.ViewGroup[1]/android.widget.TextView[2]",
+                new Rectangle(20, 200, 400, 60),
+                false, true, true, false, false, 2
+        );
+        parentContainer.addChild(child1);
+        parentContainer.addChild(child2);
+
+        List<UIElementNode> nodes = List.of(parentContainer, child1, child2);
+        // Since parentContainer has two TextView children, //*[@resource-id='...']//android.widget.TextView is NOT unique
+        String child1XPath = generator.generateOptimalXPath(child1, nodes, "GET_TEXT");
+        assertEquals("//hierarchy/android.view.ViewGroup[1]/android.widget.TextView[1]", child1XPath);
+
+        // Node with both single and double quotes in text
+        UIElementNode quotedNode = new UIElementNode(
+                "android.widget.Button", "", "Don't say \"No\"", "", "android.widget.Button",
+                "//hierarchy/android.widget.Button[1]",
+                new Rectangle(0, 500, 300, 100),
+                true, true, true, false, false, 1
+        );
+        String quotedXPath = generator.generateOptimalXPath(quotedNode, List.of(quotedNode), "TAP");
+        assertTrue(quotedXPath.contains("concat("), "Text containing both ' and \" must use XPath concat(): " + quotedXPath);
+    }
 }

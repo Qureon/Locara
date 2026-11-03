@@ -1,8 +1,5 @@
 package com.qureon.locara.core.ledger;
 
-import com.qureon.locara.core.ledger.VisualEvidenceAnnotator;
-
-import com.qureon.locara.core.ledger.VisualEvidenceAnnotator;
 import com.qureon.locara.core.model.HealCandidate;
 import com.qureon.locara.core.model.HealConfig;
 import com.qureon.locara.core.model.UIElementNode;

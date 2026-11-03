@@ -88,21 +88,26 @@ export class PlaywrightMcpAdapter {
       }
 
       const nodeName = (node.name || '').toLowerCase().trim();
+      if (!nodeName) {
+        continue;
+      }
       let score = 0.0;
 
       if (nodeName === cleanHint) {
         score = 1.0;
       } else if (nodeName.includes(cleanHint) || cleanHint.includes(nodeName)) {
-        score = 0.85;
+        const minLen = Math.min(nodeName.length, cleanHint.length);
+        const maxLen = Math.max(nodeName.length, cleanHint.length);
+        score = (minLen >= 3 && (minLen / maxLen) >= 0.60) ? 0.85 : (minLen / maxLen) * 0.70;
       } else {
         // Token match
-        const hintTokens = new Set(cleanHint.split(/\s+/));
-        const nodeTokens = new Set(nodeName.split(/\s+/));
+        const hintTokens = new Set(cleanHint.split(/\s+/).filter(Boolean));
+        const nodeTokens = new Set(nodeName.split(/\s+/).filter(Boolean));
         let matches = 0;
         for (const t of hintTokens) {
           if (nodeTokens.has(t)) matches++;
         }
-        score = matches / Math.max(hintTokens.size, nodeTokens.size);
+        score = matches / Math.max(1, Math.max(hintTokens.size, nodeTokens.size));
       }
 
       // Bonus if role matches common actionable tags

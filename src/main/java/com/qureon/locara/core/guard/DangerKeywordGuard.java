@@ -15,19 +15,30 @@ import java.util.Set;
 public final class DangerKeywordGuard {
 
     private static final Set<String> DANGER_KEYWORDS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-            "hapus", "delete", "remove", "batal", "cancel", "tutup", "close",
-            "keluar", "exit", "logout", "blokir", "block", "tolak", "reject", "reset"
+            "hapus", "hapuskan", "penghapusan", "menghapus", "delete", "remove",
+            "batal", "batalkan", "pembatalan", "membatalkan", "cancel",
+            "tutup", "penutupan", "menutup", "close",
+            "keluar", "exit", "logout", "signout",
+            "blokir", "pemblokiran", "memblokir", "block", "freeze",
+            "tolak", "penolakan", "menolak", "reject", "decline", "reset"
     )));
 
     private static final Set<String> FINANCIAL_KEYWORDS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-            "bayar", "bayarkan", "pembayaran", "pay", "payment", "checkout", "transfer", "beli", "buy",
-            "topup", "top up", "debet", "debit", "tarik", "kirim uang"
+            "bayar", "bayarkan", "pembayaran", "membayar", "pay", "payment", "checkout",
+            "transfer", "kirimuang", "kirim uang",
+            "beli", "belikan", "pembelian", "membeli", "buy", "purchase",
+            "topup", "top up", "debet", "pendebetan", "debit",
+            "tarik", "penarikan", "withdraw", "tagihan"
     )));
 
     private static final Set<String> POSITIVE_KEYWORDS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-            "lanjut", "next", "continue", "kirim", "send",
+            "lanjut", "lanjutkan", "next", "continue", "proceed", "kirim", "send",
             "proses", "process", "submit", "konfirmasi", "confirm", "setuju",
-            "agree", "ok", "ya", "yes", "simpan", "save"
+            "agree", "ok", "oke", "ya", "yes", "simpan", "save", "selesai", "done", "finish"
+    )));
+
+    private static final Set<String> WIDGET_PREFIXES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            "btn", "button", "ic", "icon", "tv", "txt", "lbl", "label", "et", "input", "img", "iv"
     )));
 
     private DangerKeywordGuard() {}
@@ -37,15 +48,18 @@ public final class DangerKeywordGuard {
      * @return true if there is a dangerous polarity mismatch (MUST REJECT).
      */
     public static boolean isPolarityViolation(String targetHint, UIElementNode candidateNode) {
-        if (targetHint == null || candidateNode == null) return false;
+        if (targetHint == null || targetHint.isBlank() || candidateNode == null) return false;
 
         Set<String> targetTokens = StringSimilarity.tokenize(targetHint);
+        if (targetTokens.isEmpty()) return false;
 
         boolean targetIsFinancial = containsAny(targetTokens, FINANCIAL_KEYWORDS);
         boolean targetIsPositive = containsAny(targetTokens, POSITIVE_KEYWORDS) || targetIsFinancial;
         boolean targetIsDanger = containsAny(targetTokens, DANGER_KEYWORDS);
 
         Set<String> nodeTokens = extractNodeTokens(candidateNode);
+        if (nodeTokens.isEmpty()) return false;
+
         boolean nodeHasFinancial = containsAny(nodeTokens, FINANCIAL_KEYWORDS);
         boolean nodeHasDanger = containsAny(nodeTokens, DANGER_KEYWORDS);
         boolean nodeHasPositive = containsAny(nodeTokens, POSITIVE_KEYWORDS) || nodeHasFinancial;
@@ -55,6 +69,14 @@ public final class DangerKeywordGuard {
         // MUST NEVER be clicked if the target hint did not explicitly request a financial action
         // (e.g. looking for 'OK', 'Lanjut', 'Tutup', 'Simpan', 'Informasi').
         if (nodeHasFinancial && !targetIsFinancial) {
+            return true;
+        }
+
+        // Rule 1 (Bank Mega Zero-Loss Destructive Lockout):
+        // If target does NOT explicitly request a destructive/danger action,
+        // NEVER allow matching any candidate that contains a danger keyword—even if the candidate
+        // also contains a positive word (e.g. 'Ya, Hapus', 'Konfirmasi Batal').
+        if (!targetIsDanger && nodeHasDanger) {
             return true;
         }
 
@@ -68,20 +90,8 @@ public final class DangerKeywordGuard {
             return false;
         }
 
-        // Case 1: Target wants purely positive action ('Lanjut'/'Bayar'/'Transfer'), but candidate contains danger ('Batal'/'Hapus')
-        if (targetIsPositive && !targetIsDanger && nodeHasDanger) {
-            return true;
-        }
-
         // Case 2: Target wants purely danger action ('Batal'/'Cancel'), but candidate contains positive ('Lanjut'/'Bayar'/'Transfer')
         if (targetIsDanger && !targetIsPositive && nodeHasPositive) {
-            return true;
-        }
-
-        // Case 3 (Bank Mega Zero-Loss Invariant): Target is neutral/non-danger (e.g. 'Lihat Rekening', 'Cek Saldo'),
-        // but candidate is destructive ('Blokir', 'Hapus', 'Tolak', 'Batal').
-        // NEVER allow a neutral target to match a destructive/danger element!
-        if (!targetIsDanger && nodeHasDanger) {
             return true;
         }
 
@@ -103,15 +113,37 @@ public final class DangerKeywordGuard {
 
     private static boolean containsAny(Set<String> sourceTokens, Set<String> dictionary) {
         for (String token : sourceTokens) {
-            for (String dictWord : dictionary) {
-                if (token.equals(dictWord)) {
-                    return true;
-                }
-                if (dictWord.length() >= 4 && (token.startsWith(dictWord) || token.contains(dictWord))) {
+            if (matchesDictionaryWord(token, dictionary)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean matchesDictionaryWord(String token, Set<String> dictionary) {
+        if (token == null || token.isEmpty()) return false;
+        if (dictionary.contains(token)) {
+            return true;
+        }
+
+        // Strip common Indonesian enclitics/imperative suffixes (-kan, -nya, -lah)
+        if (token.length() > 5 && (token.endsWith("kan") || token.endsWith("nya") || token.endsWith("lah"))) {
+            String stem = token.substring(0, token.length() - 3);
+            if (dictionary.contains(stem)) {
+                return true;
+            }
+        }
+
+        // Strip leading widget prefix on unseparated identifier tokens (e.g. "btnhapus" -> "hapus")
+        for (String prefix : WIDGET_PREFIXES) {
+            if (token.length() > prefix.length() + 2 && token.startsWith(prefix)) {
+                String remainder = token.substring(prefix.length());
+                if (dictionary.contains(remainder)) {
                     return true;
                 }
             }
         }
+
         return false;
     }
 }

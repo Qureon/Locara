@@ -34,7 +34,10 @@ public class HealingAuditLedger {
                             String status,
                             HealConfig config,
                             com.qureon.locara.core.framework.FrameworkFingerprint fingerprint) {
-        if (!config.isAuditLedgerEnabled()) return;
+        if (config == null || !config.isAuditLedgerEnabled()) return;
+        if (context == null) {
+            context = new HealContext.Builder().build();
+        }
 
         synchronized (FILE_LOCK) {
             File projectDir = new File(config.getKatalonProjectPath());
@@ -76,7 +79,7 @@ public class HealingAuditLedger {
                 escapeJson(context.getTargetHint()),
                 escapeJson(context.getTargetHint()),
                 escapeJson(context.getOriginalLocator()),
-                status,
+                escapeJson(status),
                 confidence,
                 escapeJson(frameworkTag),
                 escapeJson(healedXPath),
@@ -116,13 +119,13 @@ public class HealingAuditLedger {
                 java.util.Locale.US,
                 "| %s | %s | %s | %s | **%s** | %.1f%% | `%s` | `%s` |\n",
                 now,
-                context.getScreenName(),
-                action,
-                context.getTargetHint(),
-                status,
+                escapeMd(context.getScreenName()),
+                escapeMd(action),
+                escapeMd(context.getTargetHint()),
+                escapeMd(status),
                 confidence * 100.0,
-                healedXPath.replace("|", "\\|"),
-                rsPath.replace("|", "\\|")
+                escapeMd(healedXPath),
+                escapeMd(rsPath)
         ));
 
         try {
@@ -144,11 +147,32 @@ public class HealingAuditLedger {
         }
     }
 
+    private String escapeMd(String s) {
+        if (s == null) return "";
+        return s.replace("|", "\\|").replace("\r", " ").replace("\n", " ");
+    }
+
     private String escapeJson(String s) {
         if (s == null) return "";
-        return s.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r");
+        StringBuilder sb = new StringBuilder(s.length() + 16);
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '\\': sb.append("\\\\"); break;
+                case '"': sb.append("\\\""); break;
+                case '\n': sb.append("\\n"); break;
+                case '\r': sb.append("\\r"); break;
+                case '\t': sb.append("\\t"); break;
+                case '\b': sb.append("\\b"); break;
+                case '\f': sb.append("\\f"); break;
+                default:
+                    if (c < 0x20) {
+                        sb.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        sb.append(c);
+                    }
+            }
+        }
+        return sb.toString();
     }
 }

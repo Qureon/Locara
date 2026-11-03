@@ -57,6 +57,7 @@ public class AppiumLocara {
         }
 
         // 2. Self-Healing Execution
+        if (!ENGINE.getConfig().isEnabled()) return false;
         return executeHealing(driver, locatorOrXPath, targetHint, "TAP", "");
     }
 
@@ -81,6 +82,7 @@ public class AppiumLocara {
             System.out.println("[AppiumLocara] Standard setText failed: " + locatorOrXPath + " -> Initiating autonomous healing...");
         }
 
+        if (!ENGINE.getConfig().isEnabled()) return false;
         return executeHealing(driver, locatorOrXPath, targetHint, "SET_TEXT", text);
     }
 
@@ -92,6 +94,10 @@ public class AppiumLocara {
             Object el = findElementDirectly(driver, locatorOrXPath);
             if (el != null) return el;
         } catch (Throwable ignored) {}
+
+        if (!ENGINE.getConfig().isEnabled()) {
+            throw new RuntimeException("[AppiumLocara] Element not found and self-healing is disabled: " + locatorOrXPath);
+        }
 
         String pageSource = extractPageSource(driver);
         HealContext context = HealContext.builder()
@@ -187,11 +193,14 @@ public class AppiumLocara {
     }
 
     private static Object findElementDirectly(Object driver, String locatorOrXPath) {
+        if (driver == null || locatorOrXPath == null || locatorOrXPath.trim().isEmpty()) {
+            return null;
+        }
         try {
             Class<?> byClass = Class.forName("org.openqa.selenium.By");
             Object by;
-            if (locatorOrXPath.startsWith("//") || locatorOrXPath.startsWith("xpath=") || locatorOrXPath.startsWith("(")) {
-                String cleanXpath = locatorOrXPath.replace("xpath=", "");
+            if (locatorOrXPath.startsWith("//") || locatorOrXPath.startsWith("/") || locatorOrXPath.startsWith("xpath=") || locatorOrXPath.startsWith("(")) {
+                String cleanXpath = locatorOrXPath.startsWith("xpath=") ? locatorOrXPath.substring(6) : locatorOrXPath;
                 Method xpathMethod = byClass.getMethod("xpath", String.class);
                 by = xpathMethod.invoke(null, cleanXpath);
             } else {

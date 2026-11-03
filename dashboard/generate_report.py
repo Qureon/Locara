@@ -11,6 +11,7 @@ attaching to Jira tickets, Jenkins artifacts, or UAT sign-off documentation.
 import sys
 import os
 import json
+import html as html_lib
 from pathlib import Path
 from datetime import datetime
 
@@ -189,7 +190,7 @@ REPORT_TEMPLATE = """<!DOCTYPE html>
             <div class="meta-right">
                 <p><strong>Target App:</strong> Mobile Application (Android/iOS) &amp; Web</p>
                 <p><strong>Generated:</strong> {generated_time}</p>
-                <p><strong>Engine:</strong> Locara Core v1.8.1 (Katalon 11.7.0+ Ready)</p>
+                <p><strong>Engine:</strong> Locara Core v1.8.2 (Katalon 11.7.0+ Ready)</p>
             </div>
         </header>
 
@@ -319,21 +320,27 @@ def generate_report(output_path=None):
 
     rows = []
     for e in events:
-        status = e.get("status", "SUCCESS")
+        status = str(e.get("status", "SUCCESS"))
         badge_cls = "badge-success" if status == "SUCCESS" else ("badge-scrolled" if status == "SCROLLED" else "badge-lockout")
-        tier = e.get("intentionTier", "INTERACTION")
+        tier = str(e.get("intentionTier", "INTERACTION"))
         tier_style = "background:rgba(0,229,255,0.15); color:var(--cyan);" if tier == "INTERACTION" else ("background:rgba(16,185,129,0.15); color:var(--emerald);" if tier == "CHECKPOINT" else "background:rgba(139,92,246,0.15); color:var(--violet);")
         conf = f"{float(e.get('confidence', 0.0)) * 100:.1f}%"
-        xpath = e.get("healedXPath", "-")
-        rs = Path(e.get("rsFile", "-")).name if e.get("rsFile") else "-"
+        xpath = html_lib.escape(str(e.get("healedXPath", "-")))
+        rs_raw = e.get("rsFile") or e.get("generatedRs") or "-"
+        rs = html_lib.escape(Path(str(rs_raw)).name if rs_raw != "-" else "-")
+        ts = html_lib.escape(str(e.get("timestamp", "-")))
+        screen = html_lib.escape(str(e.get("screen", "-")))
+        hint = html_lib.escape(str(e.get("hint") or e.get("targetHint") or "-"))
+        tier_esc = html_lib.escape(tier)
+        status_esc = html_lib.escape(status)
 
         rows.append(f"""
             <tr>
-                <td style="font-family: var(--font-mono); color: var(--text-secondary);">{e.get("timestamp", "-")}</td>
-                <td><strong>{e.get("screen", "-")}</strong></td>
-                <td>{e.get("hint", "-")}</td>
-                <td><span class="badge" style="{tier_style} font-size:10px;">{tier}</span></td>
-                <td><span class="badge {badge_cls}">{status}</span></td>
+                <td style="font-family: var(--font-mono); color: var(--text-secondary);">{ts}</td>
+                <td><strong>{screen}</strong></td>
+                <td>{hint}</td>
+                <td><span class="badge" style="{tier_style} font-size:10px;">{tier_esc}</span></td>
+                <td><span class="badge {badge_cls}">{status_esc}</span></td>
                 <td><strong>{conf}</strong></td>
                 <td><code>{xpath}</code></td>
                 <td style="color: var(--cyan);">{rs}</td>

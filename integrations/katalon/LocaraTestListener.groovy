@@ -16,7 +16,7 @@ import java.util.regex.Pattern
 class LocaraTestListener {
 
     private static Object engineInstance = null
-    private static final Pattern OBJECT_ID_PATTERN = Pattern.compile("Object Repository/([^\'\"\\s]+)")
+    private static final Pattern OBJECT_ID_PATTERN = Pattern.compile("Object Repository/([^'\"\\r\\n)]+)")
 
     @AfterTestCase
     def onTestCaseFailure(TestCaseContext testCaseContext) {
@@ -46,7 +46,13 @@ class LocaraTestListener {
         println("==============================================================")
 
         try {
-            def driver = MobileDriverFactory.getMobileDriver()
+            def driver = null
+            try {
+                Class<?> bridgeClass = Class.forName("com.qureon.locara.katalon.KatalonDriverBridge")
+                driver = bridgeClass.getMethod("getMobileDriver").invoke(null)
+            } catch (Throwable ignored) {
+                driver = MobileDriverFactory.getDriver()
+            }
             if (driver == null) {
                 println("[Locara by Qureon] No active MobileDriver found. Skipping listener recovery.")
                 return
@@ -71,7 +77,7 @@ class LocaraTestListener {
             String failedObjectPath = ""
             Matcher matcher = OBJECT_ID_PATTERN.matcher(errorMsg)
             if (matcher.find()) {
-                failedObjectPath = "Object Repository/" + matcher.group(1)
+                failedObjectPath = "Object Repository/" + matcher.group(1).trim()
             }
 
             String objectName = failedObjectPath.isEmpty() ? "UnknownElement" :
@@ -81,7 +87,8 @@ class LocaraTestListener {
 
             Class<?> engineClass = Class.forName("com.qureon.locara.core.LocaraEngine")
             if (engineInstance == null) {
-                engineInstance = engineClass.newInstance()
+                engineInstance = engineClass.getDeclaredConstructor().newInstance()
+                engineInstance.getConfig().setAutoGenerateRs(true)
             }
             Class<?> contextClass = Class.forName("com.qureon.locara.core.model.HealContext")
             def builderMethod = contextClass.getMethod("builder")
