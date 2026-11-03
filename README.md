@@ -5,7 +5,7 @@
 ### Adaptive Locator Intelligence & Universal Self-Healing Engine
 *An autonomous, offline-first self-healing engine for resilient mobile & hybrid test automation.*
 
-[![Version](https://img.shields.io/badge/version-1.7.0-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
+[![Version](https://img.shields.io/badge/version-1.8.1-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-63%2F63%20passing-10B981?style=flat-square)](build.gradle)
 [![Java](https://img.shields.io/badge/java-17%20%7C%2021%20%7C%2024-orange?style=flat-square&logo=openjdk)](build.gradle)
@@ -38,8 +38,9 @@ Locara menerapkan prinsip **In-Flight Zero-Interruption**:
 6. **Katalon 11.6.0+ Ranked Multi-XPath Synthesizer (v1.7.0)**: Menghasilkan struktur `.rs` XML dengan tabel *Object's XPaths* berlapis (`xpath:attributes`, `xpath:idRelative`, `xpath:position`, `xpath:custom`) yang kompatibel penuh dengan fitur edit locator di Katalon Studio 11.6.0+.
 7. **Katalon 11.2 - 11.7.0+ Element State Keywords Hub (v1.7.0)**: Klasifikasi dan penanganan otonom untuk 26 keyword baru `isElement*` (conditional branching non-fatal) dan `assertElement*` (strict assertion checkpoints).
 8. **Pause & Resume Concurrency Resilience (v1.7.0)**: Manajemen sesi aman untuk fitur *Pause/Resume Test Suite* Katalon 11.6.0 dengan ledger disk-flush atomik dan invalidasi context otomatis.
-9. **Enterprise Safety Guard**: Proteksi polaritas bahaya (*Danger Polarity Lockout*), auto-dismiss keyboard virtual (*The Golden Triad*), dan *Auto-Scroll Viewport Fallback* untuk tombol di bawah lipatan layar.
-10. **Zero Cloud PII Leakage**: 100% offline, nol transmisi data keluar mesin lokal. Aman untuk standar kepatuhan perbankan & enterprise.
+9. **Enterprise Financial Shield & Zero-False-Green Lattice (v1.8.0)**: Proteksi polaritas transaksi finansial (*Rule 0: anti-salah klik bayar/transfer*), eliminasi asimetri token tunggal pada probe presence, pemisahan kluster semantik finansial, dan isolasi thread-safe per-runner via `ThreadLocal<AppTarget>` multi-threading.
+10. **Enterprise Safety Guard**: Proteksi polaritas bahaya (*Danger Polarity Lockout*), auto-dismiss keyboard virtual (*The Golden Triad*), dan *Auto-Scroll Viewport Fallback* untuk tombol di bawah lipatan layar.
+11. **Zero Cloud PII Leakage**: 100% offline, nol transmisi data keluar mesin lokal. Aman untuk standar kepatuhan perbankan & enterprise.
 
 ---
 
@@ -244,10 +245,10 @@ Jalankan evaluasi heuristik dan inspeksi langsung dari terminal:
 
 ```bash
 # 1. Evaluasi & generate file .rs dari berkas XML dump
-java -jar locara-1.7.0.jar --xml dump.xml --hint "Lanjut Transfer" --out "Object Repository/Transfer/btn_Lanjut.rs"
+java -jar locara-1.8.0.jar --xml dump.xml --hint "Lanjut Transfer" --out "Object Repository/Transfer/btn_Lanjut.rs"
 
 # 2. Inspeksi seluruh elemen interaktif dalam XML / HTML
-java -jar locara-1.7.0.jar --xml dump.xml --inspect
+java -jar locara-1.8.0.jar --xml dump.xml --inspect
 ```
 
 ---
