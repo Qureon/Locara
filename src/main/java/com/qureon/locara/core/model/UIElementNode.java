@@ -153,6 +153,82 @@ public class UIElementNode {
         return "[" + bounds.x + "," + bounds.y + "][" + (bounds.x + bounds.width) + "," + (bounds.y + bounds.height) + "]";
     }
 
+    public boolean isCheckable() {
+        return Boolean.parseBoolean(getAttribute("checkable", "false"));
+    }
+
+    public boolean isChecked() {
+        return Boolean.parseBoolean(getAttribute("checked", "false"));
+    }
+
+    public boolean isInputWidget() {
+        String t = tag.toLowerCase();
+        String c = className.toLowerCase();
+        return t.contains("edittext") || c.contains("edittext") ||
+               t.contains("textfield") || c.contains("textfield") ||
+               t.contains("autocompletetextview") || c.contains("autocompletetextview") ||
+               "input".equals(t) || "textarea".equals(t);
+    }
+
+    public boolean isCheckboxOrToggleWidget() {
+        String t = tag.toLowerCase();
+        String c = className.toLowerCase();
+        return isCheckable() ||
+               t.contains("checkbox") || c.contains("checkbox") ||
+               t.contains("radiobutton") || c.contains("radiobutton") ||
+               t.contains("switch") || c.contains("switch") ||
+               t.contains("togglebutton") || c.contains("togglebutton") ||
+               "checkbox".equalsIgnoreCase(getAttribute("type")) ||
+               "checkbox".equalsIgnoreCase(getAttribute("role"));
+    }
+
+    /**
+     * Detects compact, square-like interactive ViewGroups/Views/ImageViews (<= 160px)
+     * frequently used by React Native & Flutter developers as custom checkboxes without resource-id.
+     */
+    public boolean isCompactCheckboxGeometry() {
+        if (bounds == null || bounds.width <= 0 || bounds.height <= 0) return false;
+        if (bounds.width > 160 || bounds.height > 160) return false;
+        if (Math.abs(bounds.width - bounds.height) > 45) return false;
+        String t = tag.toLowerCase();
+        String c = className.toLowerCase();
+        boolean isContainerOrIcon = t.contains("viewgroup") || c.contains("viewgroup") ||
+                                    t.contains("view") || c.contains("view") ||
+                                    t.contains("imageview") || c.contains("imageview");
+        return isContainerOrIcon && (clickable || isCheckable() || (parent != null && parent.isClickable()));
+    }
+
+    /**
+     * Aggregates visible text or content-desc from direct/nested children (up to maxDepth)
+     * when a clickable container (e.g. React Native ViewGroup) has no direct text attribute of its own.
+     */
+    public String getAggregatedDescendantText(int maxDepth) {
+        if (hasText()) return text;
+        StringBuilder sb = new StringBuilder();
+        collectDescendantText(this, 0, maxDepth, sb);
+        return sb.toString().trim();
+    }
+
+    private void collectDescendantText(UIElementNode current, int currentDepth, int maxDepth, StringBuilder sb) {
+        if (current == null || currentDepth > maxDepth) return;
+        if (current != this) {
+            if (current.hasText()) {
+                if (sb.length() > 0) sb.append(" ");
+                sb.append(current.getText());
+            } else if (current.hasContentDesc()) {
+                if (sb.length() > 0) sb.append(" ");
+                sb.append(current.getContentDesc());
+            }
+        }
+        if (currentDepth < maxDepth) {
+            for (UIElementNode child : current.getChildren()) {
+                if (child.isDisplayed()) {
+                    collectDescendantText(child, currentDepth + 1, maxDepth, sb);
+                }
+            }
+        }
+    }
+
     @Override
     public String toString() {
         return "UIElementNode{" +
