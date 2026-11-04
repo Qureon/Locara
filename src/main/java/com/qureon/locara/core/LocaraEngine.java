@@ -85,16 +85,53 @@ public class LocaraEngine {
         com.qureon.locara.core.framework.FrameworkFingerprint fingerprint = resolveFingerprint(nodes, xmlPageSource);
 
         List<HealCandidate> candidates = matcher.findCandidates(nodes, context, config, fingerprint);
+        String cleanedHint = HeuristicMatcher.cleanSemanticHint(context.getTargetHint());
+
+        // Label-to-Control Pivot: If top candidate for TAP/CHECK is a non-clickable TextView (with no clickable parent),
+        // check if it is actually the label for an adjacent interactive CheckBox, compact clickable ViewGroup, or EditText.
+        if (!candidates.isEmpty()) {
+            UIElementNode topNode = candidates.get(0).getNode();
+            String expTag = context.getExpectedTag() != null ? context.getExpectedTag().toLowerCase() : "";
+            boolean isTextViewLabel = topNode != null &&
+                    (topNode.getTag().toLowerCase().contains("textview") || topNode.getClassName().toLowerCase().contains("textview")) &&
+                    !topNode.isClickable() && !hasClickableAncestor(topNode);
+            boolean expectsInteractiveControl = expTag.contains("checkbox") || expTag.contains("viewgroup") ||
+                    expTag.contains("edittext") || com.qureon.locara.core.spatial.SpatialAlignmentEngine.isCheckboxSemanticHint(cleanedHint);
+
+            if (isTextViewLabel && expectsInteractiveControl) {
+                java.util.Optional<UIElementNode> pairedControl = spatialEngine.findAlignedNode(
+                        topNode, nodes, com.qureon.locara.core.spatial.SpatialAlignmentEngine.AlignmentMode.AUTO_BEST_PROXIMITY,
+                        context.getAction(), context.getExpectedTag(), cleanedHint);
+                if (pairedControl.isPresent()) {
+                    UIElementNode ctrl = pairedControl.get();
+                    if (ctrl.isClickable() || ctrl.isCheckable() || ctrl.isInputWidget() || ctrl.isCheckboxOrToggleWidget()) {
+                        String ctrlXPath = xpathGenerator.generateOptimalXPath(ctrl, nodes, context.getAction());
+                        HealCandidate pivoted = new HealCandidate(ctrl, ctrlXPath,
+                                Math.max(0.86, candidates.get(0).getConfidenceScore()), "SPATIAL_LABEL_TO_CONTROL_PIVOT");
+                        candidates = java.util.Collections.singletonList(pivoted);
+                    }
+                }
+            }
+        }
+
         if (candidates.isEmpty() && 0.85 >= config.getMinConfidenceThreshold()) {
-            // Spatial Proximity Fallback: Infer target input/value element based on visual 2D layout alignment
-            String cleanedHint = HeuristicMatcher.cleanSemanticHint(context.getTargetHint());
-            java.util.Optional<UIElementNode> spatialNode = spatialEngine.findTargetByLabel(cleanedHint, nodes);
+            // Spatial Proximity Fallback: Infer target input/checkbox/value element based on visual 2D layout alignment
+            java.util.Optional<UIElementNode> spatialNode = spatialEngine.findTargetByLabel(
+                    cleanedHint, nodes, context.getAction(), context.getExpectedTag());
             if (spatialNode.isPresent()) {
                 UIElementNode sNode = spatialNode.get();
                 if (!com.qureon.locara.core.guard.DangerKeywordGuard.isPolarityViolation(cleanedHint, sNode)) {
                     String sXPath = xpathGenerator.generateOptimalXPath(sNode, nodes, context.getAction());
                     HealCandidate sCand = new HealCandidate(sNode, sXPath, 0.85, "SPATIAL_ALIGNMENT_PROXIMITY");
                     candidates = java.util.Collections.singletonList(sCand);
+                }
+            }
+
+            // Single-Widget Screen Fallback: Resolve sole anonymous EditText or CheckBox when screen has exactly 1 instance
+            if (candidates.isEmpty()) {
+                java.util.Optional<HealCandidate> singleCand = resolveSingleAnonymousWidget(nodes, context, cleanedHint);
+                if (singleCand.isPresent()) {
+                    candidates = java.util.Collections.singletonList(singleCand.get());
                 }
             }
         }
@@ -170,5 +207,70 @@ public class LocaraEngine {
                     com.qureon.locara.core.framework.AppFramework.PLAYWRIGHT_WEB, 1.0, "Enforced Profile: Playwright Modern Web (HTML5/ARIA)", 0.0);
         }
         return frameworkDetector.detect(nodes, xmlPageSource);
+    }
+
+    private java.util.Optional<HealCandidate> resolveSingleAnonymousWidget(List<UIElementNode> nodes, HealContext context, String cleanedHint) {
+        String action = context.getAction() != null ? context.getAction().toUpperCase() : "";
+        String expTag = context.getExpectedTag() != null ? context.getExpectedTag().toLowerCase() : "";
+
+        boolean isInputRequest = "SET_TEXT".equals(action) || "INPUT".equals(action) || "CLEAR_TEXT".equals(action) ||
+                "FILL".equals(action) || expTag.contains("edittext") || expTag.contains("textfield") || expTag.contains("input");
+
+        if (isInputRequest) {
+            List<UIElementNode> inputNodes = new java.util.ArrayList<>();
+            for (UIElementNode n : nodes) {
+                if (n.isDisplayed() && n.isEnabled() && n.isInputWidget()) {
+                    inputNodes.add(n);
+                }
+            }
+            if (inputNodes.size() == 1) {
+                UIElementNode soleInput = inputNodes.get(0);
+                String xp = xpathGenerator.generateOptimalXPath(soleInput, nodes, context.getAction());
+                return java.util.Optional.of(new HealCandidate(soleInput, xp, 0.85, "SINGLE_INPUT_WIDGET_ON_SCREEN"));
+            }
+        }
+
+        boolean isCheckboxRequest = expTag.contains("checkbox") || expTag.contains("radio") || expTag.contains("switch") ||
+                com.qureon.locara.core.spatial.SpatialAlignmentEngine.isCheckboxSemanticHint(cleanedHint);
+
+        if (isCheckboxRequest && ("TAP".equals(action) || "CLICK".equals(action) || "CHECK".equals(action) || action.isEmpty())) {
+            List<UIElementNode> checkNodes = new java.util.ArrayList<>();
+            for (UIElementNode n : nodes) {
+                if (n.isDisplayed() && n.isEnabled() && n.isCheckboxOrToggleWidget()) {
+                    checkNodes.add(n);
+                }
+            }
+            if (checkNodes.size() == 1) {
+                UIElementNode soleCheck = checkNodes.get(0);
+                String xp = xpathGenerator.generateOptimalXPath(soleCheck, nodes, context.getAction());
+                return java.util.Optional.of(new HealCandidate(soleCheck, xp, 0.85, "SINGLE_CHECKBOX_ON_SCREEN"));
+            } else if (checkNodes.isEmpty()) {
+                List<UIElementNode> compactBoxes = new java.util.ArrayList<>();
+                for (UIElementNode n : nodes) {
+                    if (n.isDisplayed() && n.isEnabled() && n.isCompactCheckboxGeometry() && !n.hasText()) {
+                        compactBoxes.add(n);
+                    }
+                }
+                if (compactBoxes.size() == 1) {
+                    UIElementNode soleBox = compactBoxes.get(0);
+                    String xp = xpathGenerator.generateOptimalXPath(soleBox, nodes, context.getAction());
+                    return java.util.Optional.of(new HealCandidate(soleBox, xp, 0.85, "SINGLE_CUSTOM_CHECKBOX_ON_SCREEN"));
+                }
+            }
+        }
+
+        return java.util.Optional.empty();
+    }
+
+    private boolean hasClickableAncestor(UIElementNode node) {
+        if (node == null) return false;
+        UIElementNode curr = node.getParent();
+        int levels = 0;
+        while (curr != null && levels < 4) {
+            if (curr.isClickable()) return true;
+            curr = curr.getParent();
+            levels++;
+        }
+        return false;
     }
 }

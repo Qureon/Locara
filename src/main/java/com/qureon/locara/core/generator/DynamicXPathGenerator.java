@@ -170,6 +170,17 @@ public class DynamicXPathGenerator {
             }
         }
 
+        // Strategy 3B: Clickable/Checkable Container wrapping a unique child TextView (when targetNode itself is the ViewGroup)
+        if ((targetNode.isClickable() || targetNode.isCheckable()) && text.isEmpty() && resourceId.isEmpty() && contentDesc.isEmpty()) {
+            UIElementNode childTextNode = findFirstTextDescendant(targetNode, 2);
+            if (childTextNode != null && isTextUnique(childTextNode.getText(), allNodes)) {
+                String childTag = childTextNode.getTag().isEmpty() ? "android.widget.TextView" : childTextNode.getTag();
+                String attrPred = targetNode.isClickable() ? "@clickable='true'" : "@checkable='true'";
+                return String.format("//%s[%s and .//%s[@text=%s]]",
+                        tag, attrPred, childTag, toXPathLiteral(childTextNode.getText()));
+            }
+        }
+
         // Strategy 4: Text alone (if unique)
         if (!text.isEmpty()) {
             String xpath = String.format("//%s[@text=%s]", tag, toXPathLiteral(text));
@@ -197,8 +208,116 @@ public class DynamicXPathGenerator {
             }
         }
 
+        // Strategy 6B: Sibling / Row Container Label Anchor XPath (for anonymous EditText, CheckBox, or ViewGroup checkbox)
+        String relationalXPath = synthesizeSiblingAnchorXPath(targetNode, allNodes);
+        if (!relationalXPath.isEmpty()) {
+            return relationalXPath;
+        }
+
+        // Strategy 6C: Unique Widget Tag on Screen (e.g. sole EditText or sole CheckBox on the active screen)
+        if ((targetNode.isInputWidget() || targetNode.isCheckboxOrToggleWidget()) && isSoleTagInstance(tag, allNodes)) {
+            return "//" + tag;
+        }
+
         // Fallback: Exact structural XPath from parser
         return targetNode.getXpath();
+    }
+
+    private UIElementNode findFirstTextDescendant(UIElementNode container, int maxDepth) {
+        if (container == null || maxDepth <= 0) return null;
+        for (UIElementNode child : container.getChildren()) {
+            if (child.isDisplayed() && child.hasText()) {
+                return child;
+            }
+            UIElementNode nested = findFirstTextDescendant(child, maxDepth - 1);
+            if (nested != null) return nested;
+        }
+        return null;
+    }
+
+    private boolean isTextUnique(String targetText, List<UIElementNode> allNodes) {
+        if (targetText == null || targetText.isEmpty() || allNodes == null) return false;
+        int count = 0;
+        for (UIElementNode n : allNodes) {
+            if (targetText.equals(n.getText())) {
+                count++;
+                if (count > 1) return false;
+            }
+        }
+        return count == 1;
+    }
+
+    private boolean isSoleTagInstance(String tag, List<UIElementNode> allNodes) {
+        if (tag == null || tag.isEmpty() || "*".equals(tag) || allNodes == null) return false;
+        int count = 0;
+        for (UIElementNode n : allNodes) {
+            if (n.isDisplayed() && matchesTag(tag, n)) {
+                count++;
+                if (count > 1) return false;
+            }
+        }
+        return count == 1;
+    }
+
+    private String synthesizeSiblingAnchorXPath(UIElementNode targetNode, List<UIElementNode> allNodes) {
+        if (targetNode == null || targetNode.getParent() == null) return "";
+        String targetTag = targetNode.getTag().isEmpty() ? "*" : targetNode.getTag();
+
+        // Case 1: Direct sibling TextView inside the same parent (e.g., [CheckBox/ViewGroup] + [TextView] or [TextView] + [EditText])
+        UIElementNode parent = targetNode.getParent();
+        List<UIElementNode> siblings = parent.getChildren();
+        int targetIdx = siblings.indexOf(targetNode);
+        int sameTagSiblings = 0;
+        for (UIElementNode sib : siblings) {
+            if (matchesTag(targetTag, sib)) sameTagSiblings++;
+        }
+
+        if (sameTagSiblings == 1) {
+            for (int i = 0; i < siblings.size(); i++) {
+                if (i == targetIdx) continue;
+                UIElementNode sib = siblings.get(i);
+                if (sib.isDisplayed() && sib.hasText() && isTextUnique(sib.getText(), allNodes)) {
+                    String sibTag = sib.getTag().isEmpty() ? "android.widget.TextView" : sib.getTag();
+                    String axis = (i > targetIdx) ? "following-sibling::" : "preceding-sibling::";
+                    if (targetNode.isInputWidget() || targetNode.isCheckboxOrToggleWidget()) {
+                        return String.format("//%s[%s%s[@text=%s]]",
+                                targetTag, axis, sibTag, toXPathLiteral(sib.getText()));
+                    } else if (targetNode.isClickable() || targetNode.isCheckable()) {
+                        String attr = targetNode.isClickable() ? "@clickable='true'" : "@checkable='true'";
+                        return String.format("//%s[%s and %s%s[@text=%s]]",
+                                targetTag, attr, axis, sibTag, toXPathLiteral(sib.getText()));
+                    }
+                }
+            }
+        }
+
+        // Case 2: React Native nested Input Box (Row ViewGroup -> [TextView label] + [Input Box ViewGroup -> EditText])
+        if (targetNode.isInputWidget() && parent.getParent() != null) {
+            UIElementNode grandParent = parent.getParent();
+            int inputsInGrandParent = countDescendantTag(grandParent, targetTag);
+            if (inputsInGrandParent == 1) {
+                for (UIElementNode aunt : grandParent.getChildren()) {
+                    if (aunt != parent && aunt.isDisplayed() && aunt.hasText() && isTextUnique(aunt.getText(), allNodes)) {
+                        String gpTag = grandParent.getTag().isEmpty() ? "android.view.ViewGroup" : grandParent.getTag();
+                        String auntTag = aunt.getTag().isEmpty() ? "android.widget.TextView" : aunt.getTag();
+                        return String.format("//%s[./%s[@text=%s]]//%s",
+                                gpTag, auntTag, toXPathLiteral(aunt.getText()), targetTag);
+                    }
+                }
+            }
+        }
+
+        return "";
+    }
+
+    private int countDescendantTag(UIElementNode container, String tag) {
+        if (container == null) return 0;
+        int count = 0;
+        for (UIElementNode child : container.getChildren()) {
+            if (matchesTag(tag, child)) count++;
+            count += countDescendantTag(child, tag);
+        }
+        return count;
     }
 
     private UIElementNode findClickableAncestor(UIElementNode node) {

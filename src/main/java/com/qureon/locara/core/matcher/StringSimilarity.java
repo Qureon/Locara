@@ -166,6 +166,8 @@ public final class StringSimilarity {
                 } else if (norm.equals("signup")) {
                     set.add("sign");
                     set.add("up");
+                } else if (norm.equals("menyetujui") || norm.equals("disetujui") || norm.equals("persetujuan")) {
+                    set.add("setuju");
                 }
             }
         }

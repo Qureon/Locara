@@ -64,7 +64,9 @@ public class KatalonDriverBridge {
             // 1. Determine strategy and locator value
             String strategyName = "XPATH";
             String locatorValue = healedXPath;
-            if (node != null) {
+            boolean isAscendedContainerXPath = healedXPath.contains("@clickable='true' and .//") ||
+                    healedXPath.contains("@checkable='true' and .//");
+            if (node != null && !isAscendedContainerXPath) {
                 if (node.hasContentDesc()) {
                     strategyName = "ACCESSIBILITY";
                     locatorValue = node.getContentDesc();

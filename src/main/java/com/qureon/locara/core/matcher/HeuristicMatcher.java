@@ -57,10 +57,26 @@ public class HeuristicMatcher {
                 continue;
             }
 
+            // Filter 3: Static TextView labels cannot receive SET_TEXT/INPUT directly (they act as spatial anchor labels)
+            if (("SET_TEXT".equalsIgnoreCase(action) || "INPUT".equalsIgnoreCase(action) ||
+                 "CLEAR_TEXT".equalsIgnoreCase(action) || "FILL".equalsIgnoreCase(action)) &&
+                !node.isInputWidget() &&
+                (node.getTag().toLowerCase().contains("textview") || node.getClassName().toLowerCase().contains("textview"))) {
+                continue;
+            }
+
             // Calculate Vector 1: Text Similarity
             double textScore = 0.0;
+            boolean hasEffectiveText = node.hasText();
             if (node.hasText()) {
                 textScore = StringSimilarity.compositeScore(node.getText(), targetHint);
+            } else if ((node.isClickable() || node.isCheckable()) && !node.hasResourceId() && !node.hasContentDesc()) {
+                // Anonymous clickable/checkable container (e.g. React Native ViewGroup button or checkbox row without ID)
+                String descendantText = node.getAggregatedDescendantText(2);
+                if (!descendantText.isEmpty() && descendantText.length() <= 160) {
+                    textScore = StringSimilarity.compositeScore(descendantText, targetHint) * 0.96;
+                    hasEffectiveText = textScore >= 0.65;
+                }
             }
 
             // Calculate Vector 2: Resource ID Semantic & KMP Morphology Similarity
@@ -96,7 +112,7 @@ public class HeuristicMatcher {
             double wProx = profile != null ? profile.getWeightProximity() : config.getWeightProximity();
 
             // Dynamic weight redistribution across available semantic vectors
-            boolean hasText = node.hasText();
+            boolean hasText = hasEffectiveText;
             boolean hasId = node.hasResourceId();
             boolean hasDesc = node.hasContentDesc();
 
@@ -184,11 +200,15 @@ public class HeuristicMatcher {
         double score = 0.5; // neutral baseline
         String tag = node.getTag().toLowerCase();
         String className = node.getClassName().toLowerCase();
+        String expLower = expectedTag != null ? expectedTag.toLowerCase() : "";
 
-        if (expectedTag != null && !expectedTag.isEmpty() && (tag.contains(expectedTag.toLowerCase()) || className.contains(expectedTag.toLowerCase()))) {
+        if (!expLower.isEmpty() && (tag.contains(expLower) || className.contains(expLower))) {
             score = 1.0;
-        } else if ("TAP".equalsIgnoreCase(action) || "CLICK".equalsIgnoreCase(action)) {
-            if (tag.contains("button") || className.contains("button") || "a".equals(tag)) {
+        } else if (expLower.contains("checkbox") && (node.isCheckboxOrToggleWidget() || node.isCompactCheckboxGeometry())) {
+            // Developer used ViewGroup or custom checkable node as a CheckBox
+            score = node.isCheckboxOrToggleWidget() ? 1.0 : 0.95;
+        } else if ("TAP".equalsIgnoreCase(action) || "CLICK".equalsIgnoreCase(action) || "CHECK".equalsIgnoreCase(action)) {
+            if (tag.contains("button") || className.contains("button") || "a".equals(tag) || node.isCheckboxOrToggleWidget()) {
                 score = 1.0;
             } else if (tag.contains("imageview") || className.contains("imageview")) {
                 score = node.isClickable() ? 0.90 : 0.60;
@@ -197,12 +217,12 @@ public class HeuristicMatcher {
                 boolean hasClickableParent = hasClickableAncestor(node);
                 score = (node.isClickable() || hasClickableParent) ? 0.85 : 0.60;
             } else if (tag.contains("viewgroup") || className.contains("viewgroup") || tag.contains("view") || className.contains("view") || "div".equals(tag)) {
-                score = node.isClickable() ? 0.90 : 0.75;
-            } else if (node.isClickable()) {
-                score = 0.80;
+                score = (node.isClickable() || node.isCheckable()) ? 0.90 : 0.75;
+            } else if (node.isClickable() || node.isCheckable()) {
+                score = 0.85;
             }
         } else if ("SET_TEXT".equalsIgnoreCase(action) || "INPUT".equalsIgnoreCase(action) || "CLEAR_TEXT".equalsIgnoreCase(action) || "FILL".equalsIgnoreCase(action)) {
-            if (tag.contains("edittext") || className.contains("edittext") || tag.contains("textfield") || "input".equals(tag) || "textarea".equals(tag)) {
+            if (node.isInputWidget()) {
                 score = 1.0;
             } else if (tag.contains("viewgroup") || className.contains("viewgroup")) {
                 score = 0.70;
@@ -210,7 +230,7 @@ public class HeuristicMatcher {
         } else if ("GET_TEXT".equalsIgnoreCase(action) || "READ".equalsIgnoreCase(action) || "VISIBLE".equalsIgnoreCase(action) || "PRESENT".equalsIgnoreCase(action) || "LOCATOR".equalsIgnoreCase(action)) {
             if (tag.contains("textview") || className.contains("textview")) {
                 score = 1.0;
-            } else if (tag.contains("edittext") || className.contains("edittext")) {
+            } else if (node.isInputWidget()) {
                 score = 0.90;
             } else if (node.hasText() || node.hasContentDesc()) {
                 score = 0.85;
@@ -221,7 +241,7 @@ public class HeuristicMatcher {
 
     private double calculateProximityScore(UIElementNode node, String action) {
         double score = 0.5;
-        if (node.isClickable() || (("TAP".equalsIgnoreCase(action) || "CLICK".equalsIgnoreCase(action)) && hasClickableAncestor(node))) {
+        if (node.isClickable() || node.isCheckable() || (("TAP".equalsIgnoreCase(action) || "CLICK".equalsIgnoreCase(action)) && hasClickableAncestor(node))) {
             score += 0.3;
         }
         if (node.isEnabled()) {
