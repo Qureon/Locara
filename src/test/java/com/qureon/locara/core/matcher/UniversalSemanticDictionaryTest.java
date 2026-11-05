@@ -61,4 +61,40 @@ public class UniversalSemanticDictionaryTest {
         assertEquals(1.0, UniversalSemanticDictionary.calculateSemanticAffinity("isi ulang", "top up"), 0.001);
         assertEquals(1.0, UniversalSemanticDictionary.calculateSemanticAffinity("muat ulang", "refresh"), 0.001);
     }
+
+    @Test
+    @DisplayName("Should detect wealth & investment management semantic synonyms")
+    void testWealthManagementSynonyms() {
+        // Document & Prospectus & FFS
+        assertTrue(UniversalSemanticDictionary.isSynonym("prospektus", "dokumen"));
+        assertTrue(UniversalSemanticDictionary.isSynonym("prospectus", "document"));
+        assertTrue(UniversalSemanticDictionary.isSynonym("fund fact sheet", "dokumen"));
+
+        // Performance & Yield
+        assertTrue(UniversalSemanticDictionary.isSynonym("kinerja", "performance"));
+        assertTrue(UniversalSemanticDictionary.isSynonym("return", "imbal hasil"));
+        assertTrue(UniversalSemanticDictionary.isSynonym("yield", "imbal hasil"));
+
+        // Description & Info
+        assertTrue(UniversalSemanticDictionary.isSynonym("deskripsi", "about"));
+        assertTrue(UniversalSemanticDictionary.isSynonym("description", "tentang"));
+
+        // Comparison & Benchmark
+        assertTrue(UniversalSemanticDictionary.isSynonym("bandingkan", "compare"));
+        assertTrue(UniversalSemanticDictionary.isSynonym("benchmark", "tolok ukur"));
+
+        // Asset Classes
+        assertTrue(UniversalSemanticDictionary.isSynonym("pendapatan tetap", "fixed income"));
+        assertTrue(UniversalSemanticDictionary.isSynonym("pasar uang", "money market"));
+        assertTrue(UniversalSemanticDictionary.isSynonym("saham", "equity"));
+        assertTrue(UniversalSemanticDictionary.isSynonym("campuran", "balanced"));
+
+        // Risk Profile
+        assertTrue(UniversalSemanticDictionary.isSynonym("profil risiko", "risk profile"));
+
+        // Anti-Conflicting Invariant: Inquiry concepts must NOT be synonymous with transactions
+        assertFalse(UniversalSemanticDictionary.isSynonym("dokumen", "subscribe"));
+        assertFalse(UniversalSemanticDictionary.isSynonym("kinerja", "redeem"));
+        assertFalse(UniversalSemanticDictionary.isSynonym("deskripsi", "investasi"));
+    }
 }

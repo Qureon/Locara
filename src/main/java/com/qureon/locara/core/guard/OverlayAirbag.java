@@ -45,7 +45,13 @@ public class OverlayAirbag {
             "close",
             "dismiss",
             "lewati",
-            "skip"
+            "skip",
+            "saya mengerti",
+            "mengerti",
+            "paham",
+            "ok",
+            "oke",
+            "setuju"
     );
 
     /**

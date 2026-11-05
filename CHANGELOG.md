@@ -5,6 +5,15 @@ This project adheres strictly to [Semantic Versioning (SemVer 2.0.0)](https://se
 
 ---
 
+## [v1.10.0] - 2026-11-05
+### Added
+- **Wealth & Investment Financial Polarity Protection (`DangerKeywordGuard`)**: Enriched `FINANCIAL_KEYWORDS` with wealth management transaction actions (`subscribe`, `subscription`, `langganan`, `penambahan unit`, `redeem`, `redemption`, `cairkan`, `pencairan`, `jual unit`, `switching`, `pengalihan`). Rule 0 strictly blocks accidental clicks on transaction action buttons when automated tests or inquiries search for informative tabs or buttons (`Deskripsi`, `Dokumen`, `Kinerja`, `Bandingkan`, `Informasi`).
+- **Wealth Management Universal Semantic Tensor (`UniversalSemanticDictionary`)**: Added 8 comprehensive micro-tensor semantic clusters (Concepts 18 to 25) covering Investment Subscriptions (`subscribe`, `investasi`, `beli unit`), Redemptions (`redeem`, `cairkan`), Performance (`kinerja`, `performance`, `return`, `imbal hasil`), Documents (`prospektus`, `prospectus`, `fund fact sheet`, `ffs`), Description (`deskripsi`, `about`, `detail produk`), Comparison (`bandingkan`, `benchmark`), Asset Categories (`pasar uang`, `pendapatan tetap`, `campuran`, `saham`, `obligasi`, `sbn ritel`), and Risk Profiles (`profil risiko`, `risk profile`, `sid`).
+- **Horizontal Product Carousel & Tab Strip Traversal (`ScrollRecoveryEngine`)**: Added autonomous horizontal carousel swipe recovery (`performSwipeLeft` and `performSwipeRight`) and detection (`hasHorizontalCarousel` and `isCarouselEligible`) to dynamically unveil off-screen investment cards and product tabs across `HorizontalScrollView`, `ViewPager2`, and horizontal `RecyclerView` structures without triggering false swipes during read-only probes.
+- **Market Hours & Advisory Modal Overlay Neutralizer (`OverlayAirbag`)**: Expanded `DISMISS_MODAL_TERMS` to recognize investment notice buttons (`"saya mengerti"`, `"mengerti"`, `"paham"`, `"ok"`, `"oke"`, `"setuju"`), ensuring market hours closures and banking advisories are autonomously neutralized without disrupting test flows.
+
+---
+
 ## [v1.9.4] - 2026-11-05
 ### Added
 - **Smart `TestObject` Property & Locator Hint Fallback (`Locara`)**: Added `resolveEffectiveHint` and `getMobileLocator()` extraction so generic `.rs` names (`01. ViewGroup`) automatically resolve semantic hints from `text`/`content-desc` properties or `@text='...'` XPath literals.

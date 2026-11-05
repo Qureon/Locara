@@ -232,4 +232,50 @@ public class DangerKeywordGuardTest {
         assertTrue(DangerKeywordGuard.isPolarityViolation("Lanjut", rnDeleteContainer),
                 "Clickable ViewGroup wrapping 'Hapus Akun' child TextView MUST be blocked by DangerKeywordGuard");
     }
+
+    @Test
+    @DisplayName("Wealth & Investment Financial Isolation: Inquiry targets MUST block transaction buttons (Subscribe, Redeem, Cairkan)")
+    void testWealthFinancialPolarityIsolation() {
+        UIElementNode subscribeBtn = new UIElementNode(
+                "android.widget.Button", "com.bankmega.msmile:id/btn_subscribe",
+                "Subscribe", "Subscribe Unit Reksa Dana", "android.widget.Button", "//android.widget.Button",
+                new Rectangle(100, 2000, 300, 100), true, true, true, false, false, 2
+        );
+
+        UIElementNode redeemBtn = new UIElementNode(
+                "android.widget.Button", "com.bankmega.msmile:id/btn_redeem",
+                "Redeem", "Cairkan Unit Investasi", "android.widget.Button", "//android.widget.Button",
+                new Rectangle(500, 2000, 300, 100), true, true, true, false, false, 2
+        );
+
+        UIElementNode switchingBtn = new UIElementNode(
+                "android.widget.Button", "com.bankmega.msmile:id/btn_switch",
+                "Switching", "Pengalihan Unit", "android.widget.Button", "//android.widget.Button",
+                new Rectangle(100, 2000, 300, 100), true, true, true, false, false, 2
+        );
+
+        UIElementNode deskripsiTab = new UIElementNode(
+                "android.widget.TextView", "com.bankmega.msmile:id/tab_deskripsi",
+                "Deskripsi", "Tab Deskripsi Produk", "android.widget.TextView", "//android.widget.TextView",
+                new Rectangle(100, 300, 200, 60), true, true, true, false, false, 2
+        );
+
+        // When test script searches for inquiry tabs, transaction buttons MUST be strictly blocked
+        assertTrue(DangerKeywordGuard.isPolarityViolation("Deskripsi", subscribeBtn),
+                "Inquiry target 'Deskripsi' MUST block 'Subscribe' financial button");
+        assertTrue(DangerKeywordGuard.isPolarityViolation("Dokumen", redeemBtn),
+                "Inquiry target 'Dokumen' MUST block 'Redeem' financial button");
+        assertTrue(DangerKeywordGuard.isPolarityViolation("Kinerja", switchingBtn),
+                "Inquiry target 'Kinerja' MUST block 'Switching' financial button");
+        assertTrue(DangerKeywordGuard.isPolarityViolation("Bandingkan Produk", subscribeBtn),
+                "Inquiry target 'Bandingkan' MUST block 'Subscribe' financial button");
+
+        // When test script explicitly requests wealth transactions, they are safely permitted
+        assertFalse(DangerKeywordGuard.isPolarityViolation("Subscribe Reksa Dana", subscribeBtn),
+                "Explicit 'Subscribe' target should allow 'Subscribe' button");
+        assertFalse(DangerKeywordGuard.isPolarityViolation("Cairkan Reksa Dana", redeemBtn),
+                "Explicit 'Cairkan' target should allow 'Redeem' button");
+        assertFalse(DangerKeywordGuard.isPolarityViolation("Deskripsi", deskripsiTab),
+                "Inquiry target 'Deskripsi' safely allows 'Deskripsi' tab");
+    }
 }

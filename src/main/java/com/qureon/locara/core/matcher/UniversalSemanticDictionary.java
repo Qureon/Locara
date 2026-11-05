@@ -68,6 +68,30 @@ public final class UniversalSemanticDictionary {
 
         // Universal Concept 14: Refresh / Reload
         registerCluster("muat ulang", "refresh", "reload", "sinkron", "sync");
+
+        // Universal Concept 18: Investment Subscription / Buy / Invest
+        registerCluster("subscribe", "invest", "investasi", "berinvestasi", "pembelian reksa dana", "beli reksadana", "beli unit");
+
+        // Universal Concept 19: Investment Redemption / Sell / Cash Out
+        registerCluster("redeem", "redemption", "cairkan", "pencairan", "jual unit", "tarik dana", "cash out");
+
+        // Universal Concept 20: Performance / Yield / Return
+        registerCluster("kinerja", "performance", "return", "imbal hasil", "yield", "histori kinerja", "grafik");
+
+        // Universal Concept 21: Prospectus / Documents / Legal & FFS
+        registerCluster("dokumen", "document", "prospektus", "prospectus", "fund fact sheet", "ffs", "ringkasan produk", "dokumen penawaran");
+
+        // Universal Concept 22: Description / About / Product Info
+        registerCluster("deskripsi", "description", "tentang", "about", "detail produk", "informasi produk", "profil produk");
+
+        // Universal Concept 23: Comparison / Benchmark
+        registerCluster("bandingkan", "compare", "komparasi", "comparison", "tolok ukur", "benchmark");
+
+        // Universal Concept 24: Asset Class / Product Categories
+        registerCluster("pasar uang", "money market", "pendapatan tetap", "fixed income", "campuran", "balanced", "saham", "equity", "obligasi", "bonds", "sbn ritel", "sukuk");
+
+        // Universal Concept 25: Risk Profile / Assessment
+        registerCluster("profil risiko", "risk profile", "sid", "kuesioner risiko", "toleransi risiko");
     }
 
     private static void registerCluster(String... words) {

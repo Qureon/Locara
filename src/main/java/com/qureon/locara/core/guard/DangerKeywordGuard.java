@@ -28,7 +28,10 @@ public final class DangerKeywordGuard {
             "transfer", "kirimuang", "kirim uang",
             "beli", "belikan", "pembelian", "membeli", "buy", "purchase",
             "topup", "top up", "debet", "pendebetan", "debit",
-            "tarik", "penarikan", "withdraw", "tagihan"
+            "tarik", "penarikan", "withdraw", "tagihan",
+            "subscribe", "subscription", "langganan", "penambahan unit",
+            "redeem", "redemption", "cairkan", "pencairan", "jual unit",
+            "switching", "pengalihan"
     )));
 
     private static final Set<String> POSITIVE_KEYWORDS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(

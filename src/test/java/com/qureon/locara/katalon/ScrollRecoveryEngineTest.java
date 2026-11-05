@@ -106,4 +106,53 @@ public class ScrollRecoveryEngineTest {
         Locara.setScrollRecoveryEnabled(true);
         assertTrue(Locara.isScrollRecoveryEnabled());
     }
+
+    @Test
+    @DisplayName("Should accurately detect horizontal carousels and tab containers")
+    void testHorizontalCarouselDetection() {
+        UIElementNode horizontalScroll = new UIElementNode(
+                "android.widget.HorizontalScrollView", "com.bankmega.msmile:id/scroll_tabs", "", "",
+                "android.widget.HorizontalScrollView", "", new Rectangle(0, 100, 1080, 150),
+                false, true, true, true, false, 1
+        );
+
+        UIElementNode viewPager = new UIElementNode(
+                "androidx.viewpager2.widget.ViewPager2", "com.bankmega.msmile:id/carousel_funds", "", "",
+                "androidx.viewpager2.widget.ViewPager2", "", new Rectangle(0, 300, 1080, 500),
+                false, true, true, true, false, 1
+        );
+
+        UIElementNode verticalScroll = new UIElementNode(
+                "android.widget.ScrollView", "com.bankmega.msmile:id/scroll_body", "", "",
+                "android.widget.ScrollView", "", new Rectangle(0, 0, 1080, 1920),
+                false, true, true, true, false, 1
+        );
+
+        assertTrue(scrollEngine.hasHorizontalCarousel(Collections.singletonList(horizontalScroll)));
+        assertTrue(scrollEngine.hasHorizontalCarousel(Collections.singletonList(viewPager)));
+        assertFalse(scrollEngine.hasHorizontalCarousel(Collections.singletonList(verticalScroll)));
+    }
+
+    @Test
+    @DisplayName("Carousel swipe eligibility should allow TAP on cards but strictly block read-only probes and dialogs")
+    void testCarouselEligibilityForCardsAndTabs() {
+        UIElementNode horizontalScroll = new UIElementNode(
+                "android.widget.HorizontalScrollView", "carousel_products", "", "",
+                "android.widget.HorizontalScrollView", "", new Rectangle(0, 100, 1080, 400),
+                false, true, true, true, false, 1
+        );
+        List<UIElementNode> nodes = Collections.singletonList(horizontalScroll);
+
+        // Action TAP on a mutual fund card inside carousel -> eligible!
+        assertTrue(scrollEngine.isCarouselEligible("Schroders 90 Plus", "card_schroder", "TAP", nodes));
+        assertTrue(scrollEngine.isCarouselEligible("Campuran II", "tab_campuran", "CLICK", nodes));
+
+        // Read-only checks and probes MUST NEVER swipe
+        assertFalse(scrollEngine.isCarouselEligible("Schroders 90 Plus", "card_schroder", "WAIT_FOR_ELEMENT_PRESENT", nodes));
+        assertFalse(scrollEngine.isCarouselEligible("Schroders 90 Plus", "card_schroder", "VERIFY_ELEMENT_PRESENT", nodes));
+        assertFalse(scrollEngine.isCarouselEligible("Schroders 90 Plus", "card_schroder", "PROBE", nodes));
+
+        // Overlay targets MUST NEVER swipe
+        assertFalse(scrollEngine.isCarouselEligible("Pop up izin", "pop_izin", "TAP", nodes));
+    }
 }

@@ -107,6 +107,52 @@ public class ScrollRecoveryEngine {
     }
 
     /**
+     * Checks if the parsed node hierarchy contains an active horizontal carousel or tab strip container.
+     */
+    public boolean hasHorizontalCarousel(List<UIElementNode> nodes) {
+        if (nodes == null || nodes.isEmpty()) return false;
+        for (UIElementNode node : nodes) {
+            String tag = node.getTag().toLowerCase();
+            String className = node.getClassName().toLowerCase();
+            String resId = node.getResourceId().toLowerCase();
+            if (tag.contains("horizontalscrollview") || className.contains("horizontalscrollview")
+                    || tag.contains("viewpager") || className.contains("viewpager")
+                    || tag.contains("tablayout") || className.contains("tablayout")
+                    || resId.contains("carousel") || resId.contains("tabs") || resId.contains("slider")
+                    || (node.isScrollable() && (resId.contains("horizontal") || tag.contains("horizontal") || className.contains("horizontal")))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Evaluates whether horizontal carousel swipe recovery is safe and eligible for the given action and target.
+     */
+    public boolean isCarouselEligible(String hint, String targetRsPath, String action, List<UIElementNode> nodes) {
+        if (action == null || action.trim().isEmpty()) {
+            return false;
+        }
+
+        String act = action.trim().toUpperCase();
+
+        // 1. Presence checks, probes, assertions, and checkpoints MUST NEVER swipe (strictly read-only)
+        if (act.contains("VERIFY") || act.contains("WAIT") || act.startsWith("IS_")
+                || act.contains("ASSERT") || act.contains("PRESENT") || act.contains("VISIBLE")
+                || act.contains("PROBE") || act.contains("CHECKPOINT") || act.contains("GET_TEXT")) {
+            return false;
+        }
+
+        // 2. Overlays, Modals, System Permission Dialogs MUST NEVER swipe
+        if (isOverlayOrDialogTarget(hint, targetRsPath)) {
+            return false;
+        }
+
+        // 3. Must have an active horizontal carousel in the current view
+        return hasHorizontalCarousel(nodes);
+    }
+
+    /**
      * Performs an autonomous downward scroll (swipe from bottom to top).
      */
     public boolean performScrollDown(Object driver) {
@@ -196,6 +242,94 @@ public class ScrollRecoveryEngine {
             swipeMethod.invoke(null, startX, startY, endX, endY);
             Thread.sleep(500);
             return true;
+        } catch (Exception ignored) {}
+
+        return false;
+    }
+
+    /**
+     * Performs an autonomous leftward swipe (drag from right to left)
+     * to reveal next cards or tabs in a horizontal carousel.
+     */
+    public boolean performSwipeLeft(Object driver) {
+        if (driver == null) return false;
+        int[] dims = getScreenDimensions(driver);
+        int width = dims[0];
+        int height = dims[1];
+
+        int startX = Math.min(width - 50, (int) (width * 0.85));
+        int startY = height / 2;
+        int endX = Math.max(50, (int) (width * 0.15));
+        int endY = height / 2;
+
+        try {
+            Class<?> mobileKeywords = Class.forName("com.kms.katalon.core.mobile.keyword.MobileBuiltInKeywords");
+            Method swipeMethod = mobileKeywords.getMethod("swipe", int.class, int.class, int.class, int.class);
+            swipeMethod.invoke(null, startX, startY, endX, endY);
+            Thread.sleep(500);
+            return true;
+        } catch (Exception ignored) {}
+
+        // Fallback: Appium UiAutomator2 mobile: swipeGesture
+        try {
+            Class<?> jsExecutor = Class.forName("org.openqa.selenium.JavascriptExecutor");
+            if (jsExecutor.isInstance(driver)) {
+                Method executeScript = jsExecutor.getMethod("executeScript", String.class, Object[].class);
+                java.util.Map<String, Object> swipeArgs = new java.util.HashMap<>();
+                swipeArgs.put("left", 50);
+                swipeArgs.put("top", (int) (height * 0.30));
+                swipeArgs.put("width", Math.max(100, width - 100));
+                swipeArgs.put("height", Math.max(100, (int) (height * 0.40)));
+                swipeArgs.put("direction", "left");
+                swipeArgs.put("percent", 0.75);
+                executeScript.invoke(driver, "mobile: swipeGesture", new Object[]{swipeArgs});
+                Thread.sleep(500);
+                return true;
+            }
+        } catch (Exception ignored) {}
+
+        return false;
+    }
+
+    /**
+     * Performs an autonomous rightward swipe (drag from left to right)
+     * to reveal previous cards or tabs in a horizontal carousel.
+     */
+    public boolean performSwipeRight(Object driver) {
+        if (driver == null) return false;
+        int[] dims = getScreenDimensions(driver);
+        int width = dims[0];
+        int height = dims[1];
+
+        int startX = Math.max(50, (int) (width * 0.15));
+        int startY = height / 2;
+        int endX = Math.min(width - 50, (int) (width * 0.85));
+        int endY = height / 2;
+
+        try {
+            Class<?> mobileKeywords = Class.forName("com.kms.katalon.core.mobile.keyword.MobileBuiltInKeywords");
+            Method swipeMethod = mobileKeywords.getMethod("swipe", int.class, int.class, int.class, int.class);
+            swipeMethod.invoke(null, startX, startY, endX, endY);
+            Thread.sleep(500);
+            return true;
+        } catch (Exception ignored) {}
+
+        // Fallback: Appium UiAutomator2 mobile: swipeGesture
+        try {
+            Class<?> jsExecutor = Class.forName("org.openqa.selenium.JavascriptExecutor");
+            if (jsExecutor.isInstance(driver)) {
+                Method executeScript = jsExecutor.getMethod("executeScript", String.class, Object[].class);
+                java.util.Map<String, Object> swipeArgs = new java.util.HashMap<>();
+                swipeArgs.put("left", 50);
+                swipeArgs.put("top", (int) (height * 0.30));
+                swipeArgs.put("width", Math.max(100, width - 100));
+                swipeArgs.put("height", Math.max(100, (int) (height * 0.40)));
+                swipeArgs.put("direction", "right");
+                swipeArgs.put("percent", 0.75);
+                executeScript.invoke(driver, "mobile: swipeGesture", new Object[]{swipeArgs});
+                Thread.sleep(500);
+                return true;
+            }
         } catch (Exception ignored) {}
 
         return false;

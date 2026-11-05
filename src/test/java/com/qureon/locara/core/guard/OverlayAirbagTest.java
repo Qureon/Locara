@@ -63,4 +63,21 @@ public class OverlayAirbagTest {
         assertNotNull(detected);
         assertTrue(detected.isClickable());
     }
+
+    @Test
+    @DisplayName("Should detect market hours & investment notice dismissal buttons (Saya Mengerti, Paham, OK)")
+    void testDetectMarketHoursAdvisoryDismissButton() {
+        UIElementNode noticeTitle = new UIElementNode("android.widget.TextView", "tv_title", "Pemberitahuan Jam Bursa", "", "android.widget.TextView", "", new Rectangle(100, 300, 880, 80), false, true, true, false, false, 2);
+        UIElementNode noticeBody = new UIElementNode("android.widget.TextView", "tv_desc", "Transaksi setelah pukul 13.00 WIB akan diproses pada hari kerja berikutnya.", "", "android.widget.TextView", "", new Rectangle(100, 390, 880, 200), false, true, true, false, false, 2);
+        UIElementNode understandBtn = new UIElementNode("android.widget.Button", "btn_understand", "Saya Mengerti", "", "android.widget.Button", "", new Rectangle(100, 600, 880, 100), true, true, true, false, true, 2);
+
+        List<UIElementNode> nodes = Arrays.asList(noticeTitle, noticeBody, understandBtn);
+
+        OverlayAirbag airbag = new OverlayAirbag();
+        UIElementNode detected = airbag.findModalDismissButton(nodes);
+
+        assertNotNull(detected, "OverlayAirbag should detect 'Saya Mengerti' dismissal button");
+        assertEquals("Saya Mengerti", detected.getText());
+        assertTrue(detected.isClickable());
+    }
 }

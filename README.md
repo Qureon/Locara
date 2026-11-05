@@ -5,9 +5,9 @@
 ### Adaptive Locator Intelligence & Universal Self-Healing Engine
 *An autonomous, offline-first self-healing engine for resilient mobile & hybrid test automation.*
 
-[![Version](https://img.shields.io/badge/version-1.9.4-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
+[![Version](https://img.shields.io/badge/version-1.10.0-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-111%2F111%20passing-10B981?style=flat-square)](build.gradle)
+[![Tests](https://img.shields.io/badge/tests-83%2F83%20passing-10B981?style=flat-square)](build.gradle)
 [![Java](https://img.shields.io/badge/java-17%20%7C%2021%20%7C%2024-orange?style=flat-square&logo=openjdk)](build.gradle)
 [![Katalon](https://img.shields.io/badge/katalon-8.x%20%7C%209.x%20%7C%2010.x%20%7C%2011.x%20(11.7.0%2B%20Ready)-00B0FF?style=flat-square)](https://katalon.com)
 [![Appium](https://img.shields.io/badge/appium-2.x%20%7C%201.x-662d91?style=flat-square&logo=appium)](https://appium.io)
@@ -41,6 +41,8 @@ Locara menerapkan prinsip **In-Flight Zero-Interruption**:
 9. **Enterprise Financial Shield & Zero-False-Green Lattice (v1.8.0)**: Proteksi polaritas transaksi finansial (*Rule 0: anti-salah klik bayar/transfer*), eliminasi asimetri token tunggal pada probe presence, pemisahan kluster semantik finansial, dan isolasi thread-safe per-runner via `ThreadLocal<AppTarget>` multi-threading.
 10. **Enterprise Safety Guard**: Proteksi polaritas bahaya (*Danger Polarity Lockout*), auto-dismiss keyboard virtual (*The Golden Triad*), dan *Auto-Scroll Viewport Fallback* untuk tombol di bawah lipatan layar.
 11. **Zero Cloud PII Leakage**: 100% offline, nol transmisi data keluar mesin lokal. Aman untuk standar kepatuhan perbankan & enterprise.
+12. **Wealth & Investment Semantic Intelligence (v1.10.0)**: Kluster micro-tensor khusus produk investasi (Reksa Dana & Obligasi: *Prospektus*, *FFS*, *Kinerja*, *Imbal Hasil*, *Asset Classes*), perlindungan polaritas transaksi finansial (*Rule 0: anti-salah klik Subscribe/Redeem saat mencari tab Dokumen/Deskripsi/Kinerja*), dan netralisasi otomatis modal jam bursa bilyet via `OverlayAirbag`.
+13. **Horizontal Product Carousel Traversal (v1.10.0)**: Autonomous swipe horizontal (`performSwipeLeft` / `performSwipeRight`) untuk kartu reksa dana dan strip kategori pada `HorizontalScrollView`, `ViewPager2`, dan `RecyclerView` horizontal.
 
 ---
 
