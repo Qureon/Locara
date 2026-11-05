@@ -139,13 +139,14 @@ public class LocaraOrSanitizer {
 
     private static String updateRsContent(String content, String newXPath) {
         String result = content;
+        String escapedXPath = escapeXml(newXPath);
 
         if (LOCATOR_PATTERN.matcher(result).find()) {
-            result = LOCATOR_PATTERN.matcher(result).replaceFirst("<locator>" + Matcher.quoteReplacement(newXPath) + "</locator>");
+            result = LOCATOR_PATTERN.matcher(result).replaceFirst("<locator>" + Matcher.quoteReplacement(escapedXPath) + "</locator>");
         } else {
             int closeTag = result.lastIndexOf("</MobileElementEntity>");
             if (closeTag != -1) {
-                result = result.substring(0, closeTag) + "<locator>" + newXPath + "</locator>\n</MobileElementEntity>";
+                result = result.substring(0, closeTag) + "<locator>" + escapedXPath + "</locator>\n</MobileElementEntity>";
             }
         }
 
@@ -160,9 +161,25 @@ public class LocaraOrSanitizer {
         Map<String, String> map = new HashMap<>();
         Matcher m = PROP_PATTERN.matcher(content);
         while (m.find()) {
-            map.put(m.group(1).trim(), m.group(2));
+            map.put(m.group(1).trim(), unescapeXml(m.group(2)));
         }
         return map;
+    }
+
+    private static String escapeXml(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;");
+    }
+
+    private static String unescapeXml(String s) {
+        if (s == null) return "";
+        return s.replace("&quot;", "\"")
+                .replace("&apos;", "'")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&amp;", "&");
     }
 
     private void collectRsFiles(File dir, List<File> accumulator) {

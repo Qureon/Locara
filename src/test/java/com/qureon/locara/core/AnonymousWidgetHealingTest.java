@@ -186,4 +186,33 @@ public class AnonymousWidgetHealingTest {
         assertEquals("//android.widget.EditText", res.getCandidate().getSuggestedXPath());
         assertEquals("SINGLE_INPUT_WIDGET_ON_SCREEN", res.getCandidate().getHealReason());
     }
+
+    @Test
+    @DisplayName("5. Multiple anonymous EditTexts inside a flat parent ViewGroup should generate adjacent label sibling XPath")
+    void testFlatFormMultipleAnonymousEditTexts() {
+        String xml = """
+                <hierarchy>
+                    <android.widget.FrameLayout bounds="[0,0][1080,2400]" displayed="true">
+                        <android.view.ViewGroup bounds="[50,300][1030,1200]" clickable="false" displayed="true">
+                            <android.widget.TextView bounds="[50,410][400,460]" clickable="false" displayed="true" text="Nama Zaku" resource-id=""/>
+                            <android.widget.EditText bounds="[50,480][1030,590]" clickable="true" enabled="true" displayed="true" resource-id="" text="" content-desc=""/>
+                            <android.widget.TextView bounds="[50,660][450,710]" clickable="false" displayed="true" text="Target Dana" resource-id=""/>
+                            <android.widget.EditText bounds="[50,730][1030,840]" clickable="true" enabled="true" displayed="true" resource-id="" text="" content-desc=""/>
+                        </android.view.ViewGroup>
+                    </android.widget.FrameLayout>
+                </hierarchy>
+                """;
+
+        HealContext ctxTarget = new HealContext.Builder()
+                .targetHint("02. EditText - Target Dana")
+                .action("SET_TEXT")
+                .expectedTag("EditText")
+                .build();
+
+        HealResult res = engine.heal(xml, ctxTarget);
+        assertTrue(res.isSuccess(), "Should heal second anonymous EditText in flat form container");
+        assertEquals(730, res.getCandidate().getNode().getBounds().y);
+        assertEquals("//android.widget.TextView[@text='Target Dana']/following-sibling::android.widget.EditText[1]",
+                res.getCandidate().getSuggestedXPath());
+    }
 }

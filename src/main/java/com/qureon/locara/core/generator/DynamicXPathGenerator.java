@@ -289,6 +289,24 @@ public class DynamicXPathGenerator {
                     }
                 }
             }
+        } else if (sameTagSiblings > 1 && targetIdx >= 0) {
+            // Flat form container with multiple inputs/checkboxes: anchor to immediate adjacent label sibling
+            if (targetIdx > 0) {
+                UIElementNode prevSib = siblings.get(targetIdx - 1);
+                if (prevSib.isDisplayed() && prevSib.hasText() && isTextUnique(prevSib.getText(), allNodes)) {
+                    String sibTag = prevSib.getTag().isEmpty() ? "android.widget.TextView" : prevSib.getTag();
+                    return String.format("//%s[@text=%s]/following-sibling::%s[1]",
+                            sibTag, toXPathLiteral(prevSib.getText()), targetTag);
+                }
+            }
+            if (targetIdx + 1 < siblings.size()) {
+                UIElementNode nextSib = siblings.get(targetIdx + 1);
+                if (nextSib.isDisplayed() && nextSib.hasText() && isTextUnique(nextSib.getText(), allNodes)) {
+                    String sibTag = nextSib.getTag().isEmpty() ? "android.widget.TextView" : nextSib.getTag();
+                    return String.format("//%s[@text=%s]/preceding-sibling::%s[1]",
+                            sibTag, toXPathLiteral(nextSib.getText()), targetTag);
+                }
+            }
         }
 
         // Case 2: React Native nested Input Box (Row ViewGroup -> [TextView label] + [Input Box ViewGroup -> EditText])
@@ -302,6 +320,18 @@ public class DynamicXPathGenerator {
                         String auntTag = aunt.getTag().isEmpty() ? "android.widget.TextView" : aunt.getTag();
                         return String.format("//%s[./%s[@text=%s]]//%s",
                                 gpTag, auntTag, toXPathLiteral(aunt.getText()), targetTag);
+                    }
+                }
+            } else if (inputsInGrandParent > 1 && countDescendantTag(parent, targetTag) == 1) {
+                List<UIElementNode> gpChildren = grandParent.getChildren();
+                int parentIdx = gpChildren.indexOf(parent);
+                if (parentIdx > 0) {
+                    UIElementNode prevAunt = gpChildren.get(parentIdx - 1);
+                    if (prevAunt.isDisplayed() && prevAunt.hasText() && isTextUnique(prevAunt.getText(), allNodes)) {
+                        String auntTag = prevAunt.getTag().isEmpty() ? "android.widget.TextView" : prevAunt.getTag();
+                        String parentTag = parent.getTag().isEmpty() ? "android.view.ViewGroup" : parent.getTag();
+                        return String.format("//%s[@text=%s]/following-sibling::%s[1]//%s",
+                                auntTag, toXPathLiteral(prevAunt.getText()), parentTag, targetTag);
                     }
                 }
             }
@@ -384,6 +414,24 @@ public class DynamicXPathGenerator {
             }
         }
 
+        // Strategy 3B: Ascended container XPath //Container[@clickable='true' and .//Child[@text='...']]
+        if (xpath.contains(" and .//")) {
+            if (xpath.contains("@clickable='true'") && !node.isClickable()) {
+                return false;
+            }
+            if (xpath.contains("@checkable='true'") && !node.isCheckable()) {
+                return false;
+            }
+            String descText = extractAttr(xpath, "@text=");
+            if (!descText.isEmpty()) {
+                return hasDescendantWithAttribute(node, "text", descText);
+            }
+            String descContent = extractAttr(xpath, "@content-desc=");
+            if (!descContent.isEmpty()) {
+                return hasDescendantWithAttribute(node, "content-desc", descContent);
+            }
+        }
+
         // HTML DOM attribute evaluators
         if (xpath.contains("@data-testid=")) {
             String testId = extractAttr(xpath, "@data-testid=");
@@ -426,6 +474,22 @@ public class DynamicXPathGenerator {
             return true;
         }
         return expectedTag.equalsIgnoreCase(node.getTag()) || expectedTag.equalsIgnoreCase(node.getClassName());
+    }
+
+    private boolean hasDescendantWithAttribute(UIElementNode container, String attrType, String expectedVal) {
+        if (container == null || expectedVal == null) return false;
+        for (UIElementNode child : container.getChildren()) {
+            if ("text".equals(attrType) && expectedVal.equals(child.getText())) {
+                return true;
+            }
+            if ("content-desc".equals(attrType) && expectedVal.equals(child.getContentDesc())) {
+                return true;
+            }
+            if (hasDescendantWithAttribute(child, attrType, expectedVal)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String extractAttr(String xpath, String prefix) {
