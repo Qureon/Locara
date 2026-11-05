@@ -113,7 +113,7 @@ class LocaraHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
         payload = {
             "status": "ONLINE",
-            "engine": "Locara Core v1.9.0 · Powered by Qureon (Katalon 11.7.0+ Ready)",
+            "engine": "Locara Core v1.9.1 · Powered by Qureon (Katalon 11.7.0+ Ready)",
             "target": "Qureon Autonomous QA Platform",
             "timestamp": datetime.now().isoformat(),
             "server_port": PORT

@@ -64,9 +64,8 @@ public class KatalonDriverBridge {
             // 1. Determine strategy and locator value
             String strategyName = "XPATH";
             String locatorValue = healedXPath;
-            boolean isAscendedContainerXPath = healedXPath.contains("@clickable='true' and .//") ||
-                    healedXPath.contains("@checkable='true' and .//");
-            if (node != null && !isAscendedContainerXPath) {
+            boolean isComplexXPath = com.qureon.locara.core.generator.KatalonRsSynthesizer.isComplexOrRelationalXPath(node, healedXPath);
+            if (node != null && !isComplexXPath) {
                 if (node.hasContentDesc()) {
                     strategyName = "ACCESSIBILITY";
                     locatorValue = node.getContentDesc();

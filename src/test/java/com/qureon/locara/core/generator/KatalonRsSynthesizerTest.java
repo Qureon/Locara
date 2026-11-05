@@ -197,4 +197,37 @@ public class KatalonRsSynthesizerTest {
         assertTrue(xml.contains("<key>CSS</key>"));
         assertTrue(xml.contains("<value>#login-button</value>"));
     }
+
+    @Test
+    @DisplayName("Should preserve XPATH strategy when candidate uses React Native ascended container or sibling relational XPath")
+    void testAscendedContainerAndRelationalXPathPreservesXPathStrategy() {
+        UIElementNode childTextNode = new UIElementNode(
+                "android.widget.TextView",
+                "",
+                "Buat Zaku",
+                "",
+                "android.widget.TextView",
+                "/hierarchy/android.widget.FrameLayout[1]/android.view.ViewGroup[1]/android.widget.TextView[1]",
+                new Rectangle(300, 1840, 480, 60),
+                false,
+                true,
+                true,
+                false,
+                false,
+                4
+        );
+
+        String ascendedXPath = "//android.view.ViewGroup[@clickable='true' and .//android.widget.TextView[@text='Buat Zaku']]";
+        HealCandidate candidate = new HealCandidate(childTextNode, ascendedXPath, 0.96, "RN_CONTAINER_ASCENSION");
+
+        String xml = synthesizer.generateMobileXmlContent("02. Button - Buat Zaku", candidate, null, null);
+
+        assertTrue(xml.contains("<locatorStrategy>XPATH</locatorStrategy>"),
+                "Ascended container XPath must use XPATH strategy instead of child ATTRIBUTES");
+        assertTrue(xml.contains("<selectorMethod>XPATH</selectorMethod>"));
+        assertTrue(xml.contains("<locator>//android.view.ViewGroup[@clickable=&apos;true&apos; and .//android.widget.TextView[@text=&apos;Buat Zaku&apos;]]</locator>"),
+                "Primary locator must be the ascended clickable ViewGroup XPath");
+        assertFalse(xml.contains("/hierarchy/android.widget.FrameLayout[1]"),
+                "Must write healed optimal XPath into <webElementProperties> instead of brittle positional /hierarchy path");
+    }
 }

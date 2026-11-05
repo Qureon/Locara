@@ -110,12 +110,12 @@ public class KatalonRsSynthesizer {
      */
     public String generateMobileXmlContent(String name, HealCandidate candidate, HealContext context, String existingGuid) {
         UIElementNode node = candidate != null ? candidate.getNode() : null;
-        MobileStrategy strategy = determineStrategy(node);
+        String xpath = candidate != null ? candidate.getSuggestedXPath() : "";
+        MobileStrategy strategy = determineStrategy(node, xpath);
 
         String entityGuid = (existingGuid != null && !existingGuid.isEmpty()) ? existingGuid : UUID.randomUUID().toString();
         String reason = candidate != null ? candidate.getHealReason() : "Self-Healing";
         double confidence = candidate != null ? candidate.getConfidenceScore() : 1.0;
-        String xpath = candidate != null ? candidate.getSuggestedXPath() : "";
 
         String locatorValue = determineLocatorValue(strategy, node, xpath);
         String selectorMethod = determineSelectorMethod(strategy);
@@ -239,7 +239,14 @@ public class KatalonRsSynthesizer {
     }
 
     public MobileStrategy determineStrategy(UIElementNode node) {
+        return determineStrategy(node, null);
+    }
+
+    public MobileStrategy determineStrategy(UIElementNode node, String xpath) {
         if (node == null) return MobileStrategy.XPATH;
+        if (isComplexOrRelationalXPath(node, xpath)) {
+            return MobileStrategy.XPATH;
+        }
         if (node.hasContentDesc()) {
             return MobileStrategy.ACCESSIBILITY;
         }
@@ -250,6 +257,25 @@ public class KatalonRsSynthesizer {
             return MobileStrategy.ATTRIBUTES;
         }
         return MobileStrategy.XPATH;
+    }
+
+    public static boolean isComplexOrRelationalXPath(UIElementNode node, String xpath) {
+        if (xpath == null || xpath.isEmpty()) return false;
+        if (xpath.contains(".//") ||
+                xpath.contains("following-sibling::") ||
+                xpath.contains("preceding-sibling::") ||
+                xpath.contains("]//") ||
+                xpath.startsWith("(") ||
+                xpath.startsWith("/hierarchy") ||
+                xpath.startsWith("//hierarchy")) {
+            return true;
+        }
+        if (node != null && !node.getTag().isEmpty() && xpath.startsWith("//") && !xpath.startsWith("//*")) {
+            if (!xpath.startsWith("//" + node.getTag())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public String determineLocatorValue(MobileStrategy strategy, UIElementNode node, String fallbackXpath) {
@@ -380,7 +406,7 @@ public class KatalonRsSynthesizer {
         list.add(new PropertyEntry("displayed", String.valueOf(node.isDisplayed()), false));
 
         // 18. xpath
-        String effectiveXPath = (node.getXpath() != null && !node.getXpath().isEmpty()) ? node.getXpath() : xpath;
+        String effectiveXPath = (xpath != null && !xpath.isEmpty()) ? xpath : node.getXpath();
         list.add(new PropertyEntry("xpath", effectiveXPath, strategy == MobileStrategy.XPATH));
 
         // 19. resource-id (if present)
