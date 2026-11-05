@@ -217,5 +217,19 @@ public class DangerKeywordGuardTest {
                 "Explicit 'Kirim Uang' target should allow 'Kirim Uang' button");
         assertFalse(DangerKeywordGuard.isPolarityViolation("Promo", promoMenarikNode),
                 "Substrings like 'menarik' or 'beliau' must NOT trigger false-positive financial lockout");
+
+        // React Native clickable ViewGroup wrapping child TextView with 'Hapus' or 'Bayar'
+        UIElementNode rnDeleteContainer = new UIElementNode(
+                "android.view.ViewGroup", "", "", "", "android.view.ViewGroup", "//android.view.ViewGroup[1]",
+                new Rectangle(100, 2000, 300, 100), true, true, true, false, false, 2
+        );
+        UIElementNode childDeleteText = new UIElementNode(
+                "android.widget.TextView", "", "Hapus Akun", "", "android.widget.TextView", "//android.widget.TextView[1]",
+                new Rectangle(120, 2020, 260, 60), false, true, true, false, false, 3
+        );
+        rnDeleteContainer.addChild(childDeleteText);
+
+        assertTrue(DangerKeywordGuard.isPolarityViolation("Lanjut", rnDeleteContainer),
+                "Clickable ViewGroup wrapping 'Hapus Akun' child TextView MUST be blocked by DangerKeywordGuard");
     }
 }

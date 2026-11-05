@@ -106,6 +106,7 @@ public final class DangerKeywordGuard {
     private static Set<String> extractNodeTokens(UIElementNode node) {
         Set<String> set = new HashSet<>();
         set.addAll(StringSimilarity.tokenize(node.getText()));
+        set.addAll(StringSimilarity.tokenize(node.getAggregatedDescendantText(2)));
         set.addAll(StringSimilarity.tokenize(node.getStrippedResourceId()));
         set.addAll(StringSimilarity.tokenize(node.getContentDesc()));
         return set;

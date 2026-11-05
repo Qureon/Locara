@@ -89,4 +89,34 @@ public class StringSimilarityTest {
         double infoScore = StringSimilarity.compositeScore("Info / Bantuan", "Info Bantuan");
         assertTrue(infoScore >= 0.85, "Expected high score for slash variation, got: " + infoScore);
     }
+
+    @Test
+    @DisplayName("Should block conflicting multi-word banking qualifiers and disjoint numeric tokens (Zero False-Positive Guard)")
+    void testConflictingQualifiersAndDisjointNumericGuards() {
+        // 1. Conflicting transfer channels sharing prefix 'Transfer'
+        assertTrue(StringSimilarity.compositeScore("Transfer RTGS", "Transfer SKN") < 0.65,
+                "Transfer RTGS must NOT match Transfer SKN");
+        assertTrue(StringSimilarity.compositeScore("Transfer Bi Fast", "Transfer RTGS") < 0.65,
+                "Transfer Bi Fast must NOT match Transfer RTGS");
+
+        // 2. Conflicting account direction sharing prefix 'Nomor Rekening'
+        assertTrue(StringSimilarity.compositeScore("Nomor Rekening Sumber", "Nomor Rekening Tujuan") < 0.65,
+                "Nomor Rekening Sumber must NOT match Nomor Rekening Tujuan");
+
+        // 3. Conflicting card types sharing prefix 'Kartu'
+        assertTrue(StringSimilarity.compositeScore("Kartu Kredit", "Kartu Debit") < 0.65,
+                "Kartu Kredit must NOT match Kartu Debit");
+
+        // 4. Conflicting credential states sharing prefix 'Password' / 'PIN'
+        assertTrue(StringSimilarity.compositeScore("Password Lama", "Password Baru") < 0.65,
+                "Password Lama must NOT match Password Baru");
+        assertTrue(StringSimilarity.compositeScore("PIN Lama", "PIN Baru") < 0.65,
+                "PIN Lama must NOT match PIN Baru");
+
+        // 5. Disjoint numeric tokens (wrong tenor, wrong day, wrong digit)
+        assertTrue(StringSimilarity.compositeScore("Tenor 3 Bulan", "Tenor 6 Bulan") < 0.50,
+                "Tenor 3 Bulan must NOT match Tenor 6 Bulan");
+        assertTrue(StringSimilarity.compositeScore("1 Day", "7 Day") < 0.50,
+                "1 Day must NOT match 7 Day");
+    }
 }
