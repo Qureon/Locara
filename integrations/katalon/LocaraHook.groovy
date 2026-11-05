@@ -109,6 +109,18 @@ class LocaraHook {
         return true
     }
 
+    // Helper ramah untuk mendeteksi apakah skenario yang sedang jalan adalah Negative Test Case
+    static boolean isNegativeTestCaseRunning() {
+        try {
+            def listenerClass = Class.forName("GlobalSetupListener")
+            def field = listenerClass.getField("currentTestCaseId")
+            String tcId = field.get(null)?.toString() ?: ""
+            return tcId.contains("Negative") || tcId.contains("Negative Case") || tcId.contains("Negative Test Case") || tcId.contains("/TC-N")
+        } catch (Throwable ignored) {
+            return false
+        }
+    }
+
     static synchronized void install() {
         if (installed) return
         if (!isLocaraPresent()) return
@@ -504,6 +516,11 @@ class LocaraWaitForElementPresentKeyword implements IKeyword {
             }
         } catch (Throwable ignored) {}
 
+        // 🛡️ Jika sedang menjalankan Negative Test Case, jangan paksakan healing agar assertion negatif tetap akurat
+        if (LocaraHook.isNegativeTestCaseRunning()) {
+            return false
+        }
+
         // Original returned false or threw: Trigger In-Flight Probe Airbag!
         KeywordUtil.logInfo("[Locara by Qureon] 🛡️ Intercepted missing on Mobile.waitForElementPresent('${objId}'). Activating in-flight probe healing...")
 
@@ -557,6 +574,14 @@ class LocaraVerifyElementPresentKeyword implements IKeyword {
                 return true
             }
         } catch (Throwable t) {}
+
+        // 🛡️ Jika sedang menjalankan Negative Test Case, jangan paksakan healing
+        if (LocaraHook.isNegativeTestCaseRunning()) {
+            if (flow == FailureHandling.STOP_ON_FAILURE) {
+                throw new com.kms.katalon.core.exception.StepFailedException("Element '" + objId + "' not present")
+            }
+            return false
+        }
 
         KeywordUtil.logInfo("[Locara by Qureon] 🛡️ Intercepted failure on Mobile.verifyElementPresent('${objId}'). Activating in-flight probe healing...")
 
@@ -613,6 +638,14 @@ class LocaraVerifyElementVisibleKeyword implements IKeyword {
                 return true
             }
         } catch (Throwable t) {}
+
+        // 🛡️ Jika sedang menjalankan Negative Test Case, jangan paksakan healing
+        if (LocaraHook.isNegativeTestCaseRunning()) {
+            if (flow == FailureHandling.STOP_ON_FAILURE) {
+                throw new com.kms.katalon.core.exception.StepFailedException("Element '" + objId + "' not visible")
+            }
+            return false
+        }
 
         KeywordUtil.logInfo("[Locara by Qureon] 🛡️ Intercepted failure on Mobile.verifyElementVisible('${objId}'). Activating in-flight visibility healing...")
 

@@ -5,16 +5,16 @@
 ### Adaptive Locator Intelligence & Universal Self-Healing Engine
 *An autonomous, offline-first self-healing engine for resilient mobile & hybrid test automation.*
 
-[![Version](https://img.shields.io/badge/version-1.9.3-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
+[![Version](https://img.shields.io/badge/version-1.9.4-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-97%2F97%20passing-10B981?style=flat-square)](build.gradle)
+[![Tests](https://img.shields.io/badge/tests-111%2F111%20passing-10B981?style=flat-square)](build.gradle)
 [![Java](https://img.shields.io/badge/java-17%20%7C%2021%20%7C%2024-orange?style=flat-square&logo=openjdk)](build.gradle)
 [![Katalon](https://img.shields.io/badge/katalon-8.x%20%7C%209.x%20%7C%2010.x%20%7C%2011.x%20(11.7.0%2B%20Ready)-00B0FF?style=flat-square)](https://katalon.com)
 [![Appium](https://img.shields.io/badge/appium-2.x%20%7C%201.x-662d91?style=flat-square&logo=appium)](https://appium.io)
 [![Playwright](https://img.shields.io/badge/playwright-v1.40%2B%20%7C%20MCP%20%7C%20Azure-2EAD33?style=flat-square&logo=playwright)](integrations/playwright/)
 [![Cucumber](https://img.shields.io/badge/cucumber-BDD%20%7C%20Gherkin%20%7C%20GenAI-23D96C?style=flat-square&logo=cucumber)](integrations/cucumber/)
 
-[Releases](https://github.com/Qureon/Locara/releases) • [Architecture & Flow](docs/ARCHITECTURE_AND_FLOW.md) • [User Tutorial Guide](docs/USER_TUTORIAL_GUIDE.md) • [Mission Control Dashboard](dashboard/) • [MIT License](LICENSE)
+[Releases](https://github.com/Qureon/Locara/releases) • [Changelog](CHANGELOG.md) • [Architecture & Flow](docs/ARCHITECTURE_AND_FLOW.md) • [User Tutorial Guide](docs/USER_TUTORIAL_GUIDE.md) • [Mission Control Dashboard](dashboard/) • [MIT License](LICENSE)
 
 </div>
 

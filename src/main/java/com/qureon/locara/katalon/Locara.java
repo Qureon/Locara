@@ -213,9 +213,9 @@ public class Locara {
         }
 
         String rsPath = extractObjectId(testObject);
+        String origLocator = extractLocator(testObject);
         String rawHint = (hint != null && !hint.isEmpty()) ? hint : rsPath;
-        String effectiveHint = com.qureon.locara.core.matcher.HeuristicMatcher.cleanSemanticHint(rawHint);
-        if (effectiveHint.isEmpty()) effectiveHint = rawHint;
+        String effectiveHint = resolveEffectiveHint(testObject, rawHint, origLocator);
 
         String expectedTag = extractExpectedTag(rsPath);
 
@@ -225,7 +225,7 @@ public class Locara {
                 .value("")
                 .targetRsPath(rsPath)
                 .screenName(deriveScreenName(rsPath))
-                .originalLocator(extractLocator(testObject))
+                .originalLocator(origLocator)
                 .expectedTag(expectedTag)
                 .build();
 
@@ -307,9 +307,9 @@ public class Locara {
             }
 
             String rsPath = extractObjectId(testObject);
+            String origLocator = extractLocator(testObject);
             String rawHint = (hint != null && !hint.isEmpty()) ? hint : rsPath;
-            String effectiveHint = com.qureon.locara.core.matcher.HeuristicMatcher.cleanSemanticHint(rawHint);
-            if (effectiveHint.isEmpty()) effectiveHint = rawHint;
+            String effectiveHint = resolveEffectiveHint(testObject, rawHint, origLocator);
 
             String expectedTag = extractExpectedTag(rsPath);
 
@@ -319,7 +319,7 @@ public class Locara {
                     .value("")
                     .targetRsPath(rsPath)
                     .screenName(deriveScreenName(rsPath))
-                    .originalLocator(extractLocator(testObject))
+                    .originalLocator(origLocator)
                     .expectedTag(expectedTag)
                     .build();
 
@@ -446,9 +446,9 @@ public class Locara {
         }
 
         String rsPath = explicitRsPath != null ? explicitRsPath : extractObjectId(testObject);
+        String origLocator = extractLocator(testObject);
         String rawHint = (hint != null && !hint.isEmpty()) ? hint : rsPath;
-        String effectiveHint = com.qureon.locara.core.matcher.HeuristicMatcher.cleanSemanticHint(rawHint);
-        if (effectiveHint.isEmpty()) effectiveHint = rawHint;
+        String effectiveHint = resolveEffectiveHint(testObject, rawHint, origLocator);
 
         String expectedTag = extractExpectedTag(rsPath);
 
@@ -458,11 +458,22 @@ public class Locara {
                 .value(value)
                 .targetRsPath(rsPath)
                 .screenName(deriveScreenName(rsPath))
-                .originalLocator(extractLocator(testObject))
+                .originalLocator(origLocator)
                 .expectedTag(expectedTag)
                 .build();
 
         HealResult result = ENGINE.heal(pageSource, context);
+
+        // Overlay Airbag Fallback: If target not found, check for blocking OS permission or modal overlay
+        if (!result.isSuccess()) {
+            boolean dismissed = OVERLAY_AIRBAG.dismissBlockingOverlay(driver, pageSource);
+            if (dismissed) {
+                pageSource = KatalonDriverBridge.getPageSource(driver);
+                if (pageSource != null) {
+                    result = ENGINE.heal(pageSource, context);
+                }
+            }
+        }
 
         // Auto-Scroll Fallback: If not found, attempt scroll recovery on scrollable containers
         if (!result.isSuccess() && ENGINE.getConfig().isScrollRecoveryEnabled()) {
@@ -607,8 +618,17 @@ public class Locara {
         }
     }
 
-    private static String extractLocator(Object testObject) {
+    public static String extractLocator(Object testObject) {
         if (testObject == null) return "";
+        for (String methodName : new String[]{"getMobileLocator", "getLocator"}) {
+            try {
+                Method m = testObject.getClass().getMethod(methodName);
+                Object val = m.invoke(testObject);
+                if (val != null && !val.toString().trim().isEmpty()) {
+                    return val.toString().trim();
+                }
+            } catch (Exception ignored) {}
+        }
         try {
             Method getXpath = testObject.getClass().getMethod("findPropertyValue", String.class, boolean.class);
             Object val = getXpath.invoke(testObject, "xpath", false);
@@ -616,6 +636,52 @@ public class Locara {
         } catch (Exception ignored) {
             return "";
         }
+    }
+
+    public static String resolveEffectiveHint(Object testObject, String rawHint, String originalLocator) {
+        String cleaned = com.qureon.locara.core.matcher.HeuristicMatcher.cleanSemanticHint(rawHint);
+        if (!isGenericOrEmptyHint(cleaned)) {
+            return cleaned;
+        }
+        // Fallback 1: Inspect TestObject properties (text, content-desc, resource-id)
+        if (testObject != null) {
+            for (String propName : new String[]{"text", "content-desc", "resource-id"}) {
+                try {
+                    Method findProp = testObject.getClass().getMethod("findPropertyValue", String.class, boolean.class);
+                    Object val = findProp.invoke(testObject, propName, false);
+                    if (val != null && !val.toString().trim().isEmpty()) {
+                        String propVal = val.toString().trim();
+                        if ("resource-id".equals(propName) && propVal.contains(":id/")) {
+                            propVal = propVal.substring(propVal.indexOf(":id/") + 4);
+                        }
+                        if (!isGenericOrEmptyHint(propVal)) {
+                            return propVal;
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
+        // Fallback 2: Extract @text='...' or @content-desc='...' from originalLocator
+        if (originalLocator != null && !originalLocator.isEmpty()) {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("@(?:text|content-desc)\\s*=\\s*['\"]([^'\"]+)['\"]").matcher(originalLocator);
+            if (m.find()) {
+                String extracted = m.group(1).trim();
+                if (!isGenericOrEmptyHint(extracted)) {
+                    return extracted;
+                }
+            }
+        }
+        return !cleaned.isEmpty() ? cleaned : (rawHint != null ? rawHint : "");
+    }
+
+    private static boolean isGenericOrEmptyHint(String s) {
+        if (s == null || s.trim().isEmpty()) return true;
+        String lower = s.trim().toLowerCase();
+        return lower.equals("button") || lower.equals("tombol") || lower.equals("viewgroup") ||
+                lower.equals("groupview") || lower.equals("textview") || lower.equals("edittext") ||
+                lower.equals("imageview") || lower.equals("checkbox") || lower.equals("radiobutton") ||
+                lower.equals("view") || lower.equals("input") || lower.equals("field") ||
+                lower.equals("text") || lower.equals("value") || lower.equals("label");
     }
 
     private static String extractExpectedTag(String rsPath) {
