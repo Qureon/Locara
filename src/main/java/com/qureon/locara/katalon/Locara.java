@@ -18,6 +18,9 @@ public class Locara {
     private static final KeyboardGuard KEYBOARD_GUARD = new KeyboardGuard();
     private static final ScrollRecoveryEngine SCROLL_ENGINE = new ScrollRecoveryEngine(2);
     private static final com.qureon.locara.core.guard.OverlayAirbag OVERLAY_AIRBAG = new com.qureon.locara.core.guard.OverlayAirbag();
+    private static final com.qureon.locara.core.context.ContextualEntityResolver CONTEXT_RESOLVER = new com.qureon.locara.core.context.ContextualEntityResolver();
+    private static final com.qureon.locara.katalon.variable.AutoVariableSynthesizer VARIABLE_SYNTHESIZER = new com.qureon.locara.katalon.variable.AutoVariableSynthesizer();
+    private static final com.qureon.locara.katalon.variable.ScriptVariableAligner SCRIPT_ALIGNER = new com.qureon.locara.katalon.variable.ScriptVariableAligner();
 
     private static LocaraEngine createDefaultEngine() {
         String userDir = System.getProperty("user.dir");
@@ -739,6 +742,63 @@ public class Locara {
             return false;
         } catch (Throwable t) {
             return true;
+        }
+    }
+
+    /**
+     * Dynamically resolves the active bank account card from the current mobile screen.
+     */
+    public static com.qureon.locara.core.context.ResolvedAccount resolveActiveAccount(Object driver) {
+        if (driver == null) {
+            driver = KatalonDriverBridge.getMobileDriver();
+        }
+        if (driver == null) {
+            return null;
+        }
+        String pageSource = KatalonDriverBridge.getPageSource(driver);
+        return CONTEXT_RESOLVER.resolveActiveAccount(pageSource);
+    }
+
+    /**
+     * Resolves the active bank account card directly from raw XML/HTML page source string.
+     */
+    public static com.qureon.locara.core.context.ResolvedAccount resolveActiveAccount(String pageSource) {
+        return CONTEXT_RESOLVER.resolveActiveAccount(pageSource);
+    }
+
+    /**
+     * Synthesizes and injects Menu Variables into a Katalon Test Case XML Entity (.tc).
+     */
+    public static boolean synthesizeTestCaseVariables(File tcFile, java.util.List<com.qureon.locara.katalon.variable.TestCaseVariable> variables) {
+        try {
+            return VARIABLE_SYNTHESIZER.synthesizeVariables(tcFile, variables);
+        } catch (Exception e) {
+            System.err.println("[Locara] Failed to synthesize variables: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Synchronizes a specific variable default value into a .tc file.
+     */
+    public static boolean syncVariableDefault(File tcFile, String varName, String defaultValue) {
+        try {
+            return VARIABLE_SYNTHESIZER.syncVariableDefault(tcFile, varName, defaultValue);
+        } catch (Exception e) {
+            System.err.println("[Locara] Failed to sync variable default: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Aligns a Groovy script to ensure variables are declared outside try-catch blocks.
+     */
+    public static boolean alignScript(File scriptFile) {
+        try {
+            return SCRIPT_ALIGNER.alignScript(scriptFile);
+        } catch (Exception e) {
+            System.err.println("[Locara] Failed to align script: " + e.getMessage());
+            return false;
         }
     }
 }

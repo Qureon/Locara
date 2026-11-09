@@ -5,6 +5,15 @@ This project adheres strictly to [Semantic Versioning (SemVer 2.0.0)](https://se
 
 ---
 
+## [v1.11.0] - 2026-11-09
+### Added
+- **Contextual Entity Resolver (`ContextualEntityResolver` & `ResolvedAccount`)**: Autonomous mobile banking dashboard entity extraction. Discovers active account numbers, account holder names, account types (e.g. Tabungan Mega Dana, Mega Payroll), and balance visibility states directly from Appium page source / Android UI hierarchy XML (`HorizontalScrollView`, `ViewGroup`, `RecyclerView`). Extracts clean 10–16 digit account numbers even from spaced card representations (`0107 4002 1025 853` -> `010740021025853`).
+- **Autonomous Variable Synthesizer (`AutoVariableSynthesizer`)**: Programmatic management and synchronization of Katalon Studio Menu Variables (`<variableLinks>` and `<variable>`) inside `.tc` XML entities with deterministic UUID v4 generation, schema validation, and zero duplication. Prevents blank variable lists in Katalon Studio UI and guarantees seamless data binding.
+- **Script Variable Scoping Aligner (`ScriptVariableAligner`)**: Enforces variable declarations (`passwordLogin`, `nomorRekeningSumber`, etc.) to be defined outside `try { ... }` blocks in Groovy test scripts, ensuring clean variable scoping, persistence across `catch`/`finally`, and standard compliance.
+- **Expanded CLI & Java Public API (`Locara`, `LocaraCli`)**: Added `extract-account`, `sync-tc`, and `align-script` commands to `locara` CLI and corresponding public methods `Locara.resolveActiveAccount(...)`, `Locara.synthesizeTestCaseVariables(...)`, `Locara.syncVariableDefault(...)`, and `Locara.alignScript(...)`.
+
+---
+
 ## [v1.10.0] - 2026-11-05
 ### Added
 - **Wealth & Investment Financial Polarity Protection (`DangerKeywordGuard`)**: Enriched `FINANCIAL_KEYWORDS` with wealth management transaction actions (`subscribe`, `subscription`, `langganan`, `penambahan unit`, `redeem`, `redemption`, `cairkan`, `pencairan`, `jual unit`, `switching`, `pengalihan`). Rule 0 strictly blocks accidental clicks on transaction action buttons when automated tests or inquiries search for informative tabs or buttons (`Deskripsi`, `Dokumen`, `Kinerja`, `Bandingkan`, `Informasi`).

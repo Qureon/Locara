@@ -9,10 +9,16 @@ import com.qureon.locara.core.model.UIElementNode;
 import com.qureon.locara.core.parser.PageSourceParser;
 import com.qureon.locara.core.sanitizer.LocaraOrSanitizer;
 import com.qureon.locara.core.parser.FieldRelationshipParser;
+import com.qureon.locara.core.context.ContextualEntityResolver;
+import com.qureon.locara.core.context.ResolvedAccount;
+import com.qureon.locara.katalon.variable.AutoVariableSynthesizer;
+import com.qureon.locara.katalon.variable.ScriptVariableAligner;
+import com.qureon.locara.katalon.variable.TestCaseVariable;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -50,6 +56,40 @@ public class LocaraCli {
                 System.err.println("❌ Error reading XML file: " + e.getMessage());
                 System.exit(1);
             }
+            return;
+        }
+
+        if ("extract-account".equalsIgnoreCase(command) || hasArg(args, "--extract-account")) {
+            String xmlPath = getArg(args, "--xml");
+            if (xmlPath == null && args.length > 1 && !args[1].startsWith("-")) {
+                xmlPath = args[1];
+            }
+            if (xmlPath == null) {
+                System.err.println("❌ Error: Missing --xml <path_to_xml>");
+                System.exit(1);
+            }
+            runExtractAccountMode(xmlPath);
+            return;
+        }
+
+        if ("sync-tc".equalsIgnoreCase(command) || hasArg(args, "--sync-tc")) {
+            String tcPath = getArg(args, "--tc");
+            if (tcPath == null && args.length > 1 && !args[1].startsWith("-")) {
+                tcPath = args[1];
+            }
+            String varName = getArg(args, "--var");
+            String defVal = getArg(args, "--default", "''");
+            String desc = getArg(args, "--desc", "Auto-synced by Locara");
+            runSyncTcMode(tcPath, varName, defVal, desc);
+            return;
+        }
+
+        if ("align-script".equalsIgnoreCase(command) || hasArg(args, "--align-script")) {
+            String scriptPath = getArg(args, "--script");
+            if (scriptPath == null && args.length > 1 && !args[1].startsWith("-")) {
+                scriptPath = args[1];
+            }
+            runAlignScriptMode(scriptPath);
             return;
         }
 
@@ -241,14 +281,95 @@ public class LocaraCli {
         }
     }
 
+    private static void runExtractAccountMode(String xmlPath) {
+        try {
+            String xmlContent = Files.readString(new File(xmlPath).toPath(), StandardCharsets.UTF_8);
+            ContextualEntityResolver resolver = new ContextualEntityResolver();
+            ResolvedAccount account = resolver.resolveActiveAccount(xmlContent);
+
+            System.out.println("==============================================================");
+            System.out.println("  Locara by Qureon · Contextual Entity & Account Card Resolver");
+            System.out.println("==============================================================");
+            if (account != null && account.isValid()) {
+                System.out.println("✅ Active Account Discovered:");
+                System.out.println("💳 Account Number : " + account.getAccountNumber());
+                System.out.println("🏦 Account Type   : " + account.getAccountType());
+                System.out.println("👤 Account Holder : " + (account.getHolderName().isEmpty() ? "-" : account.getHolderName()));
+                System.out.println("🔒 Masked Balance : " + (account.isMaskedBalancePresent() ? "YES" : "NO"));
+            } else {
+                System.out.println("⚠️ No active account card matching 10-16 digits discovered in XML.");
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Failed to extract account entity: " + e.getMessage());
+        }
+    }
+
+    private static void runSyncTcMode(String tcPath, String varName, String defVal, String desc) {
+        if (tcPath == null || varName == null) {
+            System.err.println("❌ Error: Missing --tc <path.tc> or --var <varName>");
+            return;
+        }
+        File tcFile = new File(tcPath);
+        if (!tcFile.exists()) {
+            System.err.println("❌ Error: .tc file not found: " + tcFile.getAbsolutePath());
+            return;
+        }
+        try {
+            AutoVariableSynthesizer synthesizer = new AutoVariableSynthesizer();
+            boolean changed = synthesizer.syncVariableDefault(tcFile, varName, defVal);
+            System.out.println("==============================================================");
+            System.out.println("  Locara by Qureon · Autonomous Variable Synthesizer (AVS)    ");
+            System.out.println("==============================================================");
+            if (changed) {
+                System.out.println("✅ Synchronized variable '" + varName + "' = " + defVal + " in " + tcFile.getName());
+            } else {
+                System.out.println("ℹ️ Variable '" + varName + "' already up to date in " + tcFile.getName());
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Failed to sync .tc variable: " + e.getMessage());
+        }
+    }
+
+    private static void runAlignScriptMode(String scriptPath) {
+        if (scriptPath == null) {
+            System.err.println("❌ Error: Missing --script <path.groovy>");
+            return;
+        }
+        File scriptFile = new File(scriptPath);
+        if (!scriptFile.exists()) {
+            System.err.println("❌ Error: Script file not found: " + scriptFile.getAbsolutePath());
+            return;
+        }
+        try {
+            ScriptVariableAligner aligner = new ScriptVariableAligner();
+            boolean changed = aligner.alignScript(scriptFile);
+            System.out.println("==============================================================");
+            System.out.println("  Locara by Qureon · Script Variable Scoping Aligner          ");
+            System.out.println("==============================================================");
+            if (changed) {
+                System.out.println("✅ Successfully aligned variables outside try block in " + scriptFile.getName());
+            } else {
+                System.out.println("ℹ️ Script is already compliant with outside-try scoping invariant.");
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Failed to align script: " + e.getMessage());
+        }
+    }
+
     private static void printUsage() {
-        System.out.println("Locara by Qureon CLI v1.9.4 — Autonomous Mobile Recon & Synthesizer");
+        System.out.println("Locara by Qureon CLI v1.11.0 — Autonomous Mobile Recon & Synthesizer");
         System.out.println("Usage:");
         System.out.println("  locara --xml <path> --hint <hint> [options]");
         System.out.println("  locara sanitize-or --path <path> [--fix] [--no-backup]");
+        System.out.println("  locara extract-account --xml <path>");
+        System.out.println("  locara sync-tc --tc <path.tc> --var <varName> [--default <val>] [--desc <desc>]");
+        System.out.println("  locara align-script --script <path.groovy>");
         System.out.println("\nCommands & Options:");
         System.out.println("  sanitize-or        Scan and convert brittle hierarchy XPaths in Object Repository to relative");
         System.out.println("  inspect-fields     Autonomously extract all label-value pairs and totals from XML");
+        System.out.println("  extract-account    Autonomously extract active bank account card and holder from XML");
+        System.out.println("  sync-tc            Synthesize or update Menu Variables in Katalon .tc XML entity");
+        System.out.println("  align-script       Align Groovy script variables outside try block");
         System.out.println("  --xml <path>       Path to Appium pageSource XML dump file");
         System.out.println("  --hint <text>      Semantic description or label of the target element");
         System.out.println("  --out <path>       Target path for generated .rs file (e.g. Object Repository/Screen/btn.rs)");
