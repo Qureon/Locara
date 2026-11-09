@@ -91,4 +91,28 @@ public class LocaraOrSanitizerTest {
         assertFalse(updated.contains("\\'"), "Must NEVER produce invalid XPath \\' escaping");
         assertTrue(updated.contains("\"Don't show again\""), "Must safely wrap text with quotes in double quotes");
     }
+
+    @Test
+    @DisplayName("LocaraOrSanitizer should detect strategy conflict and harmonize selectorMethod to XPATH")
+    void testSanitizeStrategyConflict() throws Exception {
+        String xmlConflict = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                "<MobileElementEntity>\n" +
+                "   <name>TextView - Get Text Pendapatan Tetap</name>\n" +
+                "   <selectorMethod>BASIC</selectorMethod>\n" +
+                "   <locator>(//android.widget.TextView[contains(@text, 'PT')]/following-sibling::android.widget.TextView)[1]</locator>\n" +
+                "   <locatorStrategy>ATTRIBUTES</locatorStrategy>\n" +
+                "</MobileElementEntity>";
+
+        File rsFile = new File(tempDir.toFile(), "test_conflict.rs");
+        Files.writeString(rsFile.toPath(), xmlConflict);
+
+        LocaraOrSanitizer sanitizer = new LocaraOrSanitizer();
+        LocaraOrSanitizer.SanitizeSummary summary = sanitizer.scanAndSanitize(tempDir.toFile(), true, false);
+
+        assertEquals(1, summary.getTotalSanitized());
+
+        String updated = Files.readString(rsFile.toPath());
+        assertTrue(updated.contains("<selectorMethod>XPATH</selectorMethod>"), "Should harmonize selectorMethod to XPATH");
+        assertTrue(updated.contains("<locatorStrategy>XPATH</locatorStrategy>"), "Should harmonize locatorStrategy to XPATH");
+    }
 }

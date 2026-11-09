@@ -278,4 +278,43 @@ public class DangerKeywordGuardTest {
         assertFalse(DangerKeywordGuard.isPolarityViolation("Deskripsi", deskripsiTab),
                 "Inquiry target 'Deskripsi' safely allows 'Deskripsi' tab");
     }
+
+    @Test
+    @DisplayName("Corporate Issuer Isolation: Product targets MUST strictly reject corporate issuer headers (PT ... Aset Manajemen)")
+    void testCorporateIssuerIsolation() {
+        UIElementNode manulifeIssuerHeader = new UIElementNode(
+                "android.widget.TextView", "com.bankmega.msmile:id/tv_issuer",
+                "PT Manulife Aset Manajemen Indonesia", "Header Manajer Investasi",
+                "android.widget.TextView", "//android.widget.TextView[1]",
+                new Rectangle(50, 100, 800, 80), false, false, false, false, false, 1
+        );
+
+        UIElementNode schroderIssuerHeader = new UIElementNode(
+                "android.widget.TextView", "com.bankmega.msmile:id/tv_issuer",
+                "PT Schroder Investment Management Indonesia", "Header Manajer Investasi",
+                "android.widget.TextView", "//android.widget.TextView[1]",
+                new Rectangle(50, 100, 800, 80), false, false, false, false, false, 1
+        );
+
+        UIElementNode productCard = new UIElementNode(
+                "android.widget.TextView", "com.bankmega.msmile:id/tv_product_title",
+                "Reksa Dana Manulife Dana Campuran II", "Kartu Produk Reksadana",
+                "android.widget.TextView", "//android.widget.TextView[2]",
+                new Rectangle(50, 500, 800, 100), true, true, true, false, false, 2
+        );
+
+        // Product target MUST block corporate company header
+        assertTrue(DangerKeywordGuard.isPolarityViolation("reksa dana manulife dana campuran", manulifeIssuerHeader),
+                "Product target MUST reject 'PT Manulife Aset Manajemen Indonesia' header");
+        assertTrue(DangerKeywordGuard.isPolarityViolation("Schroder Dana Prestasi Plus", schroderIssuerHeader),
+                "Product target MUST reject 'PT Schroder Investment Management Indonesia' header");
+
+        // Product target safely matches product card
+        assertFalse(DangerKeywordGuard.isPolarityViolation("reksa dana manulife dana campuran", productCard),
+                "Product target safely allows product card");
+
+        // Explicit corporate query safely allows corporate header
+        assertFalse(DangerKeywordGuard.isPolarityViolation("PT Manulife Aset Manajemen Indonesia", manulifeIssuerHeader),
+                "Explicit PT target should allow corporate issuer header");
+    }
 }

@@ -5,6 +5,13 @@ This project adheres strictly to [Semantic Versioning (SemVer 2.0.0)](https://se
 
 ---
 
+## [v1.12.0] - 2026-11-09
+### Added
+- **Corporate Issuer Header vs Instrument Isolation (`DangerKeywordGuard`)**: Added Rule 0B enforcing strict semantic entity isolation between corporate legal entity headers (`PT ... Aset Manajemen / Investment Management / Sekuritas`) and financial instruments / product cards. Strictly blocks false-healing of product target queries (e.g. `reksa dana manulife dana campuran`) to corporate issuer company headers (e.g. `PT Manulife Aset Manajemen Indonesia`), reducing cross-entity false positives to 0.0%.
+- **Object Repository Strategy-Method Conflict Harmonizer (`LocaraOrSanitizer`)**: Enhanced `.rs` sanitizer to detect and harmonize contradictory selector configurations where `<selectorMethod>BASIC</selectorMethod>` or `<locatorStrategy>ATTRIBUTES</locatorStrategy>` co-exists with a populated relative XPath `<locator>(//.*)</locator>`. Automatically aligns `<selectorMethod>` and `<locatorStrategy>` to `XPATH`, preventing Katalon Studio from ignoring custom XPath locators.
+
+---
+
 ## [v1.11.0] - 2026-11-09
 ### Added
 - **Contextual Entity Resolver (`ContextualEntityResolver` & `ResolvedAccount`)**: Autonomous mobile banking dashboard entity extraction. Discovers active account numbers, account holder names, account types (e.g. Tabungan Mega Dana, Mega Payroll), and balance visibility states directly from Appium page source / Android UI hierarchy XML (`HorizontalScrollView`, `ViewGroup`, `RecyclerView`). Extracts clean 10–16 digit account numbers even from spaced card representations (`0107 4002 1025 853` -> `010740021025853`).

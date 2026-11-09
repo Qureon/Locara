@@ -25,6 +25,7 @@ public class LocaraOrSanitizer {
 
     private static final Pattern LOCATOR_PATTERN = Pattern.compile("<locator>([^<]*)</locator>");
     private static final Pattern STRATEGY_PATTERN = Pattern.compile("<locatorStrategy>([^<]*)</locatorStrategy>");
+    private static final Pattern SELECTOR_METHOD_PATTERN = Pattern.compile("<selectorMethod>[^<]*</selectorMethod>");
 
     public static class SanitizeResult {
         private final File file;
@@ -95,9 +96,30 @@ public class LocaraOrSanitizer {
         String content = Files.readString(rsFile.toPath(), StandardCharsets.UTF_8);
 
         boolean isBrittle = content.contains("//hierarchy") || content.contains("<name>xpath</name>\n      <type>Main</type>\n      <value>//hierarchy");
+        Matcher locMatcher = LOCATOR_PATTERN.matcher(content);
+        boolean hasXPathLocator = content.contains("<locatorStrategy>XPATH</locatorStrategy>")
+                || (locMatcher.find() && (locMatcher.group(1).trim().startsWith("//") || locMatcher.group(1).trim().startsWith("(//")));
+        boolean isBasicMethod = content.contains("<selectorMethod>BASIC</selectorMethod>");
+        boolean isStrategyConflict = hasXPathLocator && isBasicMethod;
 
-        if (!isBrittle) {
+        if (!isBrittle && !isStrategyConflict) {
             return new SanitizeResult(rsFile, false, false, null, null, "Already resilient");
+        }
+
+        if (!isBrittle && isStrategyConflict) {
+            String updated = SELECTOR_METHOD_PATTERN.matcher(content).replaceFirst("<selectorMethod>XPATH</selectorMethod>");
+            if (content.contains("<locatorStrategy>ATTRIBUTES</locatorStrategy>")) {
+                updated = STRATEGY_PATTERN.matcher(updated).replaceFirst("<locatorStrategy>XPATH</locatorStrategy>");
+            }
+            if (!writeChanges) {
+                return new SanitizeResult(rsFile, false, false, "BASIC", "XPATH", "Selector strategy conflict: BASIC method with XPath locator (Dry-run)");
+            }
+            if (createBackup) {
+                File backupFile = new File(rsFile.getAbsolutePath() + ".bak");
+                Files.writeString(backupFile.toPath(), content, StandardCharsets.UTF_8);
+            }
+            Files.writeString(rsFile.toPath(), updated, StandardCharsets.UTF_8);
+            return new SanitizeResult(rsFile, false, true, "BASIC", "XPATH", "Harmonized selectorMethod and locatorStrategy to XPATH");
         }
 
         Map<String, String> properties = extractProperties(content);
@@ -152,6 +174,10 @@ public class LocaraOrSanitizer {
 
         if (STRATEGY_PATTERN.matcher(result).find()) {
             result = STRATEGY_PATTERN.matcher(result).replaceFirst("<locatorStrategy>XPATH</locatorStrategy>");
+        }
+
+        if (SELECTOR_METHOD_PATTERN.matcher(result).find()) {
+            result = SELECTOR_METHOD_PATTERN.matcher(result).replaceFirst("<selectorMethod>XPATH</selectorMethod>");
         }
 
         return result;

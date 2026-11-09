@@ -40,6 +40,14 @@ public final class DangerKeywordGuard {
             "agree", "ok", "oke", "ya", "yes", "simpan", "save", "selesai", "done", "finish"
     )));
 
+    private static final Set<String> CORPORATE_PREFIX_TOKENS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            "pt", "perseroan", "perusahaan"
+    )));
+
+    private static final Set<String> CORPORATE_SUFFIX_TOKENS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            "manajemen", "management", "sekuritas", "securities", "tbk"
+    )));
+
     private static final Set<String> WIDGET_PREFIXES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
             "btn", "button", "ic", "icon", "tv", "txt", "lbl", "label", "et", "input", "img", "iv"
     )));
@@ -72,6 +80,14 @@ public final class DangerKeywordGuard {
         // MUST NEVER be clicked if the target hint did not explicitly request a financial action
         // (e.g. looking for 'OK', 'Lanjut', 'Tutup', 'Simpan', 'Informasi').
         if (nodeHasFinancial && !targetIsFinancial) {
+            return true;
+        }
+
+        // Rule 0B (Corporate Issuer Header vs Instrument Isolation):
+        // If candidate node represents a corporate legal entity (e.g. "PT Manulife Aset Manajemen Indonesia"),
+        // but targetHint does NOT explicitly ask for a corporate entity/PT,
+        // strictly reject candidate to prevent false-healing product cards to corporate company headers.
+        if (isCorporateIssuerNode(candidateNode) && !isCorporateTarget(targetTokens)) {
             return true;
         }
 
@@ -149,5 +165,25 @@ public final class DangerKeywordGuard {
         }
 
         return false;
+    }
+
+    private static boolean isCorporateTarget(Set<String> targetTokens) {
+        return containsAny(targetTokens, CORPORATE_PREFIX_TOKENS);
+    }
+
+    private static boolean isCorporateIssuerNode(UIElementNode node) {
+        if (node == null) return false;
+        return isCorporateText(node.getText()) || isCorporateText(node.getContentDesc());
+    }
+
+    private static boolean isCorporateText(String raw) {
+        if (raw == null || raw.isBlank()) return false;
+        String normalized = raw.toLowerCase().trim();
+        boolean hasPtPrefix = normalized.startsWith("pt ") || normalized.startsWith("pt.") 
+                || normalized.contains(" pt ") || normalized.contains(" perseroan ");
+        if (!hasPtPrefix) return false;
+
+        Set<String> tokens = StringSimilarity.tokenize(normalized);
+        return containsAny(tokens, CORPORATE_SUFFIX_TOKENS);
     }
 }
