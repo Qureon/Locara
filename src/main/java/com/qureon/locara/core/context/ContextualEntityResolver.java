@@ -29,24 +29,40 @@ public class ContextualEntityResolver {
      * Resolves the active bank account card from a raw XML page source string.
      */
     public ResolvedAccount resolveActiveAccount(String pageSource) {
-        if (pageSource == null || pageSource.trim().isEmpty()) {
-            return null;
-        }
-        try {
-            List<UIElementNode> nodes = parser.parse(pageSource);
-            return resolveActiveAccount(nodes);
-        } catch (Exception e) {
-            return null;
-        }
+        return resolveAccountByNumber(pageSource, null);
     }
 
     /**
      * Resolves the active bank account card from a flattened list of parsed UIElementNodes.
      */
     public ResolvedAccount resolveActiveAccount(List<UIElementNode> nodes) {
+        return resolveAccountByNumber(nodes, null);
+    }
+
+    /**
+     * Resolves a specific bank account card matching the target account number from raw XML page source.
+     */
+    public ResolvedAccount resolveAccountByNumber(String pageSource, String targetAccountNumber) {
+        if (pageSource == null || pageSource.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            List<UIElementNode> nodes = parser.parse(pageSource);
+            return resolveAccountByNumber(nodes, targetAccountNumber);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Resolves a specific bank account card matching target account number from parsed UI nodes.
+     */
+    public ResolvedAccount resolveAccountByNumber(List<UIElementNode> nodes, String targetAccountNumber) {
         if (nodes == null || nodes.isEmpty()) {
             return null;
         }
+
+        String cleanTarget = targetAccountNumber != null ? targetAccountNumber.replaceAll("[^0-9]", "") : "";
 
         UIElementNode accountNode = null;
         String rawAccountNumber = null;
@@ -62,9 +78,24 @@ public class ContextualEntityResolver {
             }
 
             if (extracted != null) {
-                accountNode = node;
-                rawAccountNumber = extracted;
-                break;
+                if (cleanTarget.isEmpty() || extracted.contains(cleanTarget)) {
+                    accountNode = node;
+                    rawAccountNumber = extracted;
+                    break;
+                }
+            }
+        }
+
+        // Fallback search if cleanTarget was specified but not matched via full account pattern
+        if (accountNode == null && !cleanTarget.isEmpty()) {
+            for (UIElementNode node : nodes) {
+                String t = node.getText() != null ? node.getText().replaceAll("[^0-9]", "") : "";
+                String d = node.getContentDesc() != null ? node.getContentDesc().replaceAll("[^0-9]", "") : "";
+                if (t.contains(cleanTarget) || d.contains(cleanTarget)) {
+                    accountNode = node;
+                    rawAccountNumber = !t.isEmpty() ? t : d;
+                    break;
+                }
             }
         }
 
@@ -100,6 +131,39 @@ public class ContextualEntityResolver {
         boolean maskedBalance = isMaskedBalanceNearby(accountNode, nodes);
 
         return new ResolvedAccount(rawAccountNumber, accountType, holderName, maskedBalance, accountNode);
+    }
+
+    /**
+     * Synthesizes an optimal, safe XPath to tap the bank account card without hitting
+     * center-centroid action buttons (such as copy button or eye unmask button).
+     * Works seamlessly across both Compose Multiplatform (KMP) and React Native (Revamp).
+     */
+    public String resolveSafeCardTapXPath(String pageSource, String targetAccountNumber) {
+        String cleanTarget = targetAccountNumber != null ? targetAccountNumber.replaceAll("[^0-9]", "") : "";
+        boolean isKmp = pageSource != null && (pageSource.contains("my_account_savings_") || pageSource.contains("savings_detail_"));
+
+        if (isKmp) {
+            if (!cleanTarget.isEmpty() && pageSource != null) {
+                Matcher m = Pattern.compile("my_account_savings_(\\d+)_number").matcher(pageSource);
+                while (m.find()) {
+                    String idx = m.group(1);
+                    if (pageSource.contains("my_account_savings_" + idx)) {
+                        Pattern cardPattern = Pattern.compile("my_account_savings_" + idx + ".*?" + cleanTarget, Pattern.DOTALL);
+                        if (cardPattern.matcher(pageSource).find()) {
+                            return "//*[@resource-id='my_account_savings_" + idx + "_art'] | //*[@resource-id='my_account_savings_" + idx + "_title']";
+                        }
+                    }
+                }
+                return "//*[contains(@resource-id, 'my_account_savings_') and contains(@resource-id, '_number') and (contains(translate(@text, ' ', ''), '" + cleanTarget + "') or contains(translate(@content-desc, ' ', ''), '" + cleanTarget + "'))]/preceding-sibling::*[contains(@resource-id, '_art') or contains(@resource-id, '_title')]";
+            }
+            return "//*[@resource-id='my_account_savings_0_art'] | //*[@resource-id='my_account_savings_0_title']";
+        }
+
+        // React Native / Revamp mode:
+        if (!cleanTarget.isEmpty()) {
+            return "//android.widget.TextView[contains(translate(@text,' ',''),'" + cleanTarget + "') or contains(translate(@content-desc,' ',''),'" + cleanTarget + "')]/ancestor::android.view.ViewGroup[@clickable='true' and @enabled='true' and .//android.widget.ImageView][1]//android.widget.ImageView[1]";
+        }
+        return "//android.view.ViewGroup[@clickable='true' and @enabled='true' and .//android.widget.ImageView][1]//android.widget.ImageView[1]";
     }
 
     private String extractAccountNumber(String val) {

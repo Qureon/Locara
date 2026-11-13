@@ -5,6 +5,14 @@ This project adheres strictly to [Semantic Versioning (SemVer 2.0.0)](https://se
 
 ---
 
+## [v1.13.0] - 2026-11-13
+### Added
+- **Dynamic Multi-Account Entity Resolution (`ContextualEntityResolver.resolveAccountByNumber`)**: Added deterministic filtering by `targetAccountNumber` to resolve the specific active bank account card from multi-account lists (`HorizontalScrollView`, `RecyclerView`, `my_account_savings_*`). Guarantees that automated tests in multi-account scenarios target the exact account under test rather than blindly defaulting to card index 0.
+- **Centroid-Safe Account Card Tap Synthesizer (`ContextualEntityResolver.resolveSafeCardTapXPath`)**: Synthesizes safe XPath selectors that target non-interactive card visual elements (`..._art`, `..._title`, or `android.widget.ImageView`). Completely bypasses Appium centroid tapping vulnerabilities where tapping composite card bounds strikes child action buttons (`_copy_button` or `_eye_button`), preventing false-stay screen lockups.
+- **Public Card Navigation API (`Locara.tapAccountCard`, `Locara.getSafeCardTapXPath`)**: Drop-in methods in `Locara.java` for Katalon Studio test cases to navigate safely from account lists directly to account details.
+
+---
+
 ## [v1.12.0] - 2026-11-09
 ### Added
 - **Corporate Issuer Header vs Instrument Isolation (`DangerKeywordGuard`)**: Added Rule 0B enforcing strict semantic entity isolation between corporate legal entity headers (`PT ... Aset Manajemen / Investment Management / Sekuritas`) and financial instruments / product cards. Strictly blocks false-healing of product target queries (e.g. `reksa dana manulife dana campuran`) to corporate issuer company headers (e.g. `PT Manulife Aset Manajemen Indonesia`), reducing cross-entity false positives to 0.0%.

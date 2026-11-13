@@ -65,4 +65,66 @@ public class ContextualEntityResolverTest {
         assertNull(resolver.resolveActiveAccount("   "));
         assertNull(resolver.resolveActiveAccount("<empty></empty>"));
     }
+
+    @Test
+    @DisplayName("Should resolve specific account card matching targetAccountNumber in multi-account dashboard")
+    public void testResolveSpecificTargetAccount() {
+        String multiCardXml = """
+                <hierarchy>
+                  <android.widget.TextView text="Halo, Rio Griya" />
+                  <android.view.ViewGroup resource-id="my_account_savings_0">
+                    <android.widget.TextView resource-id="my_account_savings_0_title" text="Mega Dana" />
+                    <android.widget.TextView resource-id="my_account_savings_0_number" text="010740021025853" />
+                  </android.view.ViewGroup>
+                  <android.view.ViewGroup resource-id="my_account_savings_1">
+                    <android.widget.TextView resource-id="my_account_savings_1_title" text="Mega Berbagi" />
+                    <android.widget.TextView resource-id="my_account_savings_1_number" text="010740099999999" />
+                  </android.view.ViewGroup>
+                </hierarchy>
+                """;
+
+        ResolvedAccount acc0 = resolver.resolveAccountByNumber(multiCardXml, "010740021025853");
+        assertNotNull(acc0);
+        assertEquals("010740021025853", acc0.getAccountNumber());
+        assertTrue(acc0.getAccountType().contains("Mega Dana"));
+
+        ResolvedAccount acc1 = resolver.resolveAccountByNumber(multiCardXml, "010740099999999");
+        assertNotNull(acc1);
+        assertEquals("010740099999999", acc1.getAccountNumber());
+        assertTrue(acc1.getAccountType().contains("Mega Berbagi"));
+    }
+
+    @Test
+    @DisplayName("Should synthesize safe card tap XPath avoiding copy button for KMP and React Native")
+    public void testResolveSafeCardTapXPath() {
+        String kmpXml = """
+                <hierarchy>
+                  <android.view.ViewGroup resource-id="my_account_savings_0">
+                    <android.view.ViewGroup resource-id="my_account_savings_0_art" />
+                    <android.widget.TextView resource-id="my_account_savings_0_title" text="Mega Dana" />
+                    <android.widget.TextView resource-id="my_account_savings_0_number" text="010740021025853" />
+                    <android.view.ViewGroup resource-id="my_account_savings_0_copy_button" />
+                  </android.view.ViewGroup>
+                </hierarchy>
+                """;
+
+        String kmpXpath = resolver.resolveSafeCardTapXPath(kmpXml, "010740021025853");
+        assertNotNull(kmpXpath);
+        assertTrue(kmpXpath.contains("my_account_savings_0_art"));
+        assertFalse(kmpXpath.contains("copy_button"));
+
+        String rnXml = """
+                <hierarchy>
+                  <android.view.ViewGroup clickable="true" enabled="true">
+                    <android.widget.ImageView />
+                    <android.widget.TextView text="0107 4002 1025 853" />
+                  </android.view.ViewGroup>
+                </hierarchy>
+                """;
+
+        String rnXpath = resolver.resolveSafeCardTapXPath(rnXml, "010740021025853");
+        assertNotNull(rnXpath);
+        assertTrue(rnXpath.contains("010740021025853"));
+        assertTrue(rnXpath.contains("ImageView"));
+    }
 }

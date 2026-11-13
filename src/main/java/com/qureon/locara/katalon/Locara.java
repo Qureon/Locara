@@ -767,6 +767,74 @@ public class Locara {
     }
 
     /**
+     * Dynamically resolves a specific bank account card matching target account number from current mobile screen.
+     */
+    public static com.qureon.locara.core.context.ResolvedAccount resolveAccountByNumber(Object driver, String targetAccountNumber) {
+        if (driver == null) {
+            driver = KatalonDriverBridge.getMobileDriver();
+        }
+        if (driver == null) {
+            return null;
+        }
+        String pageSource = KatalonDriverBridge.getPageSource(driver);
+        return CONTEXT_RESOLVER.resolveAccountByNumber(pageSource, targetAccountNumber);
+    }
+
+    public static com.qureon.locara.core.context.ResolvedAccount resolveAccountByNumber(String targetAccountNumber) {
+        return resolveAccountByNumber(null, targetAccountNumber);
+    }
+
+    /**
+     * Synthesizes an optimal, safe XPath to tap the bank account card avoiding copy and eye button interception.
+     */
+    public static String getSafeCardTapXPath(Object driver, String targetAccountNumber) {
+        if (driver == null) {
+            driver = KatalonDriverBridge.getMobileDriver();
+        }
+        String pageSource = driver != null ? KatalonDriverBridge.getPageSource(driver) : "";
+        return CONTEXT_RESOLVER.resolveSafeCardTapXPath(pageSource, targetAccountNumber);
+    }
+
+    public static String getSafeCardTapXPath(String targetAccountNumber) {
+        return getSafeCardTapXPath(null, targetAccountNumber);
+    }
+
+    /**
+     * Autonomously locates and safely taps the bank account card corresponding to targetAccountNumber.
+     */
+    public static boolean tapAccountCard(Object driver, String targetAccountNumber) {
+        if (driver == null) {
+            driver = KatalonDriverBridge.getMobileDriver();
+        }
+        if (driver == null) {
+            return false;
+        }
+        String xpath = getSafeCardTapXPath(driver, targetAccountNumber);
+        try {
+            Class<?> byClass = Class.forName("org.openqa.selenium.By");
+            Method xpathMethod = byClass.getMethod("xpath", String.class);
+            Object by = xpathMethod.invoke(null, xpath);
+
+            Method findElementsMethod = driver.getClass().getMethod("findElements", byClass);
+            java.util.List<?> elements = (java.util.List<?>) findElementsMethod.invoke(driver, by);
+            if (elements != null && !elements.isEmpty()) {
+                Object el = elements.get(0);
+                Method clickMethod = el.getClass().getMethod("click");
+                clickMethod.invoke(el);
+                System.out.println("[Locara by Qureon] 💳 Safely tapped account card via: " + xpath);
+                return true;
+            }
+        } catch (Throwable t) {
+            System.out.println("[Locara by Qureon] Warning: tapAccountCard direct click failed: " + t.getMessage());
+        }
+        return false;
+    }
+
+    public static boolean tapAccountCard(String targetAccountNumber) {
+        return tapAccountCard(null, targetAccountNumber);
+    }
+
+    /**
      * Synthesizes and injects Menu Variables into a Katalon Test Case XML Entity (.tc).
      */
     public static boolean synthesizeTestCaseVariables(File tcFile, java.util.List<com.qureon.locara.katalon.variable.TestCaseVariable> variables) {
