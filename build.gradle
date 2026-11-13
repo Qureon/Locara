@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'com.qureon.locara'
-version = '1.13.0'
+version = '1.14.0'
 
 tasks.withType(JavaCompile).configureEach {
     options.release = 17

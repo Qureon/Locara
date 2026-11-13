@@ -97,4 +97,24 @@ public class UniversalSemanticDictionaryTest {
         assertFalse(UniversalSemanticDictionary.isSynonym("kinerja", "redeem"));
         assertFalse(UniversalSemanticDictionary.isSynonym("deskripsi", "investasi"));
     }
+
+    @Test
+    @DisplayName("Should detect established banking domain acronyms and expand cryptic abbreviations")
+    void testDomainAcronymsAndAbbreviations() {
+        // Established domain acronyms
+        assertTrue(UniversalSemanticDictionary.isEstablishedDomainAcronym("QRIS"));
+        assertTrue(UniversalSemanticDictionary.isEstablishedDomainAcronym("rtgs"));
+        assertTrue(UniversalSemanticDictionary.isEstablishedDomainAcronym("BI-FAST"));
+        assertTrue(UniversalSemanticDictionary.isEstablishedDomainAcronym("mpin"));
+        assertTrue(UniversalSemanticDictionary.isEstablishedDomainAcronym("kmp"));
+        assertFalse(UniversalSemanticDictionary.isEstablishedDomainAcronym("randomWord"));
+
+        // Cryptic abbreviation expansion
+        assertEquals("rekening", UniversalSemanticDictionary.expandCrypticAbbreviation("rek"));
+        assertEquals("transaksi", UniversalSemanticDictionary.expandCrypticAbbreviation("trx"));
+        assertEquals("nomor", UniversalSemanticDictionary.expandCrypticAbbreviation("no"));
+        assertEquals("user", UniversalSemanticDictionary.expandCrypticAbbreviation("usr"));
+        assertEquals("manager", UniversalSemanticDictionary.expandCrypticAbbreviation("mgr"));
+        assertNull(UniversalSemanticDictionary.expandCrypticAbbreviation("rekening"));
+    }
 }

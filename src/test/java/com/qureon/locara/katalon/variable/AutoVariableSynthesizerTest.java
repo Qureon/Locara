@@ -103,4 +103,28 @@ public class AutoVariableSynthesizerTest {
         assertTrue(varPos != -1 && tryPos != -1);
         assertTrue(varPos < tryPos, "Variable declaration MUST be placed before/outside try block");
     }
+
+    @Test
+    @DisplayName("Should validate variable naming against Code Naming Intelligence Section 4.1 standards")
+    public void testValidateVariableNaming() {
+        // Valid domain variables
+        assertTrue(AutoVariableSynthesizer.isValidDomainVariableName("sourceAccountNumber"));
+        assertTrue(AutoVariableSynthesizer.isValidDomainVariableName("targetAccountNumber"));
+        assertTrue(AutoVariableSynthesizer.isValidDomainVariableName("transferAmount"));
+        assertTrue(AutoVariableSynthesizer.isValidDomainVariableName("mpinInput"));
+
+        // Blacklisted generic names
+        assertFalse(AutoVariableSynthesizer.isValidDomainVariableName("data"));
+        assertFalse(AutoVariableSynthesizer.isValidDomainVariableName("temp"));
+        assertFalse(AutoVariableSynthesizer.isValidDomainVariableName("val"));
+        assertFalse(AutoVariableSynthesizer.isValidDomainVariableName("value"));
+        assertFalse(AutoVariableSynthesizer.isValidDomainVariableName("item"));
+        assertFalse(AutoVariableSynthesizer.isValidDomainVariableName("result"));
+        assertFalse(AutoVariableSynthesizer.isValidDomainVariableName("x"));
+
+        // Invalid casing or empty
+        assertFalse(AutoVariableSynthesizer.isValidDomainVariableName(""));
+        assertFalse(AutoVariableSynthesizer.isValidDomainVariableName(null));
+        assertFalse(AutoVariableSynthesizer.isValidDomainVariableName("PascalCaseVar"));
+    }
 }

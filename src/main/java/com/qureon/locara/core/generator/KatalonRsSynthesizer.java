@@ -463,22 +463,105 @@ public class KatalonRsSynthesizer {
         String screen = sanitizeFileName(context != null ? context.getScreenName() : "DefaultScreen");
         String objName = "";
         if (candidate != null && candidate.getNode() != null) {
-            objName = sanitizeFileName(candidate.getNode().getStrippedResourceId());
-            if (objName.isEmpty()) {
-                objName = sanitizeFileName(candidate.getNode().getContentDesc());
-            }
-            if (objName.isEmpty()) {
-                objName = sanitizeFileName(candidate.getNode().getText());
-            }
+            objName = deriveSemanticObjectName(candidate.getNode(), context != null ? context.getTargetHint() : "");
+        } else if (context != null && !context.getTargetHint().isEmpty()) {
+            objName = deriveSemanticObjectName(null, context.getTargetHint());
         }
         if (objName.isEmpty()) {
-            objName = "healed_element_" + System.currentTimeMillis();
+            objName = "HealedElement_" + System.currentTimeMillis();
         }
 
         String baseFolder = (config != null && config.getDefaultRsFolder() != null && !config.getDefaultRsFolder().trim().isEmpty())
                 ? config.getDefaultRsFolder().trim()
                 : "Object Repository";
         return baseFolder + "/" + screen + "/" + objName + ".rs";
+    }
+
+    /**
+     * Derives a semantically clear, standardized Katalon TestObject entity name
+     * adhering to Code Naming Intelligence conventions (e.g. BtnSubmit, TxtBalance, InpMpin).
+     */
+    public String deriveSemanticObjectName(UIElementNode node, String targetHint) {
+        if (node == null && (targetHint == null || targetHint.trim().isEmpty())) {
+            return "HealedElement_" + System.currentTimeMillis();
+        }
+
+        // 1. Deduce widget category prefix
+        String prefix = deduceWidgetPrefix(node);
+
+        // 2. Extract semantic descriptor from content-desc, clean resource-id, text, or targetHint
+        String rawDescriptor = "";
+        if (node != null) {
+            if (node.hasContentDesc()) {
+                rawDescriptor = node.getContentDesc();
+            } else if (node.hasResourceId() && isCleanResourceId(node.getResourceId())) {
+                rawDescriptor = node.getStrippedResourceId();
+            } else if (node.hasText()) {
+                rawDescriptor = node.getText();
+            }
+        }
+        if (rawDescriptor.isEmpty() && targetHint != null && !targetHint.trim().isEmpty()) {
+            rawDescriptor = targetHint.trim();
+        }
+
+        // Clean and convert descriptor to PascalCase
+        String pascalDescriptor = toPascalCase(rawDescriptor);
+        if (pascalDescriptor.isEmpty()) {
+            pascalDescriptor = "Element_" + (node != null ? node.getAttribute("index", "0") : "0");
+        }
+
+        // Prevent prefix duplication (e.g. BtnBtnSubmit -> BtnSubmit)
+        if (pascalDescriptor.startsWith(prefix) && pascalDescriptor.length() > prefix.length()) {
+            return pascalDescriptor;
+        }
+
+        return prefix + pascalDescriptor;
+    }
+
+    private String deduceWidgetPrefix(UIElementNode node) {
+        if (node == null) return "Obj";
+        String cls = node.getClassName() != null ? node.getClassName().toLowerCase() : "";
+        String resId = node.getResourceId() != null ? node.getResourceId().toLowerCase() : "";
+
+        if (cls.contains("checkbox") || resId.contains("checkbox") || resId.contains("chk")) {
+            return "Chk";
+        }
+        if (cls.contains("radio") || resId.contains("radio") || resId.contains("rdo")) {
+            return "Rdo";
+        }
+        if (cls.contains("edittext") || cls.contains("textinput") || resId.contains("input") || resId.contains("inp")) {
+            return "Inp";
+        }
+        if (cls.contains("image") || resId.contains("art") || resId.contains("img") || resId.contains("icon")) {
+            return "Img";
+        }
+        if (cls.contains("button") || resId.contains("button") || resId.contains("btn") || node.isClickable() && !cls.contains("scrollview") && !cls.contains("layout")) {
+            return "Btn";
+        }
+        if (cls.contains("textview") || cls.contains("text") || resId.contains("txt") || resId.contains("title") || resId.contains("number") || resId.contains("label")) {
+            return "Txt";
+        }
+        if (cls.contains("viewgroup") || cls.contains("layout") || cls.contains("panel") || cls.contains("card") || resId.contains("pnl") || resId.contains("card") || resId.contains("screen")) {
+            return "Pnl";
+        }
+        return "Obj";
+    }
+
+    private String toPascalCase(String input) {
+        if (input == null || input.trim().isEmpty()) return "";
+        // Replace punctuation/spaces with single space
+        String clean = input.replaceAll("[^a-zA-Z0-9]+", " ").trim();
+        String[] words = clean.split("\\s+");
+        StringBuilder sb = new StringBuilder();
+        for (String w : words) {
+            if (!w.isEmpty()) {
+                sb.append(Character.toUpperCase(w.charAt(0)));
+                if (w.length() > 1) {
+                    sb.append(w.substring(1));
+                }
+            }
+        }
+        return sb.toString();
     }
 
     private String sanitizeFileName(String name) {

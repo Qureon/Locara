@@ -5,6 +5,15 @@ This project adheres strictly to [Semantic Versioning (SemVer 2.0.0)](https://se
 
 ---
 
+## [v1.14.0] - 2026-11-13
+### Added
+- **Code Naming Intelligence & Convention Standardization Engine (`KatalonRsSynthesizer`)**: Added `deriveSemanticObjectName` enforcing 8-dimension communication standards. Automatically deduces standardized widget category prefixes (`Btn*`, `Txt*`, `Inp*`, `Pnl*`, `Img*`, `Chk*`, `Rdo*`) and converts semantic labels to PascalCase, eliminating generic names (`01. ViewGroup_3`, `Button_Submit`).
+- **Autonomous Variable Synthesizer (AVS) Hygiene Guard (`AutoVariableSynthesizer`)**: Added `isValidDomainVariableName` enforcing camelCase and blacklisting meaningless identifiers (`data`, `temp`, `val`, `value`, `item`, `object`, `obj`, `result`, `x`, `abc`) during `.tc` Menu Variable synthesis.
+- **Domain Acronyms & Abbreviation Policy Tensor (`UniversalSemanticDictionary`)**: Added `isEstablishedDomainAcronym` for preserving critical banking acronyms (`QRIS`, `RTGS`, `BI-FAST`, `SKN`, `MPIN`, `VA`, `OTP`, `KMP`) and `expandCrypticAbbreviation` for expanding ambiguous short forms (`rek` -> `rekening`, `trx` -> `transaksi`, `no` -> `nomor`).
+- **Code Naming Auditor CLI Subcommand (`locara audit-naming`)**: Introduced `CodeNamingAuditor` in `LocaraCli` allowing developers to execute Mode A (Audit Only) scans across Object Repositories, Test Cases, and Groovy scripts to produce comprehensive Markdown inventory reports.
+
+---
+
 ## [v1.13.0] - 2026-11-13
 ### Added
 - **Dynamic Multi-Account Entity Resolution (`ContextualEntityResolver.resolveAccountByNumber`)**: Added deterministic filtering by `targetAccountNumber` to resolve the specific active bank account card from multi-account lists (`HorizontalScrollView`, `RecyclerView`, `my_account_savings_*`). Guarantees that automated tests in multi-account scenarios target the exact account under test rather than blindly defaulting to card index 0.

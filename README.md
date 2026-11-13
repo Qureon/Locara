@@ -5,9 +5,9 @@
 ### Adaptive Locator Intelligence & Universal Self-Healing Engine
 *An autonomous, offline-first self-healing engine for resilient mobile & hybrid test automation.*
 
-[![Version](https://img.shields.io/badge/version-1.12.0-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
+[![Version](https://img.shields.io/badge/version-1.14.0-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-92%2F92%20passing-10B981?style=flat-square)](build.gradle)
+[![Tests](https://img.shields.io/badge/tests-99%2F99%20passing-10B981?style=flat-square)](build.gradle)
 [![Java](https://img.shields.io/badge/java-17%20%7C%2021%20%7C%2024-orange?style=flat-square&logo=openjdk)](build.gradle)
 [![Katalon](https://img.shields.io/badge/katalon-8.x%20%7C%209.x%20%7C%2010.x%20%7C%2011.x%20(11.7.0%2B%20Ready)-00B0FF?style=flat-square)](https://katalon.com)
 [![Appium](https://img.shields.io/badge/appium-2.x%20%7C%201.x-662d91?style=flat-square&logo=appium)](https://appium.io)
@@ -45,6 +45,8 @@ Locara menerapkan prinsip **In-Flight Zero-Interruption**:
 13. **Horizontal Product Carousel Traversal (v1.10.0)**: Autonomous swipe horizontal (`performSwipeLeft` / `performSwipeRight`) untuk kartu reksa dana dan strip kategori pada `HorizontalScrollView`, `ViewPager2`, dan `RecyclerView` horizontal.
 14. **Contextual Entity Resolver & Autonomous Variable Synthesizer (v1.11.0)**: Resolusi otonom entitas rekening aktif di carousel dashboard (nomor rekening, nama pemilik, jenis tabungan) langsung dari XML hierarki Android, serta sintesis & sinkronisasi otomatis *Menu Variables* ke berkas XML `.tc` Katalon Studio dengan UUID v4 deterministik dan *Script Variable Scoping Aligner* (di luar blok `try`).
 15. **Corporate Issuer Header Isolation & OR Strategy Conflict Harmonizer (v1.12.0)**: Proteksi polaritas entitas hukum perbankan & manajer investasi (*Rule 0B: anti-salah klik atau salah heal header PT Manulife / PT Schroder saat mencari kartu produk*), serta sinkronisasi otonom berkas `.rs` yang mengalami konflik strategi (`<selectorMethod>BASIC</selectorMethod>` tetapi memiliki `<locator>XPath</locator>`) agar Katalon Studio tidak mengabaikan XPath kustom.
+16. **Dynamic Multi-Account Resolution & Centroid-Safe Card Tap (v1.13.0)**: Resolusi target kartu rekening secara deterministik berbasis `targetAccountNumber` pada carousel multi-rekening dan sintesis XPath aman (`_art` / `_title` / `ImageView`) yang menghindari tombol salin/mata (*copy button centroid trap*).
+17. **Code Naming Intelligence & Convention Auditor (v1.14.0)**: Deduplikasi & standarisasi penamaan `.rs` (`Btn*`, `Txt*`, `Inp*`, `Pnl*`, `Img*`, `Chk*`, `Rdo*`), hygiene guard variabel AVS terhadap nama generik (`data`, `temp`, `val`), preservasi akronim perbankan (`QRIS`, `RTGS`, `BI-FAST`, `MPIN`), serta subcommand CLI `locara audit-naming` (Mode A Read-Only).
 
 ---
 

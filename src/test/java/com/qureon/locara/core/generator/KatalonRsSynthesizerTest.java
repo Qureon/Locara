@@ -230,4 +230,44 @@ public class KatalonRsSynthesizerTest {
         assertFalse(xml.contains("/hierarchy/android.widget.FrameLayout[1]"),
                 "Must write healed optimal XPath into <webElementProperties> instead of brittle positional /hierarchy path");
     }
+
+    @Test
+    @DisplayName("Should derive semantic object names adhering to Code Naming Intelligence conventions")
+    void testDeriveSemanticObjectName() {
+        UIElementNode btnNode = new UIElementNode(
+                "android.widget.Button",
+                "",
+                "Konfirmasi Transfer",
+                "",
+                "android.widget.Button",
+                "//android.widget.Button",
+                new Rectangle(100, 100, 200, 50),
+                true, true, true, false, false, 3
+        );
+        assertEquals("BtnKonfirmasiTransfer", synthesizer.deriveSemanticObjectName(btnNode, ""));
+
+        UIElementNode txtNode = new UIElementNode(
+                "android.widget.TextView",
+                "com.bankmega.msmiledev:id/my_account_savings_0_amount",
+                "Rp 50.000.000",
+                "",
+                "android.widget.TextView",
+                "//android.widget.TextView",
+                new Rectangle(100, 200, 200, 50),
+                false, true, true, false, false, 3
+        );
+        assertEquals("TxtMyAccountSavings0Amount", synthesizer.deriveSemanticObjectName(txtNode, ""));
+
+        UIElementNode inpNode = new UIElementNode(
+                "android.widget.EditText",
+                "",
+                "",
+                "Masukkan Nominal",
+                "android.widget.EditText",
+                "//android.widget.EditText",
+                new Rectangle(100, 300, 200, 50),
+                true, true, true, false, false, 3
+        );
+        assertEquals("InpMasukkanNominal", synthesizer.deriveSemanticObjectName(inpNode, ""));
+    }
 }

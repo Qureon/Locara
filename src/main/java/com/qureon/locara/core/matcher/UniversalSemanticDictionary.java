@@ -169,4 +169,39 @@ public final class UniversalSemanticDictionary {
         }
         return filtered.isEmpty() ? tokens : filtered;
     }
+
+    private static final Set<String> DOMAIN_ACRONYMS = new HashSet<>(Arrays.asList(
+            "qris", "rtgs", "bi-fast", "bifast", "skn", "mpin", "pin", "cif", "va", "otp", "kmp", "cusip", "xbrl", "sbn"
+    ));
+
+    private static final Map<String, String> CRYPTIC_ABBREVIATIONS = new HashMap<>();
+    static {
+        CRYPTIC_ABBREVIATIONS.put("rek", "rekening");
+        CRYPTIC_ABBREVIATIONS.put("trx", "transaksi");
+        CRYPTIC_ABBREVIATIONS.put("no", "nomor");
+        CRYPTIC_ABBREVIATIONS.put("usr", "user");
+        CRYPTIC_ABBREVIATIONS.put("mgr", "manager");
+        CRYPTIC_ABBREVIATIONS.put("cfg", "config");
+        CRYPTIC_ABBREVIATIONS.put("proc", "process");
+        CRYPTIC_ABBREVIATIONS.put("acc", "account");
+        CRYPTIC_ABBREVIATIONS.put("bal", "balance");
+        CRYPTIC_ABBREVIATIONS.put("dest", "destination");
+        CRYPTIC_ABBREVIATIONS.put("src", "source");
+    }
+
+    /**
+     * Checks if a token is an established domain acronym that must be strictly preserved.
+     */
+    public static boolean isEstablishedDomainAcronym(String token) {
+        if (token == null) return false;
+        return DOMAIN_ACRONYMS.contains(token.trim().toLowerCase());
+    }
+
+    /**
+     * Checks if a token is a known cryptic abbreviation and returns its expanded canonical form.
+     */
+    public static String expandCrypticAbbreviation(String token) {
+        if (token == null) return null;
+        return CRYPTIC_ABBREVIATIONS.get(token.trim().toLowerCase());
+    }
 }

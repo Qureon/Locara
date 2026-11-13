@@ -93,6 +93,18 @@ public class LocaraCli {
             return;
         }
 
+        if ("audit-naming".equalsIgnoreCase(command) || hasArg(args, "--audit-naming")) {
+            String targetPath = getArg(args, "--path");
+            if (targetPath == null && args.length > 1 && !args[1].startsWith("-")) {
+                targetPath = args[1];
+            }
+            if (targetPath == null || targetPath.isEmpty()) {
+                targetPath = ".";
+            }
+            runAuditNamingMode(targetPath);
+            return;
+        }
+
         String xmlPath = getArg(args, "--xml");
         String hint = getArg(args, "--hint");
         String outPath = getArg(args, "--out");
@@ -356,15 +368,39 @@ public class LocaraCli {
         }
     }
 
+    private static void runAuditNamingMode(String targetPath) {
+        File dir = new File(targetPath);
+        if (!dir.exists()) {
+            System.err.println("❌ Error: Target path does not exist: " + dir.getAbsolutePath());
+            System.exit(1);
+        }
+
+        System.out.println("================================================================================");
+        System.out.println("🔍 LOCARA BY QUREON — CODE NAMING INTELLIGENCE & CONVENTION AUDITOR");
+        System.out.println("🎯 Operating Mode: MODE A — AUDIT ONLY (Read-Only)");
+        System.out.println("📁 Target Directory: " + dir.getAbsolutePath());
+        System.out.println("================================================================================");
+
+        com.qureon.locara.cli.audit.CodeNamingAuditor auditor = new com.qureon.locara.cli.audit.CodeNamingAuditor();
+        List<com.qureon.locara.cli.audit.CodeNamingFinding> findings = auditor.auditProject(dir);
+
+        String report = auditor.generateMarkdownReport(findings, dir.getName());
+        System.out.println(report);
+        System.out.println("================================================================================");
+        System.out.println("📊 Audit completed with " + findings.size() + " findings.");
+    }
+
     private static void printUsage() {
-        System.out.println("Locara by Qureon CLI v1.11.0 — Autonomous Mobile Recon & Synthesizer");
+        System.out.println("Locara by Qureon CLI v1.14.0 — Autonomous Mobile Recon & Synthesizer");
         System.out.println("Usage:");
         System.out.println("  locara --xml <path> --hint <hint> [options]");
         System.out.println("  locara sanitize-or --path <path> [--fix] [--no-backup]");
         System.out.println("  locara extract-account --xml <path>");
         System.out.println("  locara sync-tc --tc <path.tc> --var <varName> [--default <val>] [--desc <desc>]");
         System.out.println("  locara align-script --script <path.groovy>");
+        System.out.println("  locara audit-naming [--path <dir>]");
         System.out.println("\nCommands & Options:");
+        System.out.println("  audit-naming       Audit codebase for naming conventions & ambiguities (Mode A)");
         System.out.println("  sanitize-or        Scan and convert brittle hierarchy XPaths in Object Repository to relative");
         System.out.println("  inspect-fields     Autonomously extract all label-value pairs and totals from XML");
         System.out.println("  extract-account    Autonomously extract active bank account card and holder from XML");

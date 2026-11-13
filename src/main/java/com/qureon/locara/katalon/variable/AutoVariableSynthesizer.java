@@ -5,8 +5,11 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -217,6 +220,29 @@ public class AutoVariableSynthesizer {
             return m.group(1).trim();
         }
         return "";
+    }
+
+    private static final Set<String> BLACKLISTED_GENERIC_VAR_NAMES = new HashSet<>(Arrays.asList(
+            "data", "temp", "val", "value", "item", "object", "obj", "result", "x", "abc", "test", "variable", "var"
+    ));
+
+    /**
+     * Evaluates variable naming against Section 4.1 Code Naming Intelligence standards.
+     * Returns true if variable communicates domain purpose and is not a blacklisted generic identifier.
+     */
+    public static boolean isValidDomainVariableName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            return false;
+        }
+        String clean = name.trim();
+        if (clean.length() < 2) {
+            return false;
+        }
+        if (BLACKLISTED_GENERIC_VAR_NAMES.contains(clean.toLowerCase())) {
+            return false;
+        }
+        // Must follow camelCase: starts with lowercase letter, alphanumeric
+        return clean.matches("^[a-z][a-zA-Z0-9_]*$");
     }
 
     private String escapeXml(String text) {
