@@ -1,12 +1,13 @@
 /**
  * ==============================================================================
- * ZERO-HEALING DASHBOARD — TELEMETRY MODULE
+ * LOCARA MISSION CONTROL — TELEMETRY MODULE
  * Table rendering, sorting, pagination, search, and audit export.
  * ==============================================================================
  */
 
 import { appState } from "../state.js";
 import { renderIcon } from "../icons.js";
+import { escapeHtml } from "../utils.js";
 
 export function initTelemetryModule() {
     initSearchAndFilters();
@@ -150,7 +151,7 @@ export function renderTelemetryTable() {
         const targetHintStr = evt.targetHint || evt.hint || "-";
         const timeDisplay = evt.timestamp ? ((evt.timestamp.includes(" ") ? evt.timestamp.split(" ")[1] : evt.timestamp.replace("T", " "))) : "-";
 
-        const safeId = escapeHtml(String(evt.id || "").replace(/'/g, ""));
+        const safeId = escapeHtml(String(evt.id || ""));
 
         return `
             <tr class="audit-row" data-id="${safeId}">
@@ -162,7 +163,7 @@ export function renderTelemetryTable() {
                 <td><span class="status-pill ${statusClass}">${statusLabel}</span></td>
                 <td class="font-mono text-sm text-cyan" title="${escapeHtml(rsPath)}">${escapeHtml(rsShortName)}</td>
                 <td>
-                    <button class="btn btn-secondary btn-sm" onclick="window.viewEventForensics('${safeId}')" style="padding: 4px 10px; font-size: 0.76rem;">
+                    <button type="button" class="btn btn-secondary btn-sm btn-inspect-forensics" data-id="${safeId}" style="padding: 4px 10px; font-size: 0.76rem;">
                         Inspect
                     </button>
                 </td>
@@ -190,6 +191,15 @@ function renderPaginationBar(current, total, totalItems) {
 }
 
 function attachRowClickListeners() {
+    document.querySelectorAll(".btn-inspect-forensics").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (typeof window.viewEventForensics === "function") {
+                window.viewEventForensics(btn.dataset.id);
+            }
+        });
+    });
+
     document.querySelectorAll(".audit-row").forEach(row => {
         row.addEventListener("click", (e) => {
             if (e.target.closest("button")) return;
@@ -221,9 +231,4 @@ function updateKpiMetrics() {
     if (elLockouts) elLockouts.textContent = lockouts.toString();
     if (elProbes) elProbes.textContent = probes > 0 ? probes.toString() : "142";
     if (elSanitized) elSanitized.textContent = "4,087";
-}
-
-function escapeHtml(str) {
-    if (!str) return "";
-    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }

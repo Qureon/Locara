@@ -96,10 +96,10 @@ $$\text{Final Score} = (W_{\text{text}} \times S_{\text{text}}) + (W_{\text{id}}
 - Tombol `"OK"` dan `"Bayar"` tidak lagi saling bersinonim, menutup celah salah klik pada dialog transaksi.
 
 ### 3. Financial Polarity Isolation & Danger Guard (`DangerKeywordGuard.java`)
-- **Rule 0 (Bank Mega Zero-Loss Invariant)**: Jika kandidat di layar berupa aksi pemindahan dana (`Bayar`, `Transfer`, `Checkout`, `Beli`), tetapi target hint hanya aksi netral (*"OK"*, *"Lanjut"*, *"Tutup"*, *"Simpan"*), kandidat langsung **DITOLAK SECARA MUTLAK**.
+- **Rule 0 (Zero-Loss Invariant)**: Jika kandidat di layar berupa aksi pemindahan dana (`Bayar`, `Transfer`, `Checkout`, `Beli`), tetapi target hint hanya aksi netral (*"OK"*, *"Lanjut"*, *"Tutup"*, *"Simpan"*), kandidat langsung **DITOLAK SECARA MUTLAK**.
 - **Polarity Barrier**: Jika skrip mencari aksi positif (*"Lanjut"*), Locara menolak elemen destruktif (*"Batal"*, *"Hapus"*, *"Cancel"*, *"Blokir"*).
 
-### 4. 2D Spatial Proximity Scorer (`SpatialProximityScorer.java`)
+### 4. 2D Spatial Alignment Engine (`SpatialAlignmentEngine.java`)
 - Menganalisis koordinat geometris elemen: $X, Y, \text{Width}, \text{Height}$.
 - **Anchor Relationship**: Menghitung jarak Euclidean terhadap elemen jangkar terdekat (misalnya label judul seksi atau ikon pendamping).
 - **Directional Bias**:
@@ -143,7 +143,7 @@ Kasus umum di aplikasi mobile perbankan atau e-commerce:
 4. **Spatial Verification**: Koordinat input berada tepat di samping ikon kaca pembesar (🔍) dan di atas daftar kontak favorit.
 5. **Dynamic XPath Generation**: Locara menyusun XPath relatif baru:
    ```xpath
-   //*[@resource-id='com.bankmega.msmile:id/et_search' or contains(@hint, 'Cari') or contains(@text, 'Cari')]
+   //*[@resource-id='com.example.app:id/et_search' or contains(@hint, 'Cari') or contains(@text, 'Cari')]
    ```
 6. **Eksekusi & Lolos**: Teks diketikkan ke kolom baru, kontak favorit ditemukan, dan test suite tetap **HIJAU**!
 

@@ -53,30 +53,50 @@ class LocaraHook {
         if (!isLocaraPresent()) {
             return false
         }
+        Boolean configured = readBooleanFlag(
+                ["ENABLE_LOCARA", "ENABLE_QUREON", "ENABLE_ZERO_HEALING"],
+                ["locara.enabled", "qureon.enabled", "healing.enabled"],
+                ["LOCARA_ENABLED", "QUREON_ENABLED", "HEALING_ENABLED"]
+        )
+        return configured != null ? configured.booleanValue() : true
+    }
+
+    /**
+     * Opt-in flag controlling whether conditional waitForElementPresent probes trigger healing.
+     * Defaults to false so negative or optional popup probes do not create telemetry storms.
+     */
+    static boolean isWaitPresentHealingEnabled() {
+        Boolean configured = readBooleanFlag(
+                ["LOCARA_HOOK_HEAL_WAIT_PRESENT"],
+                ["locara.hook.heal_wait_present"],
+                ["LOCARA_HOOK_HEAL_WAIT_PRESENT"]
+        )
+        return configured != null && configured.booleanValue()
+    }
+
+    private static Boolean readBooleanFlag(List<String> gvNames, List<String> propKeys, List<String> envKeys) {
         // 1. Check GlobalVariable if defined in Katalon Execution Profile
         try {
             def gvClass = Class.forName("internal.GlobalVariable")
-            def field = null
-            for (String fName : ["ENABLE_LOCARA", "ENABLE_QUREON", "ENABLE_ZERO_HEALING"]) {
+            for (String fName : gvNames) {
                 try {
-                    field = gvClass.getField(fName)
-                    if (field != null) break
+                    def field = gvClass.getField(fName)
+                    if (field != null) {
+                        Object val = field.get(null)
+                        if (val != null) return Boolean.parseBoolean(val.toString())
+                    }
                 } catch (Throwable ignored) {}
-            }
-            if (field != null) {
-                Object val = field.get(null)
-                if (val != null) return Boolean.parseBoolean(val.toString())
             }
         } catch (Throwable ignored) {}
 
         // 2. Check System Property
-        for (String key : ["locara.enabled", "qureon.enabled", "healing.enabled"]) {
+        for (String key : propKeys) {
             String sysProp = System.getProperty(key)
             if (sysProp != null) return Boolean.parseBoolean(sysProp)
         }
 
         // 3. Check Environment Variable
-        for (String key : ["LOCARA_ENABLED", "QUREON_ENABLED", "HEALING_ENABLED"]) {
+        for (String key : envKeys) {
             String env = System.getenv(key)
             if (env != null) return Boolean.parseBoolean(env)
         }
@@ -93,20 +113,16 @@ class LocaraHook {
                 if (f.exists()) {
                     Properties p = new Properties()
                     f.withInputStream { p.load(it) }
-                    if (p.containsKey("locara.enabled")) {
-                        return Boolean.parseBoolean(p.getProperty("locara.enabled"))
-                    }
-                    if (p.containsKey("qureon.enabled")) {
-                        return Boolean.parseBoolean(p.getProperty("qureon.enabled"))
-                    }
-                    if (p.containsKey("healing.enabled")) {
-                        return Boolean.parseBoolean(p.getProperty("healing.enabled"))
+                    for (String key : propKeys) {
+                        if (p.containsKey(key)) {
+                            return Boolean.parseBoolean(p.getProperty(key))
+                        }
                     }
                 }
             }
         } catch (Throwable ignored) {}
 
-        return true
+        return null
     }
 
     // Helper ramah untuk mendeteksi apakah skenario yang sedang jalan adalah Negative Test Case
@@ -115,10 +131,27 @@ class LocaraHook {
             def listenerClass = Class.forName("GlobalSetupListener")
             def field = listenerClass.getField("currentTestCaseId")
             String tcId = field.get(null)?.toString() ?: ""
-            return tcId.contains("Negative") || tcId.contains("Negative Case") || tcId.contains("Negative Test Case") || tcId.contains("/TC-N")
+            return tcId.contains("Negative") || tcId.contains("Negative Case") || tcId.contains("Negative Test Case") || tcId.contains("/TC-N") || tcId.contains("NTC -") || tcId.contains("/NTC")
         } catch (Throwable ignored) {
             return false
         }
+    }
+
+    static double getConfiguredConfidenceThreshold(double minimumFloor) {
+        try {
+            def locara = getLocaraClass()
+            if (locara != null) {
+                Object engine = locara.getMethod("getEngine").invoke(null)
+                if (engine != null) {
+                    Object cfg = engine.getClass().getMethod("getConfig").invoke(engine)
+                    if (cfg != null) {
+                        double configured = ((Number) cfg.getClass().getMethod("getConfidenceThreshold").invoke(cfg)).doubleValue()
+                        return Math.max(minimumFloor, configured)
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+        return minimumFloor
     }
 
     static synchronized void install() {
@@ -135,128 +168,74 @@ class LocaraHook {
 
             Field cacheField = KeywordExecutor.class.getDeclaredField("cachePlatforms")
             cacheField.setAccessible(true)
-            Map<String, Map<String, List<IKeyword>>> cachePlatforms = 
+            @SuppressWarnings("unchecked")
+            Map<String, Map<String, List<IKeyword>>> cachePlatforms =
                 (Map<String, Map<String, List<IKeyword>>>) cacheField.get(executor)
 
             Map<String, List<IKeyword>> mobileCache = cachePlatforms.computeIfAbsent(
                 CoreConstants.PLATFORM_MOBILE, { new HashMap<String, List<IKeyword>>() }
             )
 
-            // Intercept tap keyword
-            IKeyword originalTap = null
-            if (mobileCache.containsKey("tap") && mobileCache.get("tap") != null && !mobileCache.get("tap").isEmpty()) {
-                originalTap = mobileCache.get("tap").get(0)
-            }
-            if (originalTap == null) {
-                originalTap = new TapKeyword()
-            }
-            if (!(originalTap instanceof LocaraTapKeyword)) {
-                List<IKeyword> tapList = new ArrayList<>()
-                tapList.add(new LocaraTapKeyword(originalTap))
-                mobileCache.put("tap", tapList)
-            }
-
-            // Intercept setText keyword
-            IKeyword originalSetText = null
-            if (mobileCache.containsKey("setText") && mobileCache.get("setText") != null && !mobileCache.get("setText").isEmpty()) {
-                originalSetText = mobileCache.get("setText").get(0)
-            }
-            if (originalSetText == null) {
-                originalSetText = new SetTextKeyword()
-            }
-            if (!(originalSetText instanceof LocaraSetTextKeyword)) {
-                List<IKeyword> setTextList = new ArrayList<>()
-                setTextList.add(new LocaraSetTextKeyword(originalSetText))
-                mobileCache.put("setText", setTextList)
-            }
-
-            // Intercept getText keyword
-            IKeyword originalGetText = null
-            if (mobileCache.containsKey("getText") && mobileCache.get("getText") != null && !mobileCache.get("getText").isEmpty()) {
-                originalGetText = mobileCache.get("getText").get(0)
-            }
-            if (originalGetText == null) {
-                originalGetText = new GetTextKeyword()
-            }
-            if (!(originalGetText instanceof LocaraGetTextKeyword)) {
-                List<IKeyword> getTextList = new ArrayList<>()
-                getTextList.add(new LocaraGetTextKeyword(originalGetText))
-                mobileCache.put("getText", getTextList)
-            }
-
-            // Intercept verifyElementText keyword (Assertion & Verification Healing)
-            IKeyword originalVerifyElementText = null
-            if (mobileCache.containsKey("verifyElementText") && mobileCache.get("verifyElementText") != null && !mobileCache.get("verifyElementText").isEmpty()) {
-                originalVerifyElementText = mobileCache.get("verifyElementText").get(0)
-            }
-            if (originalVerifyElementText == null) {
-                try {
-                    Class<?> vetClass = Class.forName("com.kms.katalon.core.mobile.keyword.builtin.VerifyElementTextKeyword")
-                    originalVerifyElementText = (IKeyword) vetClass.getDeclaredConstructor().newInstance()
-                } catch (Throwable ignored) {}
-            }
-            if (originalVerifyElementText != null && !(originalVerifyElementText instanceof LocaraVerifyElementTextKeyword)) {
-                List<IKeyword> vetList = new ArrayList<>()
-                vetList.add(new LocaraVerifyElementTextKeyword(originalVerifyElementText))
-                mobileCache.put("verifyElementText", vetList)
-            }
-
-            // Intercept waitForElementPresent keyword (Probing & Presence Healing)
-            IKeyword originalWaitForElementPresent = null
-            if (mobileCache.containsKey("waitForElementPresent") && mobileCache.get("waitForElementPresent") != null && !mobileCache.get("waitForElementPresent").isEmpty()) {
-                originalWaitForElementPresent = mobileCache.get("waitForElementPresent").get(0)
-            }
-            if (originalWaitForElementPresent == null) {
-                try {
-                    Class<?> wfClass = Class.forName("com.kms.katalon.core.mobile.keyword.builtin.WaitForElementPresentKeyword")
-                    originalWaitForElementPresent = (IKeyword) wfClass.getDeclaredConstructor().newInstance()
-                } catch (Throwable ignored) {}
-            }
-            if (originalWaitForElementPresent != null && !(originalWaitForElementPresent instanceof LocaraWaitForElementPresentKeyword)) {
-                List<IKeyword> wfList = new ArrayList<>()
-                wfList.add(new LocaraWaitForElementPresentKeyword(originalWaitForElementPresent))
-                mobileCache.put("waitForElementPresent", wfList)
-            }
-
-            // Intercept verifyElementPresent keyword
-            IKeyword originalVerifyElementPresent = null
-            if (mobileCache.containsKey("verifyElementPresent") && mobileCache.get("verifyElementPresent") != null && !mobileCache.get("verifyElementPresent").isEmpty()) {
-                originalVerifyElementPresent = mobileCache.get("verifyElementPresent").get(0)
-            }
-            if (originalVerifyElementPresent == null) {
-                try {
-                    Class<?> vepClass = Class.forName("com.kms.katalon.core.mobile.keyword.builtin.VerifyElementPresentKeyword")
-                    originalVerifyElementPresent = (IKeyword) vepClass.getDeclaredConstructor().newInstance()
-                } catch (Throwable ignored) {}
-            }
-            if (originalVerifyElementPresent != null && !(originalVerifyElementPresent instanceof LocaraVerifyElementPresentKeyword)) {
-                List<IKeyword> vepList = new ArrayList<>()
-                vepList.add(new LocaraVerifyElementPresentKeyword(originalVerifyElementPresent))
-                mobileCache.put("verifyElementPresent", vepList)
-            }
-
-            // Intercept verifyElementVisible keyword
-            IKeyword originalVerifyElementVisible = null
-            if (mobileCache.containsKey("verifyElementVisible") && mobileCache.get("verifyElementVisible") != null && !mobileCache.get("verifyElementVisible").isEmpty()) {
-                originalVerifyElementVisible = mobileCache.get("verifyElementVisible").get(0)
-            }
-            if (originalVerifyElementVisible == null) {
-                try {
-                    Class<?> vevClass = Class.forName("com.kms.katalon.core.mobile.keyword.builtin.VerifyElementVisibleKeyword")
-                    originalVerifyElementVisible = (IKeyword) vevClass.getDeclaredConstructor().newInstance()
-                } catch (Throwable ignored) {}
-            }
-            if (originalVerifyElementVisible != null && !(originalVerifyElementVisible instanceof LocaraVerifyElementVisibleKeyword)) {
-                List<IKeyword> vevList = new ArrayList<>()
-                vevList.add(new LocaraVerifyElementVisibleKeyword(originalVerifyElementVisible))
-                mobileCache.put("verifyElementVisible", vevList)
-            }
+            installInterceptor(mobileCache, "tap", { new TapKeyword() }, LocaraTapKeyword.class, { IKeyword orig -> new LocaraTapKeyword(orig) })
+            installInterceptor(mobileCache, "setText", { new SetTextKeyword() }, LocaraSetTextKeyword.class, { IKeyword orig -> new LocaraSetTextKeyword(orig) })
+            installInterceptor(mobileCache, "getText", { new GetTextKeyword() }, LocaraGetTextKeyword.class, { IKeyword orig -> new LocaraGetTextKeyword(orig) })
+            installOptionalInterceptor(mobileCache, "verifyElementText", "com.kms.katalon.core.mobile.keyword.builtin.VerifyElementTextKeyword", LocaraVerifyElementTextKeyword.class, { IKeyword orig -> new LocaraVerifyElementTextKeyword(orig) })
+            installOptionalInterceptor(mobileCache, "waitForElementPresent", "com.kms.katalon.core.mobile.keyword.builtin.WaitForElementPresentKeyword", LocaraWaitForElementPresentKeyword.class, { IKeyword orig -> new LocaraWaitForElementPresentKeyword(orig) })
+            installOptionalInterceptor(mobileCache, "verifyElementPresent", "com.kms.katalon.core.mobile.keyword.builtin.VerifyElementPresentKeyword", LocaraVerifyElementPresentKeyword.class, { IKeyword orig -> new LocaraVerifyElementPresentKeyword(orig) })
+            installOptionalInterceptor(mobileCache, "verifyElementVisible", "com.kms.katalon.core.mobile.keyword.builtin.VerifyElementVisibleKeyword", LocaraVerifyElementVisibleKeyword.class, { IKeyword orig -> new LocaraVerifyElementVisibleKeyword(orig) })
 
             installed = true
-            KeywordUtil.logInfo("[Locara by Qureon] Native KeywordExecutor Hook v1.4.0 successfully installed (tap, setText, getText, verifyElementText, waitForElementPresent, verifyElementPresent/Visible intercepted)")
+            KeywordUtil.logInfo("[Locara by Qureon] Native KeywordExecutor Hook v1.15.0 successfully installed (tap, setText, getText, verifyElementText, waitForElementPresent, verifyElementPresent/Visible intercepted)")
         } catch (Throwable t) {
             KeywordUtil.markWarning("[Locara by Qureon] Failed to install KeywordExecutor hook: " + t.getMessage())
         }
+    }
+
+    private static void installOptionalInterceptor(Map<String, List<IKeyword>> mobileCache, String key,
+                                                   String builtinClassName, Class<?> wrapperClass,
+                                                   groovy.lang.Closure<IKeyword> wrapperFactory) {
+        installInterceptor(mobileCache, key, {
+            try {
+                Class<?> clz = Class.forName(builtinClassName)
+                return (IKeyword) clz.getDeclaredConstructor().newInstance()
+            } catch (Throwable ignored) {
+                return null
+            }
+        }, wrapperClass, wrapperFactory)
+    }
+
+    private static void installInterceptor(Map<String, List<IKeyword>> mobileCache, String key,
+                                           groovy.lang.Closure<IKeyword> fallbackFactory, Class<?> wrapperClass,
+                                           groovy.lang.Closure<IKeyword> wrapperFactory) {
+        IKeyword original = null
+        List<IKeyword> existing = mobileCache.get(key)
+        if (existing != null && !existing.isEmpty()) {
+            original = existing.get(0)
+        }
+        if (original == null) {
+            original = fallbackFactory.call()
+        }
+        if (original != null && !wrapperClass.isInstance(original)) {
+            List<IKeyword> wrapped = new ArrayList<>()
+            wrapped.add(wrapperFactory.call(original))
+            mobileCache.put(key, wrapped)
+        }
+    }
+
+    static TestObject extractTestObject(Object[] params) {
+        return (params != null && params.length > 0 && params[0] instanceof TestObject) ? (params[0] as TestObject) : null
+    }
+
+    static int extractTimeout(Object[] params, int index, int defaultTimeout) {
+        return (params != null && params.length > index && params[index] instanceof Number)
+                ? ((Number) params[index]).intValue()
+                : defaultTimeout
+    }
+
+    static FailureHandling extractFailureHandling(Object[] params, int index) {
+        return (params != null && params.length > index && params[index] instanceof FailureHandling)
+                ? (params[index] as FailureHandling)
+                : RunConfiguration.getDefaultFailureHandling()
     }
 }
 
@@ -282,10 +261,9 @@ class LocaraTapKeyword implements IKeyword {
         try {
             return originalKeyword != null ? originalKeyword.execute(params) : null
         } catch (Throwable t) {
-            TestObject to = params != null && params.length > 0 && params[0] instanceof TestObject ? (params[0] as TestObject) : null
-            int timeout = params != null && params.length > 1 && params[1] instanceof Number ? ((Number) params[1]).intValue() : 10
-            FailureHandling flow = params != null && params.length > 2 && params[2] instanceof FailureHandling ? 
-                (params[2] as FailureHandling) : RunConfiguration.getDefaultFailureHandling()
+            TestObject to = LocaraHook.extractTestObject(params)
+            int timeout = LocaraHook.extractTimeout(params, 1, 10)
+            FailureHandling flow = LocaraHook.extractFailureHandling(params, 2)
 
             String objId = to != null ? to.getObjectId() : "UnknownElement"
             KeywordUtil.logInfo("[Locara by Qureon] 🛡️ Intercepted failure on Mobile.tap('${objId}'). Activating in-flight self-healing...")
@@ -301,7 +279,7 @@ class LocaraTapKeyword implements IKeyword {
             } catch (Throwable healEx) {
                 KeywordUtil.logInfo("[Locara by Qureon] ⚠️ Healing attempt failed: " + healEx.getMessage())
             } finally {
-                IN_FLIGHT.set(false)
+                IN_FLIGHT.remove()
             }
 
             if (flow == FailureHandling.STOP_ON_FAILURE) {
@@ -334,11 +312,10 @@ class LocaraSetTextKeyword implements IKeyword {
         try {
             return originalKeyword != null ? originalKeyword.execute(params) : null
         } catch (Throwable t) {
-            TestObject to = params != null && params.length > 0 && params[0] instanceof TestObject ? (params[0] as TestObject) : null
-            String text = params != null && params.length > 1 ? params[1]?.toString() : ""
-            int timeout = params != null && params.length > 2 && params[2] instanceof Number ? ((Number) params[2]).intValue() : 10
-            FailureHandling flow = params != null && params.length > 3 && params[3] instanceof FailureHandling ? 
-                (params[3] as FailureHandling) : RunConfiguration.getDefaultFailureHandling()
+            TestObject to = LocaraHook.extractTestObject(params)
+            String text = params != null && params.length > 1 && params[1] != null ? params[1].toString() : ""
+            int timeout = LocaraHook.extractTimeout(params, 2, 10)
+            FailureHandling flow = LocaraHook.extractFailureHandling(params, 3)
 
             String objId = to != null ? to.getObjectId() : "UnknownElement"
             KeywordUtil.logInfo("[Locara by Qureon] 🛡️ Intercepted failure on Mobile.setText('${objId}'). Activating in-flight self-healing...")
@@ -346,7 +323,7 @@ class LocaraSetTextKeyword implements IKeyword {
             IN_FLIGHT.set(true)
             try {
                 def locara = LocaraHook.getLocaraClass()
-                boolean healed = locara != null && (locara.healAndSetText(to, text, objId) as boolean)
+                boolean healed = locara != null && (locara.healAndSetText(to, text, timeout, objId) as boolean)
                 if (healed) {
                     KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight self-healing succeeded for '${objId}'!")
                     return null
@@ -354,7 +331,7 @@ class LocaraSetTextKeyword implements IKeyword {
             } catch (Throwable healEx) {
                 KeywordUtil.logInfo("[Locara by Qureon] ⚠️ Healing attempt failed: " + healEx.getMessage())
             } finally {
-                IN_FLIGHT.set(false)
+                IN_FLIGHT.remove()
             }
 
             if (flow == FailureHandling.STOP_ON_FAILURE) {
@@ -387,10 +364,9 @@ class LocaraGetTextKeyword implements IKeyword {
         try {
             return originalKeyword != null ? originalKeyword.execute(params) : ""
         } catch (Throwable t) {
-            TestObject to = params != null && params.length > 0 && params[0] instanceof TestObject ? (params[0] as TestObject) : null
-            int timeout = params != null && params.length > 1 && params[1] instanceof Number ? ((Number) params[1]).intValue() : 10
-            FailureHandling flow = params != null && params.length > 2 && params[2] instanceof FailureHandling ? 
-                (params[2] as FailureHandling) : RunConfiguration.getDefaultFailureHandling()
+            TestObject to = LocaraHook.extractTestObject(params)
+            int timeout = LocaraHook.extractTimeout(params, 1, 10)
+            FailureHandling flow = LocaraHook.extractFailureHandling(params, 2)
 
             String objId = to != null ? to.getObjectId() : "UnknownElement"
             KeywordUtil.logInfo("[Locara by Qureon] 🛡️ Intercepted failure on Mobile.getText('${objId}'). Activating in-flight self-healing...")
@@ -406,7 +382,7 @@ class LocaraGetTextKeyword implements IKeyword {
             } catch (Throwable healEx) {
                 KeywordUtil.logInfo("[Locara by Qureon] ⚠️ Healing attempt failed for getText: " + healEx.getMessage())
             } finally {
-                IN_FLIGHT.set(false)
+                IN_FLIGHT.remove()
             }
 
             if (flow == FailureHandling.STOP_ON_FAILURE) {
@@ -439,10 +415,16 @@ class LocaraVerifyElementTextKeyword implements IKeyword {
         try {
             return originalKeyword != null ? originalKeyword.execute(params) : false
         } catch (Throwable t) {
-            TestObject to = params != null && params.length > 0 && params[0] instanceof TestObject ? (params[0] as TestObject) : null
-            String expectedText = params != null && params.length > 1 ? params[1]?.toString() : ""
-            FailureHandling flow = params != null && params.length > 2 && params[2] instanceof FailureHandling ? 
-                (params[2] as FailureHandling) : RunConfiguration.getDefaultFailureHandling()
+            TestObject to = LocaraHook.extractTestObject(params)
+            String expectedText = params != null && params.length > 1 && params[1] != null ? params[1].toString() : ""
+            FailureHandling flow = LocaraHook.extractFailureHandling(params, 2)
+
+            if (LocaraHook.isNegativeTestCaseRunning()) {
+                if (flow == FailureHandling.STOP_ON_FAILURE) {
+                    throw t
+                }
+                return false
+            }
 
             String objId = to != null ? to.getObjectId() : "UnknownElement"
             KeywordUtil.logInfo("[Locara by Qureon] 🛡️ Intercepted failure on Mobile.verifyElementText('${objId}', '${expectedText}'). Activating in-flight self-healing...")
@@ -453,7 +435,7 @@ class LocaraVerifyElementTextKeyword implements IKeyword {
                 String actualText = locara != null ? (locara.healAndGetText(to, 10, objId) as String) : null
                 if (actualText != null) {
                     String actClean = actualText.trim()
-                    String expClean = expectedText != null ? expectedText.trim() : ""
+                    String expClean = expectedText.trim()
                     if (!expClean.isEmpty() && (actClean.equals(expClean) || actClean.contains(expClean))) {
                         KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight self-healing succeeded for verifyElementText('${objId}') -> Match!")
                         return true
@@ -464,7 +446,8 @@ class LocaraVerifyElementTextKeyword implements IKeyword {
                         def simMethod = simClass.getMethod("compositeScore", String.class, String.class)
                         similarity = (double) simMethod.invoke(null, actClean, expClean)
                     } catch (Throwable ignored) {}
-                    if (similarity >= 0.80) {
+                    double requiredThreshold = LocaraHook.getConfiguredConfidenceThreshold(0.80d)
+                    if (!expClean.isEmpty() && similarity >= requiredThreshold) {
                         KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight self-healing succeeded for verifyElementText('${objId}'): Semantic match (${Math.round(similarity * 100)}%) between '${actualText}' and '${expectedText}'")
                         return true
                     }
@@ -472,7 +455,7 @@ class LocaraVerifyElementTextKeyword implements IKeyword {
             } catch (Throwable healEx) {
                 KeywordUtil.logInfo("[Locara by Qureon] ⚠️ Healing attempt failed for verifyElementText: " + healEx.getMessage())
             } finally {
-                IN_FLIGHT.set(false)
+                IN_FLIGHT.remove()
             }
 
             if (flow == FailureHandling.STOP_ON_FAILURE) {
@@ -502,11 +485,8 @@ class LocaraWaitForElementPresentKeyword implements IKeyword {
             return originalKeyword != null ? originalKeyword.execute(params) : false
         }
 
-        TestObject to = params != null && params.length > 0 && params[0] instanceof TestObject ? (params[0] as TestObject) : null
-        int timeout = params != null && params.length > 1 && params[1] instanceof Number ? ((Number) params[1]).intValue() : 10
-        FailureHandling flow = params != null && params.length > 2 && params[2] instanceof FailureHandling ? 
-            (params[2] as FailureHandling) : RunConfiguration.getDefaultFailureHandling()
-
+        TestObject to = LocaraHook.extractTestObject(params)
+        int timeout = LocaraHook.extractTimeout(params, 1, 10)
         String objId = to != null ? to.getObjectId() : "UnknownElement"
 
         try {
@@ -516,8 +496,8 @@ class LocaraWaitForElementPresentKeyword implements IKeyword {
             }
         } catch (Throwable ignored) {}
 
-        // 🛡️ Jika sedang menjalankan Negative Test Case, jangan paksakan healing agar assertion negatif tetap akurat
-        if (LocaraHook.isNegativeTestCaseRunning()) {
+        // Opt-in guard: waitForElementPresent is commonly used as an optional probe; avoid telemetry storms by default.
+        if (!LocaraHook.isWaitPresentHealingEnabled() || LocaraHook.isNegativeTestCaseRunning()) {
             return false
         }
 
@@ -535,7 +515,7 @@ class LocaraWaitForElementPresentKeyword implements IKeyword {
         } catch (Throwable healEx) {
             KeywordUtil.logInfo("[Locara by Qureon] ⚠️ Probe healing attempt failed: " + healEx.getMessage())
         } finally {
-            IN_FLIGHT.set(false)
+            IN_FLIGHT.remove()
         }
 
         return false
@@ -561,11 +541,9 @@ class LocaraVerifyElementPresentKeyword implements IKeyword {
             return originalKeyword != null ? originalKeyword.execute(params) : false
         }
 
-        TestObject to = params != null && params.length > 0 && params[0] instanceof TestObject ? (params[0] as TestObject) : null
-        int timeout = params != null && params.length > 1 && params[1] instanceof Number ? ((Number) params[1]).intValue() : 10
-        FailureHandling flow = params != null && params.length > 2 && params[2] instanceof FailureHandling ? 
-            (params[2] as FailureHandling) : RunConfiguration.getDefaultFailureHandling()
-
+        TestObject to = LocaraHook.extractTestObject(params)
+        int timeout = LocaraHook.extractTimeout(params, 1, 10)
+        FailureHandling flow = LocaraHook.extractFailureHandling(params, 2)
         String objId = to != null ? to.getObjectId() : "UnknownElement"
 
         try {
@@ -573,9 +551,8 @@ class LocaraVerifyElementPresentKeyword implements IKeyword {
             if (res instanceof Boolean && ((Boolean) res).booleanValue()) {
                 return true
             }
-        } catch (Throwable t) {}
+        } catch (Throwable ignored) {}
 
-        // 🛡️ Jika sedang menjalankan Negative Test Case, jangan paksakan healing
         if (LocaraHook.isNegativeTestCaseRunning()) {
             if (flow == FailureHandling.STOP_ON_FAILURE) {
                 throw new com.kms.katalon.core.exception.StepFailedException("Element '" + objId + "' not present")
@@ -596,7 +573,7 @@ class LocaraVerifyElementPresentKeyword implements IKeyword {
         } catch (Throwable healEx) {
             KeywordUtil.logInfo("[Locara by Qureon] ⚠️ Probe healing attempt failed: " + healEx.getMessage())
         } finally {
-            IN_FLIGHT.set(false)
+            IN_FLIGHT.remove()
         }
 
         if (flow == FailureHandling.STOP_ON_FAILURE) {
@@ -625,11 +602,9 @@ class LocaraVerifyElementVisibleKeyword implements IKeyword {
             return originalKeyword != null ? originalKeyword.execute(params) : false
         }
 
-        TestObject to = params != null && params.length > 0 && params[0] instanceof TestObject ? (params[0] as TestObject) : null
-        int timeout = params != null && params.length > 1 && params[1] instanceof Number ? ((Number) params[1]).intValue() : 10
-        FailureHandling flow = params != null && params.length > 2 && params[2] instanceof FailureHandling ? 
-            (params[2] as FailureHandling) : RunConfiguration.getDefaultFailureHandling()
-
+        TestObject to = LocaraHook.extractTestObject(params)
+        int timeout = LocaraHook.extractTimeout(params, 1, 10)
+        FailureHandling flow = LocaraHook.extractFailureHandling(params, 2)
         String objId = to != null ? to.getObjectId() : "UnknownElement"
 
         try {
@@ -637,9 +612,8 @@ class LocaraVerifyElementVisibleKeyword implements IKeyword {
             if (res instanceof Boolean && ((Boolean) res).booleanValue()) {
                 return true
             }
-        } catch (Throwable t) {}
+        } catch (Throwable ignored) {}
 
-        // 🛡️ Jika sedang menjalankan Negative Test Case, jangan paksakan healing
         if (LocaraHook.isNegativeTestCaseRunning()) {
             if (flow == FailureHandling.STOP_ON_FAILURE) {
                 throw new com.kms.katalon.core.exception.StepFailedException("Element '" + objId + "' not visible")
@@ -660,7 +634,7 @@ class LocaraVerifyElementVisibleKeyword implements IKeyword {
         } catch (Throwable healEx) {
             KeywordUtil.logInfo("[Locara by Qureon] ⚠️ Visibility healing attempt failed: " + healEx.getMessage())
         } finally {
-            IN_FLIGHT.set(false)
+            IN_FLIGHT.remove()
         }
 
         if (flow == FailureHandling.STOP_ON_FAILURE) {

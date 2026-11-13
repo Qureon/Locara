@@ -7,6 +7,7 @@
 
 import { initTheme } from "./theme.js";
 import { renderIcon } from "./icons.js";
+import { escapeHtml } from "./utils.js";
 import { fetchAuditEvents, fetchEngineHealth } from "./api.js";
 import { appState } from "./state.js";
 import { initTelemetryModule } from "./modules/telemetry.js";
@@ -34,23 +35,24 @@ window.viewEventForensics = function(eventId) {
     const oldLoc = evt.brokenLocator || evt.origLocator || "-";
     const newLoc = evt.healedLocator || evt.healedXPath || "-";
 
+    const dangerGuardStr = evt.guards && evt.guards.dangerLockout ? String(evt.guards.dangerLockout) : "PASSED";
     title.textContent = `Forensic Trace: ${evt.id}`;
     body.innerHTML = `
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
             <div class="m-card" style="background: var(--bg-surface); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
                 <h4 style="font-size: 0.88rem; margin-bottom: 8px;">Konteks Eksekusi</h4>
-                <p class="text-sm"><strong>Waktu:</strong> ${evt.timestamp}</p>
-                <p class="text-sm"><strong>Screen:</strong> ${escapeHtml(evt.screen || 'DefaultScreen')}</p>
-                <p class="text-sm"><strong>Aksi:</strong> <span class="action-tag ${actionStr.toLowerCase()}">${actionStr}</span></p>
+                <p class="text-sm"><strong>Waktu:</strong> ${escapeHtml(evt.timestamp || "-")}</p>
+                <p class="text-sm"><strong>Screen:</strong> ${escapeHtml(evt.screen || "DefaultScreen")}</p>
+                <p class="text-sm"><strong>Aksi:</strong> <span class="action-tag ${escapeHtml(actionStr.toLowerCase())}">${escapeHtml(actionStr)}</span></p>
                 <p class="text-sm"><strong>Target Hint:</strong> "${escapeHtml(targetHintStr)}"</p>
-                <p class="text-sm"><strong>Latency:</strong> ${evt.latencyMs || 0} ms</p>
+                <p class="text-sm"><strong>Latency:</strong> ${escapeHtml(String(evt.latencyMs || 0))} ms</p>
             </div>
 
             <div class="m-card" style="background: var(--bg-surface); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
                 <h4 style="font-size: 0.88rem; margin-bottom: 8px;">Hasil Self-Healing</h4>
                 <p class="text-sm"><strong>Confidence:</strong> ${((evt.confidence || 0) * 100).toFixed(1)}%</p>
-                <p class="text-sm"><strong>Status:</strong> ${evt.status || 'SUCCESS'}</p>
-                <p class="text-sm"><strong>Danger Guard:</strong> ${evt.guards ? evt.guards.dangerLockout : 'PASSED'}</p>
+                <p class="text-sm"><strong>Status:</strong> ${escapeHtml(evt.status || "SUCCESS")}</p>
+                <p class="text-sm"><strong>Danger Guard:</strong> ${escapeHtml(dangerGuardStr)}</p>
                 <p class="text-sm"><strong>Object Repository:</strong></p>
                 <code class="text-xs font-mono" style="color: var(--cyan); word-break: break-all;">${escapeHtml(rsPath)}</code>
             </div>
@@ -113,7 +115,7 @@ function initNavigation() {
     const titles = {
         "telemetry": {
             title: "Autonomous Self-Healing Mission Control",
-            sub: "Pemantauan real-time in-flight self-healing, ledgers, dan recovery locator Revamp M-Smile."
+            sub: "Pemantauan real-time in-flight self-healing, ledgers, dan recovery locator aplikasi target."
         },
         "visual-diff": {
             title: "Visual Bounding Box & Deep Inspector",
@@ -121,7 +123,7 @@ function initNavigation() {
         },
         "analytics": {
             title: "Regression Health & Volatility Analytics",
-            sub: "Distribusi perbaikan otonom per modul transaksi Bank Mega dan deteksi elemen UI paling rapuh."
+            sub: "Distribusi perbaikan otonom per modul transaksi aplikasi dan deteksi elemen UI paling rapuh."
         },
         "playground": {
             title: "Interactive XML Reconnaissance Sandbox",
@@ -133,7 +135,7 @@ function initNavigation() {
         },
         "compliance": {
             title: "UAT Compliance & Audit Sign-Off",
-            sub: "Dokumentasi verifikasi resmi integritas pengujian otomasi regresi bersertifikasi QA Bank Mega."
+            sub: "Dokumentasi verifikasi resmi integritas pengujian otomasi regresi Locara Autonomous QA."
         },
         "settings": {
             title: "Engine Configuration & Tuning",
@@ -212,7 +214,7 @@ async function connectLiveEngine() {
             if (health.status === "ONLINE") {
                 connPill.innerHTML = `
                     <span class="live-pulse"></span>
-                    <span class="pill-text">${health.target}: ONLINE</span>
+                    <span class="pill-text">${escapeHtml(health.target || "LOCAL")}: ONLINE</span>
                 `;
                 connPill.style.borderColor = "var(--emerald)";
             } else {
@@ -233,9 +235,4 @@ async function connectLiveEngine() {
     }
 
     await check();
-}
-
-function escapeHtml(str) {
-    if (!str) return "";
-    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }

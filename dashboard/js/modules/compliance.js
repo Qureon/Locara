@@ -1,6 +1,6 @@
 /**
  * ==============================================================================
- * ZERO-HEALING DASHBOARD — UAT COMPLIANCE & SIGN-OFF MODULE
+ * LOCARA MISSION CONTROL — UAT COMPLIANCE & SIGN-OFF MODULE
  * Formal audit certificate verification and printable document generator.
  * ==============================================================================
  */

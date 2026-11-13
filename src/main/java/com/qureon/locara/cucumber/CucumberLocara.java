@@ -21,6 +21,10 @@ import java.util.regex.Pattern;
 public class CucumberLocara {
 
     private static final Pattern QUOTED_PATTERN = Pattern.compile("[\"']([^\"']+)[\"']");
+    private static final Pattern GHERKIN_PREFIX_PATTERN = Pattern.compile("^(?i)(Given|When|Then|And|But|\\*)\\s+");
+    private static final Pattern QUOTED_TOKEN_REMOVE_PATTERN = Pattern.compile("[\"'][^\"']+[\"']");
+    private static final Pattern SET_TEXT_NOISE_PATTERN = Pattern.compile("(?i)\\b(fill|type|into|field|kolom|input|masukkan|pada)\\b");
+    private static final Pattern CLICK_NOISE_PATTERN = Pattern.compile("(?i)\\b(button|tombol|klik|click|tap|tekan|pilih|verify|assert|harus|tampil)\\b");
 
     private static final Pattern CLICK_PATTERN = Pattern.compile("(?i)\\b(click|clicks|clicked|clicking|tap|taps|tapped|tapping|tekan|menekan|pilih|memilih|klik|mengklik|press|presses|pressed|touch|touches)\\b");
     private static final Pattern INPUT_PATTERN = Pattern.compile("(?i)\\b(fill|fills|filled|filling|type|types|typed|typing|masukkan|memasukkan|input|inputs|ketik|mengetik|isi|mengisi|enter|enters|set|sets)\\b");
@@ -76,7 +80,7 @@ public class CucumberLocara {
         }
 
         // 1. Strip Gherkin step keywords
-        String cleaned = rawStep.trim().replaceFirst("^(?i)(Given|When|Then|And|But|\\*)\\s+", "");
+        String cleaned = GHERKIN_PREFIX_PATTERN.matcher(rawStep.trim()).replaceFirst("");
 
         // 2. Extract quoted arguments
         List<String> quotedArgs = new ArrayList<>();
@@ -107,7 +111,7 @@ public class CucumberLocara {
                 int firstIdx = cleaned.indexOf("'" + quotedArgs.get(0) + "'");
                 if (firstIdx == -1) firstIdx = cleaned.indexOf("\"" + quotedArgs.get(0) + "\"");
 
-                String beforeFirst = firstIdx > 0 ? cleaned.substring(0, firstIdx).toLowerCase() : "";
+                String beforeFirst = firstIdx > 0 ? cleaned.substring(0, firstIdx).toLowerCase(java.util.Locale.ROOT) : "";
                 if (beforeFirst.contains("field") || beforeFirst.contains("kolom") || beforeFirst.contains("pada")) {
                     targetHint = quotedArgs.get(0);
                     value = quotedArgs.get(1);
@@ -117,14 +121,15 @@ public class CucumberLocara {
                 }
             } else if (quotedArgs.size() == 1) {
                 value = quotedArgs.get(0);
-                targetHint = cleaned.replaceAll("[\"'][^\"']+[\"']", "").replaceAll("(?i)\\b(fill|type|into|field|kolom|input|masukkan|pada)\\b", "").trim();
+                String unquoted = QUOTED_TOKEN_REMOVE_PATTERN.matcher(cleaned).replaceAll("");
+                targetHint = SET_TEXT_NOISE_PATTERN.matcher(unquoted).replaceAll("").trim();
             }
         } else {
             // CLICK or VERIFY
             if (!quotedArgs.isEmpty()) {
                 targetHint = quotedArgs.get(0);
             } else {
-                targetHint = cleaned.replaceAll("(?i)\\b(button|tombol|klik|click|tap|tekan|pilih|verify|assert|harus|tampil)\\b", "").trim();
+                targetHint = CLICK_NOISE_PATTERN.matcher(cleaned).replaceAll("").trim();
             }
         }
 
@@ -206,8 +211,12 @@ public class CucumberLocara {
         if (isPlaywrightPage(driver)) {
             return PlaywrightLocara.isVisible(driver, locatorOrXPath, expectedText);
         } else {
-            Object element = AppiumLocara.findElement(driver, locatorOrXPath, expectedText);
-            return element != null;
+            try {
+                Object element = AppiumLocara.findElement(driver, locatorOrXPath, expectedText);
+                return element != null;
+            } catch (RuntimeException e) {
+                return false;
+            }
         }
     }
 

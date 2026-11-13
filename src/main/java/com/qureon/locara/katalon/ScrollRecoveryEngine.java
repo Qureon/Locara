@@ -158,7 +158,7 @@ public class ScrollRecoveryEngine {
     public boolean performScrollDown(Object driver) {
         if (driver == null) return false;
 
-        int[] dims = getScreenDimensions(driver);
+        int[] dims = KatalonDriverBridge.getScreenDimensions(driver, 720, 1280);
         int width = dims[0];
         int height = dims[1];
 
@@ -167,34 +167,11 @@ public class ScrollRecoveryEngine {
         int endX = width / 2;
         int endY = Math.max(50, (int) (height * 0.25));
 
-        // Try Katalon MobileBuiltInKeywords.swipe(startX, startY, endX, endY)
-        try {
-            Class<?> mobileKeywords = Class.forName("com.kms.katalon.core.mobile.keyword.MobileBuiltInKeywords");
-            Method swipeMethod = mobileKeywords.getMethod("swipe", int.class, int.class, int.class, int.class);
-            swipeMethod.invoke(null, startX, startY, endX, endY);
-            Thread.sleep(600);
+        if (invokeKatalonSwipe(startX, startY, endX, endY, 600)) {
             return true;
-        } catch (Exception ignored) {}
-
-        // Fallback: Appium UiAutomator2 mobile: scrollGesture with full bounding parameters
-        try {
-            Class<?> jsExecutor = Class.forName("org.openqa.selenium.JavascriptExecutor");
-            if (jsExecutor.isInstance(driver)) {
-                Method executeScript = jsExecutor.getMethod("executeScript", String.class, Object[].class);
-                java.util.Map<String, Object> scrollArgs = new java.util.HashMap<>();
-                scrollArgs.put("left", 50);
-                scrollArgs.put("top", (int) (height * 0.20));
-                scrollArgs.put("width", Math.max(100, width - 100));
-                scrollArgs.put("height", Math.max(100, (int) (height * 0.60)));
-                scrollArgs.put("direction", "down");
-                scrollArgs.put("percent", 0.75);
-                executeScript.invoke(driver, "mobile: scrollGesture", new Object[]{scrollArgs});
-                Thread.sleep(600);
-                return true;
-            }
-        } catch (Exception ignored) {}
-
-        return false;
+        }
+        return invokeAppiumGesture(driver, "mobile: scrollGesture", "down",
+                (int) (height * 0.20), Math.max(100, width - 100), Math.max(100, (int) (height * 0.60)), 0.75, 600);
     }
 
     /**
@@ -202,24 +179,11 @@ public class ScrollRecoveryEngine {
      */
     public boolean performShortScroll(Object driver) {
         if (driver == null) return false;
-        int[] dims = getScreenDimensions(driver);
+        int[] dims = KatalonDriverBridge.getScreenDimensions(driver, 720, 1280);
         int width = dims[0];
         int height = dims[1];
 
-        int startX = width / 2;
-        int startY = (int) (height * 0.55);
-        int endX = width / 2;
-        int endY = (int) (height * 0.40);
-
-        try {
-            Class<?> mobileKeywords = Class.forName("com.kms.katalon.core.mobile.keyword.MobileBuiltInKeywords");
-            Method swipeMethod = mobileKeywords.getMethod("swipe", int.class, int.class, int.class, int.class);
-            swipeMethod.invoke(null, startX, startY, endX, endY);
-            Thread.sleep(400);
-            return true;
-        } catch (Exception ignored) {}
-
-        return false;
+        return invokeKatalonSwipe(width / 2, (int) (height * 0.55), width / 2, (int) (height * 0.40), 400);
     }
 
     /**
@@ -227,24 +191,11 @@ public class ScrollRecoveryEngine {
      */
     public boolean performScrollUp(Object driver) {
         if (driver == null) return false;
-        int[] dims = getScreenDimensions(driver);
+        int[] dims = KatalonDriverBridge.getScreenDimensions(driver, 720, 1280);
         int width = dims[0];
         int height = dims[1];
 
-        int startX = width / 2;
-        int startY = (int) (height * 0.30);
-        int endX = width / 2;
-        int endY = (int) (height * 0.70);
-
-        try {
-            Class<?> mobileKeywords = Class.forName("com.kms.katalon.core.mobile.keyword.MobileBuiltInKeywords");
-            Method swipeMethod = mobileKeywords.getMethod("swipe", int.class, int.class, int.class, int.class);
-            swipeMethod.invoke(null, startX, startY, endX, endY);
-            Thread.sleep(500);
-            return true;
-        } catch (Exception ignored) {}
-
-        return false;
+        return invokeKatalonSwipe(width / 2, (int) (height * 0.30), width / 2, (int) (height * 0.70), 500);
     }
 
     /**
@@ -253,42 +204,17 @@ public class ScrollRecoveryEngine {
      */
     public boolean performSwipeLeft(Object driver) {
         if (driver == null) return false;
-        int[] dims = getScreenDimensions(driver);
+        int[] dims = KatalonDriverBridge.getScreenDimensions(driver, 720, 1280);
         int width = dims[0];
         int height = dims[1];
 
         int startX = Math.min(width - 50, (int) (width * 0.85));
-        int startY = height / 2;
         int endX = Math.max(50, (int) (width * 0.15));
-        int endY = height / 2;
-
-        try {
-            Class<?> mobileKeywords = Class.forName("com.kms.katalon.core.mobile.keyword.MobileBuiltInKeywords");
-            Method swipeMethod = mobileKeywords.getMethod("swipe", int.class, int.class, int.class, int.class);
-            swipeMethod.invoke(null, startX, startY, endX, endY);
-            Thread.sleep(500);
+        if (invokeKatalonSwipe(startX, height / 2, endX, height / 2, 500)) {
             return true;
-        } catch (Exception ignored) {}
-
-        // Fallback: Appium UiAutomator2 mobile: swipeGesture
-        try {
-            Class<?> jsExecutor = Class.forName("org.openqa.selenium.JavascriptExecutor");
-            if (jsExecutor.isInstance(driver)) {
-                Method executeScript = jsExecutor.getMethod("executeScript", String.class, Object[].class);
-                java.util.Map<String, Object> swipeArgs = new java.util.HashMap<>();
-                swipeArgs.put("left", 50);
-                swipeArgs.put("top", (int) (height * 0.30));
-                swipeArgs.put("width", Math.max(100, width - 100));
-                swipeArgs.put("height", Math.max(100, (int) (height * 0.40)));
-                swipeArgs.put("direction", "left");
-                swipeArgs.put("percent", 0.75);
-                executeScript.invoke(driver, "mobile: swipeGesture", new Object[]{swipeArgs});
-                Thread.sleep(500);
-                return true;
-            }
-        } catch (Exception ignored) {}
-
-        return false;
+        }
+        return invokeAppiumGesture(driver, "mobile: swipeGesture", "left",
+                (int) (height * 0.30), Math.max(100, width - 100), Math.max(100, (int) (height * 0.40)), 0.75, 500);
     }
 
     /**
@@ -297,61 +223,59 @@ public class ScrollRecoveryEngine {
      */
     public boolean performSwipeRight(Object driver) {
         if (driver == null) return false;
-        int[] dims = getScreenDimensions(driver);
+        int[] dims = KatalonDriverBridge.getScreenDimensions(driver, 720, 1280);
         int width = dims[0];
         int height = dims[1];
 
         int startX = Math.max(50, (int) (width * 0.15));
-        int startY = height / 2;
         int endX = Math.min(width - 50, (int) (width * 0.85));
-        int endY = height / 2;
+        if (invokeKatalonSwipe(startX, height / 2, endX, height / 2, 500)) {
+            return true;
+        }
+        return invokeAppiumGesture(driver, "mobile: swipeGesture", "right",
+                (int) (height * 0.30), Math.max(100, width - 100), Math.max(100, (int) (height * 0.40)), 0.75, 500);
+    }
 
+    private static boolean invokeKatalonSwipe(int startX, int startY, int endX, int endY, long settleMs) {
         try {
             Class<?> mobileKeywords = Class.forName("com.kms.katalon.core.mobile.keyword.MobileBuiltInKeywords");
             Method swipeMethod = mobileKeywords.getMethod("swipe", int.class, int.class, int.class, int.class);
             swipeMethod.invoke(null, startX, startY, endX, endY);
-            Thread.sleep(500);
-            return true;
-        } catch (Exception ignored) {}
-
-        // Fallback: Appium UiAutomator2 mobile: swipeGesture
-        try {
-            Class<?> jsExecutor = Class.forName("org.openqa.selenium.JavascriptExecutor");
-            if (jsExecutor.isInstance(driver)) {
-                Method executeScript = jsExecutor.getMethod("executeScript", String.class, Object[].class);
-                java.util.Map<String, Object> swipeArgs = new java.util.HashMap<>();
-                swipeArgs.put("left", 50);
-                swipeArgs.put("top", (int) (height * 0.30));
-                swipeArgs.put("width", Math.max(100, width - 100));
-                swipeArgs.put("height", Math.max(100, (int) (height * 0.40)));
-                swipeArgs.put("direction", "right");
-                swipeArgs.put("percent", 0.75);
-                executeScript.invoke(driver, "mobile: swipeGesture", new Object[]{swipeArgs});
-                Thread.sleep(500);
-                return true;
-            }
-        } catch (Exception ignored) {}
-
-        return false;
+        } catch (Exception ignored) {
+            return false;
+        }
+        sleepWithInterruptRestore(settleMs);
+        return true;
     }
 
-    private int[] getScreenDimensions(Object driver) {
+    private static boolean invokeAppiumGesture(Object driver, String gestureName, String direction,
+                                                 int top, int areaWidth, int areaHeight, double percent, long settleMs) {
         try {
-            Method manageMethod = driver.getClass().getMethod("manage");
-            Object windowOptions = manageMethod.invoke(driver);
-            Method windowMethod = windowOptions.getClass().getMethod("window");
-            Object window = windowMethod.invoke(windowOptions);
-            Method getSizeMethod = window.getClass().getMethod("getSize");
-            Object size = getSizeMethod.invoke(window);
-            Method getWidthMethod = size.getClass().getMethod("getWidth");
-            Method getHeightMethod = size.getClass().getMethod("getHeight");
-            int w = (int) getWidthMethod.invoke(size);
-            int h = (int) getHeightMethod.invoke(size);
-            if (w > 0 && h > 0) {
-                return new int[]{w, h};
+            Class<?> jsExecutor = Class.forName("org.openqa.selenium.JavascriptExecutor");
+            if (!jsExecutor.isInstance(driver)) {
+                return false;
             }
-        } catch (Throwable ignored) {}
-        // Conservative default (720x1280 HD) prevents out-of-bounds swipe on smaller displays
-        return new int[]{720, 1280};
+            Method executeScript = jsExecutor.getMethod("executeScript", String.class, Object[].class);
+            java.util.Map<String, Object> args = new java.util.HashMap<>();
+            args.put("left", 50);
+            args.put("top", top);
+            args.put("width", areaWidth);
+            args.put("height", areaHeight);
+            args.put("direction", direction);
+            args.put("percent", percent);
+            executeScript.invoke(driver, gestureName, new Object[]{args});
+        } catch (Exception ignored) {
+            return false;
+        }
+        sleepWithInterruptRestore(settleMs);
+        return true;
+    }
+
+    private static void sleepWithInterruptRestore(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 }

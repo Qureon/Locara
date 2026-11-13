@@ -4,11 +4,12 @@ plugins {
 }
 
 group = 'com.qureon.locara'
-version = '1.14.0'
+version = '1.15.0'
 
 tasks.withType(JavaCompile).configureEach {
     options.release = 17
     options.encoding = 'UTF-8'
+    options.compilerArgs << '-Xlint:unchecked'
 }
 
 repositories {

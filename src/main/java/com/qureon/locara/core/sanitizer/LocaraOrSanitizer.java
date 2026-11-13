@@ -26,6 +26,14 @@ public class LocaraOrSanitizer {
     private static final Pattern LOCATOR_PATTERN = Pattern.compile("<locator>([^<]*)</locator>");
     private static final Pattern STRATEGY_PATTERN = Pattern.compile("<locatorStrategy>([^<]*)</locatorStrategy>");
     private static final Pattern SELECTOR_METHOD_PATTERN = Pattern.compile("<selectorMethod>[^<]*</selectorMethod>");
+    private static final Pattern XPATH_PROP_HIERARCHY_PATTERN = Pattern.compile(
+            "<name>\\s*xpath\\s*</name>\\s*(?:<type>[^<]*</type>\\s*)?<value>\\s*//?hierarchy",
+            Pattern.DOTALL
+    );
+    private static final Pattern XPATH_PROP_VALUE_PATTERN = Pattern.compile(
+            "(<webElementProperties>.*?<name>\\s*xpath\\s*</name>.*?<value>)([^<]*)(</value>.*?</webElementProperties>)",
+            Pattern.DOTALL
+    );
 
     public static class SanitizeResult {
         private final File file;
@@ -95,7 +103,9 @@ public class LocaraOrSanitizer {
     public SanitizeResult processSingleFile(File rsFile, boolean writeChanges, boolean createBackup) throws IOException {
         String content = Files.readString(rsFile.toPath(), StandardCharsets.UTF_8);
 
-        boolean isBrittle = content.contains("//hierarchy") || content.contains("<name>xpath</name>\n      <type>Main</type>\n      <value>//hierarchy");
+        boolean isBrittle = content.contains("//hierarchy")
+                || content.contains("/hierarchy/")
+                || XPATH_PROP_HIERARCHY_PATTERN.matcher(content).find();
         Matcher locMatcher = LOCATOR_PATTERN.matcher(content);
         boolean hasXPathLocator = content.contains("<locatorStrategy>XPATH</locatorStrategy>")
                 || (locMatcher.find() && (locMatcher.group(1).trim().startsWith("//") || locMatcher.group(1).trim().startsWith("(//")));
@@ -162,6 +172,10 @@ public class LocaraOrSanitizer {
     private static String updateRsContent(String content, String newXPath) {
         String result = content;
         String escapedXPath = escapeXml(newXPath);
+
+        if (XPATH_PROP_VALUE_PATTERN.matcher(result).find()) {
+            result = XPATH_PROP_VALUE_PATTERN.matcher(result).replaceFirst("$1" + Matcher.quoteReplacement(escapedXPath) + "$3");
+        }
 
         if (LOCATOR_PATTERN.matcher(result).find()) {
             result = LOCATOR_PATTERN.matcher(result).replaceFirst("<locator>" + Matcher.quoteReplacement(escapedXPath) + "</locator>");

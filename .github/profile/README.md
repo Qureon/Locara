@@ -36,7 +36,7 @@ Adaptive Locator Intelligence    Docs · Tooling · Bridges
 **Locara** *(Locator + Recovery)* is Qureon's first open-source project. It bridges the gap between fast-moving UI iterations and fragile test automation suites by introducing **in-flight, zero-interruption healing** for Katalon Studio and Appium.
 
 * **Repository**: [`Qureon/Locara`](https://github.com/Qureon/Locara)
-* **Status**: Production Ready (`v1.3.0`)
+* **Status**: Production Ready (`v1.15.0`)
 * **Core Philosophy**: Zero Code Changes · Zero Flaky Interruption · Strict Safety Polarity
 
 ### Key Capabilities
@@ -53,7 +53,7 @@ We are incrementally rolling out our modular test automation ecosystem:
 
 | Repository | Purpose | Status |
 |---|---|---|
-| **[`Locara`](https://github.com/Qureon/Locara)** | Core autonomous self-healing engine & instant `.rs` synthesizer | Active (v1.3.0) |
+| **[`Locara`](https://github.com/Qureon/Locara)** | Core autonomous self-healing engine & instant `.rs` synthesizer | Active (`v1.15.0`) |
 | **`Locara-Docs`** | Comprehensive guides, API reference, and architecture deep-dives | Planned |
 | **`Locara-Examples`** | Production-grade sample projects (Katalon, Appium Java, Cucumber) | Planned |
 | **`.github`** | Organization profile, community standards, and workflow templates | Active |

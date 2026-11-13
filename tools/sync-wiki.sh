@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 REPO_URL="https://github.com/Qureon/Locara.wiki.git"
-WORK_DIR="/tmp/locara-wiki-sync"
+WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/locara-wiki-sync.XXXXXX")"
+trap 'rm -rf "$WORK_DIR"' EXIT
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WIKI_SRC="$(dirname "$SCRIPT_DIR")/wiki"
 
@@ -13,12 +15,10 @@ if ! gh auth status >/dev/null 2>&1; then
     exit 1
 fi
 
-TOKEN=$(gh auth token)
-AUTH_URL="https://MuchoRio:${TOKEN}@github.com/Qureon/Locara.wiki.git"
+gh auth setup-git >/dev/null 2>&1 || true
 
-rm -rf "$WORK_DIR"
 echo "📥 Cloning $REPO_URL..."
-if ! git clone "$AUTH_URL" "$WORK_DIR" 2>/dev/null; then
+if ! git clone "$REPO_URL" "$WORK_DIR/repo" 2>/dev/null; then
     echo "⚠️ Notice: The wiki repository is not yet initialized on GitHub."
     echo "👉 Please visit https://github.com/Qureon/Locara/wiki once and click 'Create the first page'."
     echo "   After saving the first page, re-run this script to sync all pages automatically!"
@@ -26,11 +26,20 @@ if ! git clone "$AUTH_URL" "$WORK_DIR" 2>/dev/null; then
 fi
 
 echo "📋 Copying wiki pages from $WIKI_SRC..."
-cp -r "$WIKI_SRC/"* "$WORK_DIR/"
+cp -r "$WIKI_SRC/"* "$WORK_DIR/repo/"
 
-cd "$WORK_DIR"
-git config user.name "MuchoRio"
-git config user.email "riogriyaputra@gmail.com"
+cd "$WORK_DIR/repo"
+if [ -n "${GIT_USER_NAME:-}" ]; then
+    git config user.name "$GIT_USER_NAME"
+elif ! git config user.name >/dev/null 2>&1; then
+    git config user.name "Qureon Automation"
+fi
+
+if [ -n "${GIT_USER_EMAIL:-}" ]; then
+    git config user.email "$GIT_USER_EMAIL"
+elif ! git config user.email >/dev/null 2>&1; then
+    git config user.email "opensource@qureon.dev"
+fi
 
 git add .
 if git diff --staged --quiet; then
@@ -41,5 +50,3 @@ else
     git push origin master 2>/dev/null || git push origin main 2>/dev/null || git push origin HEAD
     echo "🎉 Successfully synchronized Locara Wiki!"
 fi
-
-rm -rf "$WORK_DIR"

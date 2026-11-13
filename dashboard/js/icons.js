@@ -1,6 +1,6 @@
 /**
  * ==============================================================================
- * ZERO-HEALING DASHBOARD — SVG ICON DICTIONARY
+ * LOCARA MISSION CONTROL — SVG ICON DICTIONARY
  * Crisp vector icons replacing emoji clutter with professional SVGs.
  * ==============================================================================
  */

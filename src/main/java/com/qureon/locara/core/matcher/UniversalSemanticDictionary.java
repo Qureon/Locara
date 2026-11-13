@@ -13,6 +13,8 @@ public final class UniversalSemanticDictionary {
 
     private static final Map<String, Set<Integer>> WORD_TO_CLUSTERS = new HashMap<>();
     private static final List<Set<String>> CLUSTERS = new ArrayList<>();
+    private static int maxPhraseTokens = 2;
+    private static final java.util.regex.Pattern ALPHA_NUM_TOKEN_PATTERN = java.util.regex.Pattern.compile("[a-z0-9]+");
 
     static {
         // Universal Concept 0: Next / Forward / Progression
@@ -102,6 +104,14 @@ public final class UniversalSemanticDictionary {
             if (!clean.isEmpty()) {
                 cluster.add(clean);
                 WORD_TO_CLUSTERS.computeIfAbsent(clean, k -> new HashSet<>()).add(clusterId);
+                String[] rawWords = w.trim().toLowerCase(Locale.ROOT).split("[^a-z0-9]+");
+                int nonEmptyCount = 0;
+                for (String rw : rawWords) {
+                    if (!rw.isEmpty()) nonEmptyCount++;
+                }
+                if (nonEmptyCount > maxPhraseTokens) {
+                    maxPhraseTokens = nonEmptyCount;
+                }
             }
         }
         CLUSTERS.add(Collections.unmodifiableSet(cluster));
@@ -131,24 +141,23 @@ public final class UniversalSemanticDictionary {
 
     /**
      * Calculates the semantic affinity score between two phrases (0.0 to 1.0).
-     * Rewards exact matches and cross-lingual synonym matches.
+     * Rewards exact matches and cross-lingual synonym matches across both single words
+     * and multi-word concept phrases (e.g. "Pilih Pasar Uang" vs "Money Market Tab").
      */
     public static double calculateSemanticAffinity(String phraseA, String phraseB) {
         if (phraseA == null || phraseB == null) return 0.0;
         if (isSynonym(phraseA, phraseB)) {
             return 1.0;
         }
-        Set<String> rawTokensA = StringSimilarity.tokenize(phraseA);
-        Set<String> rawTokensB = StringSimilarity.tokenize(phraseB);
 
-        Set<String> tokensA = filterWidgetTokens(rawTokensA);
-        Set<String> tokensB = filterWidgetTokens(rawTokensB);
+        List<String> unitsA = extractConceptUnits(phraseA);
+        List<String> unitsB = extractConceptUnits(phraseB);
 
-        if (tokensA.isEmpty() || tokensB.isEmpty()) return 0.0;
+        if (unitsA.isEmpty() || unitsB.isEmpty()) return 0.0;
 
         int matchCount = 0;
-        for (String a : tokensA) {
-            for (String b : tokensB) {
+        for (String a : unitsA) {
+            for (String b : unitsB) {
                 if (isSynonym(a, b)) {
                     matchCount++;
                     break;
@@ -156,18 +165,55 @@ public final class UniversalSemanticDictionary {
             }
         }
 
-        int total = Math.max(tokensA.size(), tokensB.size());
+        int total = Math.max(unitsA.size(), unitsB.size());
         return (double) matchCount / total;
     }
 
-    private static Set<String> filterWidgetTokens(Set<String> tokens) {
-        Set<String> filtered = new HashSet<>();
-        for (String t : tokens) {
+    private static List<String> extractConceptUnits(String phrase) {
+        List<String> raw = new ArrayList<>();
+        java.util.regex.Matcher m = ALPHA_NUM_TOKEN_PATTERN.matcher(phrase.toLowerCase(Locale.ROOT));
+        while (m.find()) {
+            raw.add(m.group());
+        }
+        if (raw.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<String> nonWidget = new ArrayList<>();
+        for (String t : raw) {
             if (!UI_WIDGET_TOKENS.contains(t)) {
-                filtered.add(t);
+                nonWidget.add(t);
             }
         }
-        return filtered.isEmpty() ? tokens : filtered;
+        List<String> base = nonWidget.isEmpty() ? raw : nonWidget;
+
+        List<String> merged = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        int i = 0;
+        int limit = Math.max(2, maxPhraseTokens);
+        while (i < base.size()) {
+            String matchedPhrase = null;
+            int matchedLen = 1;
+            int maxWindow = Math.min(limit, base.size() - i);
+            for (int len = maxWindow; len >= 2; len--) {
+                StringBuilder sb = new StringBuilder();
+                for (int k = 0; k < len; k++) {
+                    sb.append(base.get(i + k));
+                }
+                String candidate = sb.toString();
+                if (WORD_TO_CLUSTERS.containsKey(candidate)) {
+                    matchedPhrase = candidate;
+                    matchedLen = len;
+                    break;
+                }
+            }
+            String unit = matchedPhrase != null ? matchedPhrase : base.get(i);
+            if (seen.add(unit)) {
+                merged.add(unit);
+            }
+            i += matchedLen;
+        }
+        return merged;
     }
 
     private static final Set<String> DOMAIN_ACRONYMS = new HashSet<>(Arrays.asList(

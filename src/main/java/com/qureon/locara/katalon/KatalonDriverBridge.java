@@ -82,31 +82,16 @@ public class KatalonDriverBridge {
             // 2. Set Mobile locator & strategy if supported (MobileTestObject)
             try {
                 Class<?> lsEnum = Class.forName("com.kms.katalon.core.enums.mobile.LocatorStrategy");
-                Object strategyVal = Enum.valueOf((Class<Enum>) lsEnum, strategyName);
+                Object strategyVal = resolveEnumConstant(lsEnum, strategyName);
 
-                try {
-                    Method setLocatorStrategy = toClass.getMethod("setLocatorStrategy", lsEnum);
-                    setLocatorStrategy.invoke(testObject, strategyVal);
-                } catch (Exception ignored) {}
-
-                try {
-                    Method setLocator = toClass.getMethod("setLocator", String.class);
-                    setLocator.invoke(testObject, locatorValue);
-                } catch (Exception ignored) {}
-
-                try {
-                    Method setMobileLocator = toClass.getMethod("setMobileLocator", String.class);
-                    setMobileLocator.invoke(testObject, locatorValue);
-                } catch (Exception ignored) {}
-
-                try {
-                    Method setLocatorValue = toClass.getMethod("setLocatorValue", lsEnum, String.class);
-                    setLocatorValue.invoke(testObject, strategyVal, locatorValue);
-                } catch (Exception ignored) {}
+                invokeOptional(toClass, testObject, "setLocatorStrategy", new Class<?>[]{lsEnum}, strategyVal);
+                invokeOptional(toClass, testObject, "setLocator", new Class<?>[]{String.class}, locatorValue);
+                invokeOptional(toClass, testObject, "setMobileLocator", new Class<?>[]{String.class}, locatorValue);
+                invokeOptional(toClass, testObject, "setLocatorValue", new Class<?>[]{lsEnum, String.class}, strategyVal, locatorValue);
             } catch (Exception ignored) {
                 try {
                     Class<?> mlsEnum = Class.forName("com.kms.katalon.core.testobject.MobileTestObject$MobileLocatorStrategy");
-                    Object mlsVal = Enum.valueOf((Class<Enum>) mlsEnum, strategyName);
+                    Object mlsVal = resolveEnumConstant(mlsEnum, strategyName);
                     Method setMobileLocatorStrategy = toClass.getMethod("setMobileLocatorStrategy", mlsEnum);
                     setMobileLocatorStrategy.invoke(testObject, mlsVal);
 
@@ -118,7 +103,7 @@ public class KatalonDriverBridge {
             // 3. Fallback: Set selector method to XPATH
             try {
                 Class<?> smEnum = Class.forName("com.kms.katalon.core.testobject.SelectorMethod");
-                Object xpathMethodVal = Enum.valueOf((Class<Enum>) smEnum, "XPATH");
+                Object xpathMethodVal = resolveEnumConstant(smEnum, "XPATH");
                 Method setMethod = toClass.getMethod("setSelectorMethod", smEnum);
                 setMethod.invoke(testObject, xpathMethodVal);
 
@@ -129,35 +114,24 @@ public class KatalonDriverBridge {
             // 4. Populate / update rich properties
             try {
                 Class<?> ctEnum = Class.forName("com.kms.katalon.core.testobject.ConditionType");
-                Object equalsVal = Enum.valueOf((Class<Enum>) ctEnum, "EQUALS");
+                Object equalsVal = resolveEnumConstant(ctEnum, "EQUALS");
                 Class<?> propClass = Class.forName("com.kms.katalon.core.testobject.TestObjectProperty");
                 Method addProp = toClass.getMethod("addProperty", propClass);
+                java.lang.reflect.Constructor<?> propCtor = propClass.getConstructor(String.class, ctEnum, String.class, boolean.class);
 
-                // Add xpath property
-                Object xpathProp = propClass.getConstructor(String.class, ctEnum, String.class, boolean.class)
-                        .newInstance("xpath", equalsVal, healedXPath, true);
-                addProp.invoke(testObject, xpathProp);
-
+                addTestObjectProperty(testObject, addProp, propCtor, equalsVal, "xpath", healedXPath);
                 if (node != null) {
                     if (node.hasContentDesc()) {
-                        Object cdProp = propClass.getConstructor(String.class, ctEnum, String.class, boolean.class)
-                                .newInstance("content-desc", equalsVal, node.getContentDesc(), true);
-                        addProp.invoke(testObject, cdProp);
+                        addTestObjectProperty(testObject, addProp, propCtor, equalsVal, "content-desc", node.getContentDesc());
                     }
                     if (node.hasText()) {
-                        Object textProp = propClass.getConstructor(String.class, ctEnum, String.class, boolean.class)
-                                .newInstance("text", equalsVal, node.getText(), true);
-                        addProp.invoke(testObject, textProp);
+                        addTestObjectProperty(testObject, addProp, propCtor, equalsVal, "text", node.getText());
                     }
                     if (node.hasResourceId()) {
-                        Object idProp = propClass.getConstructor(String.class, ctEnum, String.class, boolean.class)
-                                .newInstance("resource-id", equalsVal, node.getResourceId(), true);
-                        addProp.invoke(testObject, idProp);
+                        addTestObjectProperty(testObject, addProp, propCtor, equalsVal, "resource-id", node.getResourceId());
                     }
                     if (!node.getClassName().isEmpty()) {
-                        Object clsProp = propClass.getConstructor(String.class, ctEnum, String.class, boolean.class)
-                                .newInstance("class", equalsVal, node.getClassName(), true);
-                        addProp.invoke(testObject, clsProp);
+                        addTestObjectProperty(testObject, addProp, propCtor, equalsVal, "class", node.getClassName());
                     }
                 }
             } catch (Exception ignored) {}
@@ -166,6 +140,57 @@ public class KatalonDriverBridge {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    static int[] getScreenDimensions(Object driver, int defaultWidth, int defaultHeight) {
+        if (driver != null) {
+            try {
+                Method manageMethod = driver.getClass().getMethod("manage");
+                Object windowOptions = manageMethod.invoke(driver);
+                Method windowMethod = windowOptions.getClass().getMethod("window");
+                Object window = windowMethod.invoke(windowOptions);
+                Method getSizeMethod = window.getClass().getMethod("getSize");
+                Object size = getSizeMethod.invoke(window);
+                Method getWidthMethod = size.getClass().getMethod("getWidth");
+                Method getHeightMethod = size.getClass().getMethod("getHeight");
+                int w = (int) getWidthMethod.invoke(size);
+                int h = (int) getHeightMethod.invoke(size);
+                if (w > 0 && h > 0) {
+                    return new int[]{w, h};
+                }
+            } catch (Throwable ignored) {}
+        }
+        return new int[]{defaultWidth, defaultHeight};
+    }
+
+    private static Object resolveEnumConstant(Class<?> enumClass, String constantName) {
+        if (enumClass == null || !enumClass.isEnum() || constantName == null) {
+            return null;
+        }
+        Object[] constants = enumClass.getEnumConstants();
+        if (constants != null) {
+            for (Object constant : constants) {
+                if (constant instanceof Enum<?> enumConst && enumConst.name().equals(constantName)) {
+                    return constant;
+                }
+            }
+        }
+        throw new IllegalArgumentException("No enum constant " + enumClass.getName() + "." + constantName);
+    }
+
+    private static void invokeOptional(Class<?> targetClass, Object instance, String methodName,
+                                       Class<?>[] paramTypes, Object... args) {
+        try {
+            Method m = targetClass.getMethod(methodName, paramTypes);
+            m.invoke(instance, args);
+        } catch (Exception ignored) {}
+    }
+
+    private static void addTestObjectProperty(Object testObject, Method addProp,
+                                              java.lang.reflect.Constructor<?> propCtor,
+                                              Object equalsVal, String name, String value) throws Exception {
+        Object prop = propCtor.newInstance(name, equalsVal, value, true);
+        addProp.invoke(testObject, prop);
     }
 
     public static boolean patchTestObject(Object testObject, String healedXPath) {

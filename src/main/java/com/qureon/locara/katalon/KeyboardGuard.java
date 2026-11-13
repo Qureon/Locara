@@ -32,23 +32,32 @@ public class KeyboardGuard {
     public boolean dismissKeyboard(Object driver) {
         if (driver == null) return false;
 
+        boolean dismissed = false;
         // Strategy 1: Katalon MobileBuiltInKeywords.hideKeyboard()
         try {
             Class<?> mobileKeywords = Class.forName("com.kms.katalon.core.mobile.keyword.MobileBuiltInKeywords");
             Method hideMethod = mobileKeywords.getMethod("hideKeyboard");
             hideMethod.invoke(null);
-            Thread.sleep(300);
-            return true;
+            dismissed = true;
         } catch (Exception ignored) {}
 
         // Strategy 2: Appium Driver driver.hideKeyboard()
-        try {
-            Method hideMethod = driver.getClass().getMethod("hideKeyboard");
-            hideMethod.invoke(driver);
-            Thread.sleep(300);
-            return true;
-        } catch (Exception ignored) {}
+        if (!dismissed) {
+            try {
+                Method hideMethod = driver.getClass().getMethod("hideKeyboard");
+                hideMethod.invoke(driver);
+                dismissed = true;
+            } catch (Exception ignored) {}
+        }
 
+        if (dismissed) {
+            try {
+                Thread.sleep(300);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            return true;
+        }
         return false;
     }
 
@@ -71,7 +80,7 @@ public class KeyboardGuard {
      * Guards an element before interaction: dynamically calculates screen height and dismisses keyboard if obscured.
      */
     public void guardElement(Object driver, UIElementNode node) {
-        int height = getScreenHeight(driver);
+        int height = KatalonDriverBridge.getScreenDimensions(driver, 1080, 2400)[1];
         guardElement(driver, node, height);
     }
 
@@ -87,22 +96,5 @@ public class KeyboardGuard {
                 dismissKeyboard(driver);
             }
         }
-    }
-
-    private int getScreenHeight(Object driver) {
-        if (driver != null) {
-            try {
-                Method manageMethod = driver.getClass().getMethod("manage");
-                Object windowOptions = manageMethod.invoke(driver);
-                Method windowMethod = windowOptions.getClass().getMethod("window");
-                Object window = windowMethod.invoke(windowOptions);
-                Method getSizeMethod = window.getClass().getMethod("getSize");
-                Object size = getSizeMethod.invoke(window);
-                Method getHeightMethod = size.getClass().getMethod("getHeight");
-                int h = (int) getHeightMethod.invoke(size);
-                if (h > 0) return h;
-            } catch (Throwable ignored) {}
-        }
-        return 2400;
     }
 }

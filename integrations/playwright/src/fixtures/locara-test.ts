@@ -44,7 +44,7 @@ export class LocaraPageWrapper {
     }
 
     console.info(`[Locara-Playwright] Healed '${selector}' -> Click dispatched via healed locator.`);
-    await healedLocator.click({ timeout: 5000 });
+    await healedLocator.click({ timeout: Math.max(5000, probeTimeout) });
     return true;
   }
 
@@ -73,7 +73,7 @@ export class LocaraPageWrapper {
     }
 
     console.info(`[Locara-Playwright] Healed '${selector}' -> Fill dispatched via healed locator.`);
-    await healedLocator.fill(text, { timeout: 5000 });
+    await healedLocator.fill(text, { timeout: Math.max(5000, probeTimeout) });
     return true;
   }
 
@@ -87,7 +87,7 @@ export class LocaraPageWrapper {
       if (count > 0) {
         return this.page.locator(selector);
       }
-    } catch (ignored) {}
+    } catch {}
 
     const healed = await this.healLocator(selector, hint, 'CLICK');
     return healed || this.page.locator(selector);
@@ -109,7 +109,7 @@ export class LocaraPageWrapper {
       for (let i = 0; i < nodes.length; i++) {
         const el = nodes[i] as HTMLElement;
         const style = window.getComputedStyle(el);
-        if (style.display === 'none' || style.visibility === 'hidden') continue;
+        if (style.display === 'none' || style.visibility === 'hidden' || el.hasAttribute('hidden')) continue;
 
         candidates.push({
           tag: el.tagName.toLowerCase(),
@@ -144,7 +144,7 @@ export class LocaraPageWrapper {
       return this.page.getByText(match.text);
     }
     if (match.id) {
-      return this.page.locator(`#${match.id}`);
+      return this.page.locator(`[id=${JSON.stringify(match.id)}]`);
     }
 
     return null;

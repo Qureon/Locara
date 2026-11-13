@@ -23,6 +23,9 @@ class LocaraTestListener {
         if (!core.LocaraHook.isLocaraPresent() || !core.LocaraHook.isHealingEnabled()) {
             return
         }
+        if (core.LocaraHook.isNegativeTestCaseRunning()) {
+            return
+        }
         if (testCaseContext.getTestCaseStatus() != 'FAILED') {
             return
         }
@@ -85,20 +88,17 @@ class LocaraTestListener {
 
             println("[Locara by Qureon] Diagnosing failed element: " + objectName + " (" + failedObjectPath + ")")
 
-            Class<?> engineClass = Class.forName("com.qureon.locara.core.LocaraEngine")
-            if (engineInstance == null) {
-                engineInstance = engineClass.getDeclaredConstructor().newInstance()
-                engineInstance.getConfig().setAutoGenerateRs(true)
-            }
+            Object engine = getSharedEngine()
             Class<?> contextClass = Class.forName("com.qureon.locara.core.model.HealContext")
             def builderMethod = contextClass.getMethod("builder")
             def builder = builderMethod.invoke(null)
+            String tcId = testCaseContext.getTestCaseId() ?: "UnknownTestCase"
             builder.targetHint(objectName)
-            builder.screenName(testCaseContext.getTestCaseId().replace('/', '_'))
+            builder.screenName(tcId.replace('/', '_'))
             builder.targetRsPath(failedObjectPath.isEmpty() ? "Object Repository/Healed/" + objectName + ".rs" : failedObjectPath)
             def context = builder.build()
 
-            def result = engineInstance.heal(pageSource, context)
+            def result = engine.heal(pageSource, context)
             if (result.isSuccess() && result.getCandidate() != null) {
                 println("[SUCCESS] [Locara by Qureon] Automatically healed element for next run:")
                 println("   Optimal XPath : " + result.getCandidate().getSuggestedXPath())
@@ -113,5 +113,18 @@ class LocaraTestListener {
         } catch (Throwable t) {
             println("[Locara by Qureon] Listener diagnostic encounter: " + t.getMessage())
         }
+    }
+
+    private static synchronized Object getSharedEngine() {
+        if (engineInstance == null) {
+            try {
+                Class<?> locaraClass = Class.forName("com.qureon.locara.katalon.Locara")
+                engineInstance = locaraClass.getMethod("getEngine").invoke(null)
+            } catch (Throwable ignored) {
+                Class<?> engineClass = Class.forName("com.qureon.locara.core.LocaraEngine")
+                engineInstance = engineClass.getDeclaredConstructor().newInstance()
+            }
+        }
+        return engineInstance
     }
 }

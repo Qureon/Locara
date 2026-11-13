@@ -17,11 +17,11 @@ public class ContextualEntityResolverTest {
                 <hierarchy rotation="0">
                   <android.widget.FrameLayout bounds="[0,0][1080,2400]">
                     <android.widget.LinearLayout bounds="[0,0][1080,2400]">
-                      <android.widget.TextView text="Halo, Rio Griya" bounds="[48,120][600,180]" />
+                      <android.widget.TextView text="Halo, Budi Santoso" bounds="[48,120][600,180]" />
                       <android.widget.HorizontalScrollView bounds="[48,320][1032,800]">
                         <android.view.ViewGroup bounds="[48,320][1032,800]">
                           <android.widget.TextView text="Tabungan Mega Dana" bounds="[80,360][500,420]" />
-                          <android.widget.TextView text="010740021025853" bounds="[600,360][1000,420]" />
+                          <android.widget.TextView text="900040021025853" bounds="[600,360][1000,420]" />
                           <android.widget.TextView text="••••••••" bounds="[80,480][300,540]" />
                           <android.view.ViewGroup bounds="[320,480][380,540]" clickable="true" content-desc="Lihat Saldo" />
                         </android.view.ViewGroup>
@@ -35,8 +35,8 @@ public class ContextualEntityResolverTest {
 
         assertNotNull(account, "Resolved account should not be null");
         assertTrue(account.isValid(), "Account should be marked valid (10-16 digits)");
-        assertEquals("010740021025853", account.getAccountNumber());
-        assertEquals("Rio Griya", account.getHolderName());
+        assertEquals("900040021025853", account.getAccountNumber());
+        assertEquals("Budi Santoso", account.getHolderName());
         assertTrue(account.getAccountType().contains("Tabungan Mega Dana"));
         assertTrue(account.isMaskedBalancePresent(), "Masked balance should be detected");
     }
@@ -46,7 +46,7 @@ public class ContextualEntityResolverTest {
     public void testResolveSpacedAccountNumber() {
         String xml = """
                 <hierarchy>
-                  <android.widget.TextView text="0107 4002 1025 853" bounds="[100,200][500,260]" />
+                  <android.widget.TextView text="9000 4002 1025 853" bounds="[100,200][500,260]" />
                   <android.widget.TextView text="Mega Maxi" bounds="[100,120][400,180]" />
                 </hierarchy>
                 """;
@@ -54,7 +54,7 @@ public class ContextualEntityResolverTest {
         ResolvedAccount account = resolver.resolveActiveAccount(xml);
 
         assertNotNull(account);
-        assertEquals("010740021025853", account.getAccountNumber());
+        assertEquals("900040021025853", account.getAccountNumber());
         assertEquals("Mega Maxi", account.getAccountType());
     }
 
@@ -71,26 +71,26 @@ public class ContextualEntityResolverTest {
     public void testResolveSpecificTargetAccount() {
         String multiCardXml = """
                 <hierarchy>
-                  <android.widget.TextView text="Halo, Rio Griya" />
+                  <android.widget.TextView text="Halo, Budi Santoso" />
                   <android.view.ViewGroup resource-id="my_account_savings_0">
                     <android.widget.TextView resource-id="my_account_savings_0_title" text="Mega Dana" />
-                    <android.widget.TextView resource-id="my_account_savings_0_number" text="010740021025853" />
+                    <android.widget.TextView resource-id="my_account_savings_0_number" text="900040021025853" />
                   </android.view.ViewGroup>
                   <android.view.ViewGroup resource-id="my_account_savings_1">
                     <android.widget.TextView resource-id="my_account_savings_1_title" text="Mega Berbagi" />
-                    <android.widget.TextView resource-id="my_account_savings_1_number" text="010740099999999" />
+                    <android.widget.TextView resource-id="my_account_savings_1_number" text="900040099999999" />
                   </android.view.ViewGroup>
                 </hierarchy>
                 """;
 
-        ResolvedAccount acc0 = resolver.resolveAccountByNumber(multiCardXml, "010740021025853");
+        ResolvedAccount acc0 = resolver.resolveAccountByNumber(multiCardXml, "900040021025853");
         assertNotNull(acc0);
-        assertEquals("010740021025853", acc0.getAccountNumber());
+        assertEquals("900040021025853", acc0.getAccountNumber());
         assertTrue(acc0.getAccountType().contains("Mega Dana"));
 
-        ResolvedAccount acc1 = resolver.resolveAccountByNumber(multiCardXml, "010740099999999");
+        ResolvedAccount acc1 = resolver.resolveAccountByNumber(multiCardXml, "900040099999999");
         assertNotNull(acc1);
-        assertEquals("010740099999999", acc1.getAccountNumber());
+        assertEquals("900040099999999", acc1.getAccountNumber());
         assertTrue(acc1.getAccountType().contains("Mega Berbagi"));
     }
 
@@ -102,13 +102,13 @@ public class ContextualEntityResolverTest {
                   <android.view.ViewGroup resource-id="my_account_savings_0">
                     <android.view.ViewGroup resource-id="my_account_savings_0_art" />
                     <android.widget.TextView resource-id="my_account_savings_0_title" text="Mega Dana" />
-                    <android.widget.TextView resource-id="my_account_savings_0_number" text="010740021025853" />
+                    <android.widget.TextView resource-id="my_account_savings_0_number" text="900040021025853" />
                     <android.view.ViewGroup resource-id="my_account_savings_0_copy_button" />
                   </android.view.ViewGroup>
                 </hierarchy>
                 """;
 
-        String kmpXpath = resolver.resolveSafeCardTapXPath(kmpXml, "010740021025853");
+        String kmpXpath = resolver.resolveSafeCardTapXPath(kmpXml, "900040021025853");
         assertNotNull(kmpXpath);
         assertTrue(kmpXpath.contains("my_account_savings_0_art"));
         assertFalse(kmpXpath.contains("copy_button"));
@@ -117,14 +117,14 @@ public class ContextualEntityResolverTest {
                 <hierarchy>
                   <android.view.ViewGroup clickable="true" enabled="true">
                     <android.widget.ImageView />
-                    <android.widget.TextView text="0107 4002 1025 853" />
+                    <android.widget.TextView text="9000 4002 1025 853" />
                   </android.view.ViewGroup>
                 </hierarchy>
                 """;
 
-        String rnXpath = resolver.resolveSafeCardTapXPath(rnXml, "010740021025853");
+        String rnXpath = resolver.resolveSafeCardTapXPath(rnXml, "900040021025853");
         assertNotNull(rnXpath);
-        assertTrue(rnXpath.contains("010740021025853"));
+        assertTrue(rnXpath.contains("900040021025853"));
         assertTrue(rnXpath.contains("ImageView"));
     }
 }

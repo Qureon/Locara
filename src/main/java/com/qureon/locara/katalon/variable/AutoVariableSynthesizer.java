@@ -5,9 +5,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -164,11 +162,19 @@ public class AutoVariableSynthesizer {
      * Updates an existing variable's defaultValue or synthesizes it if missing.
      */
     public boolean syncVariableDefault(File tcFile, String varName, String newDefaultValue) throws IOException {
+        return syncVariableDefault(tcFile, varName, newDefaultValue, "Auto-synced by Locara");
+    }
+
+    /**
+     * Updates an existing variable's defaultValue or synthesizes it with a custom description if missing.
+     */
+    public boolean syncVariableDefault(File tcFile, String varName, String newDefaultValue, String description) throws IOException {
         if (tcFile == null || !tcFile.exists() || varName == null) {
             return false;
         }
         String content = Files.readString(tcFile.toPath(), StandardCharsets.UTF_8);
-        String updated = syncVariableDefaultContent(content, varName, newDefaultValue, "Auto-synced by Locara");
+        String resolvedDesc = (description != null && !description.isEmpty()) ? description : "Auto-synced by Locara";
+        String updated = syncVariableDefaultContent(content, varName, newDefaultValue, resolvedDesc);
         if (!content.equals(updated)) {
             Files.writeString(tcFile.toPath(), updated, StandardCharsets.UTF_8);
             return true;
@@ -198,11 +204,10 @@ public class AutoVariableSynthesizer {
             Matcher m = specificBlock.matcher(xmlContent);
             if (m.find()) {
                 String oldBlock = m.group(1);
-                String newBlock = oldBlock.replaceAll(
-                        "<defaultValue>[\\s\\S]*?</defaultValue>",
+                String newBlock = DEFAULT_VALUE_TAG_PATTERN.matcher(oldBlock).replaceFirst(
                         "<defaultValue>" + Matcher.quoteReplacement(escapeXml(newDefaultValue)) + "</defaultValue>"
                 );
-                return xmlContent.replace(oldBlock, newBlock);
+                return xmlContent.substring(0, m.start(1)) + newBlock + xmlContent.substring(m.end(1));
             }
             return xmlContent;
         } else {
@@ -222,9 +227,11 @@ public class AutoVariableSynthesizer {
         return "";
     }
 
-    private static final Set<String> BLACKLISTED_GENERIC_VAR_NAMES = new HashSet<>(Arrays.asList(
+    private static final Pattern DEFAULT_VALUE_TAG_PATTERN = Pattern.compile("<defaultValue>[\\s\\S]*?</defaultValue>");
+    private static final Pattern CAMEL_CASE_VAR_PATTERN = Pattern.compile("^[a-z][a-zA-Z0-9_]*$");
+    private static final Set<String> BLACKLISTED_GENERIC_VAR_NAMES = Set.of(
             "data", "temp", "val", "value", "item", "object", "obj", "result", "x", "abc", "test", "variable", "var"
-    ));
+    );
 
     /**
      * Evaluates variable naming against Section 4.1 Code Naming Intelligence standards.
@@ -238,11 +245,11 @@ public class AutoVariableSynthesizer {
         if (clean.length() < 2) {
             return false;
         }
-        if (BLACKLISTED_GENERIC_VAR_NAMES.contains(clean.toLowerCase())) {
+        if (BLACKLISTED_GENERIC_VAR_NAMES.contains(clean.toLowerCase(java.util.Locale.ROOT))) {
             return false;
         }
         // Must follow camelCase: starts with lowercase letter, alphanumeric
-        return clean.matches("^[a-z][a-zA-Z0-9_]*$");
+        return CAMEL_CASE_VAR_PATTERN.matcher(clean).matches();
     }
 
     private String escapeXml(String text) {

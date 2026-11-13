@@ -101,27 +101,14 @@ public class CodeNamingAuditor {
         }
 
         // 3. Check for cryptic abbreviations in object name (e.g. "TxtNoRek")
-        String[] rsTokens = splitIdentifierTokens(baseName);
-        StringBuilder expandedRs = new StringBuilder();
         List<String> crypticRsWords = new ArrayList<>();
-        for (int idx = 0; idx < rsTokens.length; idx++) {
-            String word = rsTokens[idx];
-            if (!isFalsePositiveNo(word, rsTokens, idx)) {
-                String expanded = UniversalSemanticDictionary.expandCrypticAbbreviation(word);
-                if (expanded != null) {
-                    crypticRsWords.add(word + " -> " + expanded);
-                    expandedRs.append(capitalize(expanded));
-                    continue;
-                }
-            }
-            expandedRs.append(capitalize(word));
-        }
+        String expandedRs = expandCrypticTokens(splitIdentifierTokens(baseName), false, crypticRsWords);
         if (!crypticRsWords.isEmpty()) {
             findings.add(new CodeNamingFinding(
                     relPath, "Filename", baseName, "TEST_OBJECT",
                     "CRYPTIC_ABBREVIATION", "EXPANDED_DOMAIN_NAME",
                     "Cryptic abbreviation(s) detected: " + String.join(", ", crypticRsWords),
-                    expandedRs.toString(),
+                    expandedRs,
                     "Standardize on unambiguous domain vocabulary",
                     "LOW"
             ));
@@ -134,7 +121,7 @@ public class CodeNamingAuditor {
             String vName = v.getName();
 
             // 1. Generic names check
-            if (GENERIC_NAMES.contains(vName.toLowerCase())) {
+            if (GENERIC_NAMES.contains(vName.toLowerCase(java.util.Locale.ROOT))) {
                 findings.add(new CodeNamingFinding(
                         relPath, "Variable: " + vName, vName, "VARIABLE",
                         "GENERIC_IDENTIFIER", "DESCRIPTIVE_DOMAIN_NAME",
@@ -146,32 +133,36 @@ public class CodeNamingAuditor {
             }
 
             // 2. Cryptic abbreviation check (e.g. "noRek", "trxAmt")
-            String[] varTokens = splitIdentifierTokens(vName);
-            StringBuilder expandedVar = new StringBuilder();
             List<String> crypticVarWords = new ArrayList<>();
-            for (int idx = 0; idx < varTokens.length; idx++) {
-                String word = varTokens[idx];
-                if (!isFalsePositiveNo(word, varTokens, idx)) {
-                    String expanded = UniversalSemanticDictionary.expandCrypticAbbreviation(word);
-                    if (expanded != null) {
-                        crypticVarWords.add(word + " -> " + expanded);
-                        expandedVar.append(idx == 0 ? expanded : capitalize(expanded));
-                        continue;
-                    }
-                }
-                expandedVar.append(idx == 0 ? word : capitalize(word));
-            }
+            String expandedVar = expandCrypticTokens(splitIdentifierTokens(vName), true, crypticVarWords);
             if (!crypticVarWords.isEmpty()) {
                 findings.add(new CodeNamingFinding(
                         relPath, "Variable: " + vName, vName, "VARIABLE",
                         "CRYPTIC_ABBREVIATION", "EXPANDED_DOMAIN_NAME",
                         "Cryptic abbreviation(s) detected: " + String.join(", ", crypticVarWords),
-                        expandedVar.toString(),
+                        expandedVar,
                         "Use canonical unambiguous terminology",
                         "MEDIUM"
                 ));
             }
         }
+    }
+
+    private String expandCrypticTokens(String[] tokens, boolean preserveFirstLowercase, List<String> crypticWordsOut) {
+        StringBuilder expandedBuilder = new StringBuilder();
+        for (int idx = 0; idx < tokens.length; idx++) {
+            String word = tokens[idx];
+            String tokenOut = word;
+            if (!isFalsePositiveNo(word, tokens, idx)) {
+                String expanded = UniversalSemanticDictionary.expandCrypticAbbreviation(word);
+                if (expanded != null) {
+                    crypticWordsOut.add(word + " -> " + expanded);
+                    tokenOut = expanded;
+                }
+            }
+            expandedBuilder.append((preserveFirstLowercase && idx == 0) ? tokenOut : capitalize(tokenOut));
+        }
+        return expandedBuilder.toString();
     }
 
     private void auditGroovyFile(File groovyFile, String relPath, List<CodeNamingFinding> findings) throws IOException {
@@ -203,55 +194,61 @@ public class CodeNamingAuditor {
         }
     }
 
+    private static final Pattern IDENTIFIER_TOKEN_SPLIT_PATTERN = Pattern.compile(
+            "(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|[^a-zA-Z0-9]+"
+    );
+    private static final Pattern NON_ALNUM_SPACE_PATTERN = Pattern.compile("[^a-zA-Z0-9]+");
+    private static final Pattern WHITESPACE_SPLIT_PATTERN = Pattern.compile("\\s+");
+    private static final Set<String> INDONESIAN_NOMOR_NOUNS = Set.of(
+            "rek", "rekening", "hp", "telp", "telepon", "kartu", "card", "ref", "referensi", "va", "cif", "pin", "mpin", "otp", "urut", "id"
+    );
+    private static final java.util.Map<String, String> RS_PREFIX_ALIAS_MAP = java.util.Map.ofEntries(
+            java.util.Map.entry("button", "Btn"),
+            java.util.Map.entry("btn", "Btn"),
+            java.util.Map.entry("textview", "Txt"),
+            java.util.Map.entry("txt", "Txt"),
+            java.util.Map.entry("text", "Txt"),
+            java.util.Map.entry("edittext", "Inp"),
+            java.util.Map.entry("textinput", "Inp"),
+            java.util.Map.entry("inp", "Inp"),
+            java.util.Map.entry("viewgroup", "Pnl"),
+            java.util.Map.entry("layout", "Pnl"),
+            java.util.Map.entry("linearlayout", "Pnl"),
+            java.util.Map.entry("relativelayout", "Pnl"),
+            java.util.Map.entry("framelayout", "Pnl"),
+            java.util.Map.entry("pnl", "Pnl"),
+            java.util.Map.entry("imageview", "Img"),
+            java.util.Map.entry("imagebutton", "Img"),
+            java.util.Map.entry("img", "Img"),
+            java.util.Map.entry("checkbox", "Chk"),
+            java.util.Map.entry("chk", "Chk"),
+            java.util.Map.entry("radiobutton", "Rdo"),
+            java.util.Map.entry("rdo", "Rdo")
+    );
+
     private String[] splitIdentifierTokens(String identifier) {
         if (identifier == null || identifier.isEmpty()) return new String[0];
-        return identifier.split("(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|[^a-zA-Z0-9]+");
+        return IDENTIFIER_TOKEN_SPLIT_PATTERN.split(identifier);
     }
 
     private boolean isFalsePositiveNo(String word, String[] tokens, int idx) {
         if (!word.equalsIgnoreCase("no")) return false;
         if (idx + 1 < tokens.length) {
-            String next = tokens[idx + 1].toLowerCase();
+            String next = tokens[idx + 1].toLowerCase(java.util.Locale.ROOT);
             // "no" is Indonesian "nomor" primarily when followed by identity/reference nouns
-            Set<String> indonesianNomorNouns = new HashSet<>(Arrays.asList(
-                    "rek", "rekening", "hp", "telp", "telepon", "kartu", "card", "ref", "referensi", "va", "cif", "pin", "mpin", "otp", "urut", "id"
-            ));
-            return !indonesianNomorNouns.contains(next);
+            return !INDONESIAN_NOMOR_NOUNS.contains(next);
         }
         return true;
     }
 
     private String suggestCanonicalRsName(String raw) {
-        String clean = raw.replaceAll("[^a-zA-Z0-9]+", " ").trim();
-        String[] words = clean.split("\\s+");
+        String clean = NON_ALNUM_SPACE_PATTERN.matcher(raw).replaceAll(" ").trim();
+        String[] words = WHITESPACE_SPLIT_PATTERN.split(clean);
         if (words.length == 0 || clean.isEmpty()) return "ObjElement";
 
-        String prefix = "Obj";
-        int startIndex = 0;
-        String firstLower = words[0].toLowerCase();
-        if (firstLower.equals("button") || firstLower.equals("btn")) {
-            prefix = "Btn";
-            startIndex = 1;
-        } else if (firstLower.equals("textview") || firstLower.equals("txt") || firstLower.equals("text")) {
-            prefix = "Txt";
-            startIndex = 1;
-        } else if (firstLower.equals("edittext") || firstLower.equals("textinput") || firstLower.equals("inp")) {
-            prefix = "Inp";
-            startIndex = 1;
-        } else if (firstLower.equals("viewgroup") || firstLower.equals("layout") || firstLower.equals("linearlayout")
-                || firstLower.equals("relativelayout") || firstLower.equals("framelayout") || firstLower.equals("pnl")) {
-            prefix = "Pnl";
-            startIndex = 1;
-        } else if (firstLower.equals("imageview") || firstLower.equals("imagebutton") || firstLower.equals("img")) {
-            prefix = "Img";
-            startIndex = 1;
-        } else if (firstLower.equals("checkbox") || firstLower.equals("chk")) {
-            prefix = "Chk";
-            startIndex = 1;
-        } else if (firstLower.equals("radiobutton") || firstLower.equals("rdo")) {
-            prefix = "Rdo";
-            startIndex = 1;
-        }
+        String firstLower = words[0].toLowerCase(java.util.Locale.ROOT);
+        String prefix = RS_PREFIX_ALIAS_MAP.getOrDefault(firstLower, "Obj");
+        int startIndex = RS_PREFIX_ALIAS_MAP.containsKey(firstLower) ? 1 : 0;
 
         StringBuilder sb = new StringBuilder();
         for (int i = startIndex; i < words.length; i++) {

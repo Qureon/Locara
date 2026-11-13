@@ -8,6 +8,9 @@ import com.qureon.locara.core.model.HealConfig;
 
 import java.io.File;
 import java.lang.reflect.Method;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Public User API for Katalon Studio Test Cases and Screen Flows.
@@ -16,11 +19,19 @@ import java.lang.reflect.Method;
 public class Locara {
     private static final LocaraEngine ENGINE = createDefaultEngine();
     private static final KeyboardGuard KEYBOARD_GUARD = new KeyboardGuard();
-    private static final ScrollRecoveryEngine SCROLL_ENGINE = new ScrollRecoveryEngine(2);
+    private static volatile ScrollRecoveryEngine scrollEngine = new ScrollRecoveryEngine(ENGINE.getConfig().getMaxScrollAttempts());
     private static final com.qureon.locara.core.guard.OverlayAirbag OVERLAY_AIRBAG = new com.qureon.locara.core.guard.OverlayAirbag();
     private static final com.qureon.locara.core.context.ContextualEntityResolver CONTEXT_RESOLVER = new com.qureon.locara.core.context.ContextualEntityResolver();
     private static final com.qureon.locara.katalon.variable.AutoVariableSynthesizer VARIABLE_SYNTHESIZER = new com.qureon.locara.katalon.variable.AutoVariableSynthesizer();
     private static final com.qureon.locara.katalon.variable.ScriptVariableAligner SCRIPT_ALIGNER = new com.qureon.locara.katalon.variable.ScriptVariableAligner();
+    private static final com.qureon.locara.core.generator.DynamicXPathGenerator XPATH_GENERATOR = new com.qureon.locara.core.generator.DynamicXPathGenerator();
+
+    private static final Pattern LOCATOR_ATTR_PATTERN = Pattern.compile("@(?:text|content-desc)\\s*=\\s*['\"]([^'\"]+)['\"]");
+    private static final Pattern EXPECTED_TAG_PATTERN = Pattern.compile("^(?:[0-9]+(?:-[0-9]+)?\\.\\s*)?(ViewGroup|TextView|Button|EditText|ImageView|ImageButton|CheckBox|RadioButton|View)\\b", Pattern.CASE_INSENSITIVE);
+    private static volatile Class<?> cachedByClass;
+    private static volatile Method cachedByXPathMethod;
+    private static volatile Class<?> cachedMobileKeywordsClass;
+    private static volatile Class<?> cachedTestObjectClass;
 
     private static LocaraEngine createDefaultEngine() {
         String userDir = System.getProperty("user.dir");
@@ -58,14 +69,35 @@ public class Locara {
     public static void setAppTarget(com.qureon.locara.core.model.AppTarget target) {
         com.qureon.locara.core.model.AppTarget active = target != null ? target : com.qureon.locara.core.model.AppTarget.AUTO;
         defaultTarget = active;
-        threadTarget.set(active);
+        threadTarget.remove();
         ENGINE.getConfig().setAppTarget(active);
         System.out.println("[Locara by Qureon] Active Target Profile: " + active.getDescription());
     }
 
+    public static void setThreadAppTarget(com.qureon.locara.core.model.AppTarget target) {
+        if (target == null) {
+            clearThreadAppTarget();
+            return;
+        }
+        threadTarget.set(target);
+        ENGINE.getConfig().setThreadAppTarget(target);
+    }
+
+    public static void clearThreadAppTarget() {
+        threadTarget.remove();
+        ENGINE.getConfig().clearThreadAppTarget();
+    }
+
     public static com.qureon.locara.core.model.AppTarget getAppTarget() {
         com.qureon.locara.core.model.AppTarget target = threadTarget.get();
-        return target != null ? target : defaultTarget;
+        if (target != null) return target;
+        com.qureon.locara.core.model.AppTarget configTarget = ENGINE.getConfig().getAppTarget();
+        return configTarget != null ? configTarget : defaultTarget;
+    }
+
+    public static void resetSessionContext() {
+        threadTarget.remove();
+        ENGINE.resetSessionContext();
     }
 
     public static void setProfileUmum() { setAppTarget(com.qureon.locara.core.model.AppTarget.UMUM); }
@@ -92,6 +124,11 @@ public class Locara {
         return ENGINE.getConfig().isScrollRecoveryEnabled();
     }
 
+    public static void setMaxScrollAttempts(int maxAttempts) {
+        ENGINE.getConfig().setMaxScrollAttempts(maxAttempts);
+        scrollEngine = new ScrollRecoveryEngine(ENGINE.getConfig().getMaxScrollAttempts());
+    }
+
     public static LocaraEngine getEngine() {
         return ENGINE;
     }
@@ -101,7 +138,11 @@ public class Locara {
     }
 
     public static ScrollRecoveryEngine getScrollEngine() {
-        return SCROLL_ENGINE;
+        int configured = ENGINE.getConfig().getMaxScrollAttempts();
+        if (scrollEngine.getMaxScrollAttempts() != configured) {
+            scrollEngine = new ScrollRecoveryEngine(configured);
+        }
+        return scrollEngine;
     }
 
     /**
@@ -144,29 +185,37 @@ public class Locara {
      * Taps an element by its semantic hint without requiring a prior spy in Object Repository!
      */
     public static boolean tapByHint(String hint, String targetRsPath) {
+        return tapByHint(hint, 10, targetRsPath);
+    }
+
+    public static boolean tapByHint(String hint, int timeoutSeconds, String targetRsPath) {
         if (!ENGINE.getConfig().isEnabled()) return false;
-        return executeHealing(null, hint, "TAP", "", 10, targetRsPath);
+        return executeHealing(null, hint, "TAP", "", timeoutSeconds, targetRsPath);
     }
 
     /**
      * Enters text into an input field with autonomous healing.
      */
     public static boolean setText(Object testObject, String text, String hint) {
+        return setText(testObject, text, 10, hint);
+    }
+
+    public static boolean setText(Object testObject, String text, int timeoutSeconds, String hint) {
         if (!ENGINE.getConfig().isEnabled()) {
             try {
-                return invokeKatalonSetText(testObject, text, 10);
+                return invokeKatalonSetText(testObject, text, timeoutSeconds);
             } catch (Throwable t) {
                 return false;
             }
         }
         try {
-            boolean success = invokeKatalonSetText(testObject, text, 10);
+            boolean success = invokeKatalonSetText(testObject, text, timeoutSeconds);
             if (success) return true;
         } catch (Throwable t) {
             System.out.println("[Locara by Qureon] Intercepted setText failure on: " + hint + " (" + t.getMessage() + ")");
         }
 
-        return executeHealing(testObject, hint, "SET_TEXT", text, 10, null);
+        return executeHealing(testObject, hint, "SET_TEXT", text, timeoutSeconds, null);
     }
 
     /**
@@ -174,8 +223,12 @@ public class Locara {
      * Used by hooks and listeners to prevent recursion loops.
      */
     public static boolean healAndSetText(Object testObject, String text, String hint) {
+        return healAndSetText(testObject, text, 10, hint);
+    }
+
+    public static boolean healAndSetText(Object testObject, String text, int timeoutSeconds, String hint) {
         if (!ENGINE.getConfig().isEnabled()) return false;
-        return executeHealing(testObject, hint, "SET_TEXT", text, 10, null);
+        return executeHealing(testObject, hint, "SET_TEXT", text, timeoutSeconds, null);
     }
 
     /**
@@ -187,9 +240,7 @@ public class Locara {
 
     public static String getText(Object testObject, int timeoutSeconds, String hint) {
         try {
-            Class<?> mobileKeywords = Class.forName("com.kms.katalon.core.mobile.keyword.MobileBuiltInKeywords");
-            Class<?> toClass = Class.forName("com.kms.katalon.core.testobject.TestObject");
-            Method getTextMethod = mobileKeywords.getMethod("getText", toClass, int.class);
+            Method getTextMethod = getMobileKeywordMethod("getText", getTestObjectClass(), int.class);
             Object result = getTextMethod.invoke(null, testObject, timeoutSeconds);
             if (result != null) return result.toString();
         } catch (Throwable t) {
@@ -215,32 +266,17 @@ public class Locara {
             throw new RuntimeException("[Locara by Qureon] Failed to capture getPageSource() from active driver!");
         }
 
-        String rsPath = extractObjectId(testObject);
-        String origLocator = extractLocator(testObject);
-        String rawHint = (hint != null && !hint.isEmpty()) ? hint : rsPath;
-        String effectiveHint = resolveEffectiveHint(testObject, rawHint, origLocator);
-
-        String expectedTag = extractExpectedTag(rsPath);
-
-        HealContext context = HealContext.builder()
-                .targetHint(effectiveHint)
-                .action("GET_TEXT")
-                .value("")
-                .targetRsPath(rsPath)
-                .screenName(deriveScreenName(rsPath))
-                .originalLocator(origLocator)
-                .expectedTag(expectedTag)
-                .build();
-
-        HealResult result = ENGINE.heal(pageSource, context);
+        HealContext context = buildHealContext(testObject, hint, "GET_TEXT", "", extractObjectId(testObject));
+        List<com.qureon.locara.core.model.UIElementNode> nodes = safeParsePageSource(pageSource);
+        HealResult result = ENGINE.heal(nodes, pageSource, context);
 
         // Overlay Airbag Fallback: If target not found, check for blocking OS permission or modal overlay
         if (!result.isSuccess()) {
-            boolean dismissed = OVERLAY_AIRBAG.dismissBlockingOverlay(driver, pageSource);
+            boolean dismissed = OVERLAY_AIRBAG.dismissBlockingOverlay(driver, nodes);
             if (dismissed) {
                 pageSource = KatalonDriverBridge.getPageSource(driver);
                 if (pageSource != null) {
-                    result = ENGINE.heal(pageSource, context);
+                    result = ENGINE.heal(safeParsePageSource(pageSource), pageSource, context);
                 }
             }
         }
@@ -261,7 +297,7 @@ public class Locara {
             KatalonDriverBridge.patchTestObject(testObject, result.getCandidate().getNode(), healedXPath);
         }
 
-        return executeDirectGetText(driver, healedXPath);
+        return executeDirectGetText(driver, healedXPath, timeoutSeconds);
     }
 
     /**
@@ -273,9 +309,7 @@ public class Locara {
 
     public static boolean clearText(Object testObject, int timeoutSeconds, String hint) {
         try {
-            Class<?> mobileKeywords = Class.forName("com.kms.katalon.core.mobile.keyword.MobileBuiltInKeywords");
-            Class<?> toClass = Class.forName("com.kms.katalon.core.testobject.TestObject");
-            Method clearMethod = mobileKeywords.getMethod("clearText", toClass, int.class);
+            Method clearMethod = getMobileKeywordMethod("clearText", getTestObjectClass(), int.class);
             clearMethod.invoke(null, testObject, timeoutSeconds);
             return true;
         } catch (Throwable t) {
@@ -298,23 +332,41 @@ public class Locara {
      */
     public static boolean healAndVerifyPresent(Object testObject, int timeoutSeconds, String hint) {
         if (!ENGINE.getConfig().isEnabled()) return false;
-        try {
-            Object driver = KatalonDriverBridge.getMobileDriver();
-            if (driver == null) {
-                return false;
-            }
+        Object driver = KatalonDriverBridge.getMobileDriver();
+        String healedXPath = resolvePresentXPathAndPatch(driver, testObject, hint);
+        if (healedXPath == null || healedXPath.isEmpty()) {
+            return false;
+        }
+        return verifyElementExists(driver, healedXPath);
+    }
 
+    /**
+     * Directly triggers self-healing for verifyElementVisible.
+     */
+    public static boolean healAndVerifyVisible(Object testObject, int timeoutSeconds, String hint) {
+        if (!ENGINE.getConfig().isEnabled()) return false;
+        Object driver = KatalonDriverBridge.getMobileDriver();
+        String healedXPath = resolvePresentXPathAndPatch(driver, testObject, hint);
+        if (healedXPath == null || healedXPath.isEmpty()) {
+            return false;
+        }
+        return verifyElementDisplayed(driver, healedXPath);
+    }
+
+    private static String resolvePresentXPathAndPatch(Object driver, Object testObject, String hint) {
+        if (driver == null) {
+            return null;
+        }
+        try {
             String pageSource = KatalonDriverBridge.getPageSource(driver);
             if (pageSource == null || pageSource.isEmpty()) {
-                return false;
+                return null;
             }
 
             String rsPath = extractObjectId(testObject);
             String origLocator = extractLocator(testObject);
             String rawHint = (hint != null && !hint.isEmpty()) ? hint : rsPath;
             String effectiveHint = resolveEffectiveHint(testObject, rawHint, origLocator);
-
-            String expectedTag = extractExpectedTag(rsPath);
 
             HealContext context = HealContext.builder()
                     .targetHint(effectiveHint)
@@ -323,47 +375,48 @@ public class Locara {
                     .targetRsPath(rsPath)
                     .screenName(deriveScreenName(rsPath))
                     .originalLocator(origLocator)
-                    .expectedTag(expectedTag)
+                    .expectedTag(extractExpectedTag(rsPath))
                     .build();
 
-            HealResult result = ENGINE.heal(pageSource, context);
+            List<com.qureon.locara.core.model.UIElementNode> nodes = safeParsePageSource(pageSource);
+            HealResult result = ENGINE.heal(nodes, pageSource, context);
 
             // Tier 2: Semantic Intent Matcher Fallback for banking error dialogs/text
-            if (!result.isSuccess()) {
-                try {
-                    com.qureon.locara.core.parser.PageSourceParser parser = new com.qureon.locara.core.parser.PageSourceParser();
-                    java.util.List<com.qureon.locara.core.model.UIElementNode> nodes = parser.parse(pageSource);
-                    com.qureon.locara.core.model.UIElementNode bestNode = null;
-                    double bestScore = 0.0;
+            if (!result.isSuccess() && nodes != null && !nodes.isEmpty()) {
+                com.qureon.locara.core.model.UIElementNode bestNode = null;
+                double bestScore = 0.0;
 
-                    for (com.qureon.locara.core.model.UIElementNode node : nodes) {
-                        if (!node.isDisplayed()) continue;
-                        if (com.qureon.locara.core.guard.DangerKeywordGuard.isPolarityViolation(effectiveHint, node)) continue;
-                        if (node.hasText()) {
-                            double score = com.qureon.locara.core.matcher.LocaraIntentMatcher.calculateIntentScore(node.getText(), effectiveHint);
-                            if (score > bestScore && score >= Math.max(0.85, ENGINE.getConfig().getMinConfidenceThreshold())) {
-                                bestScore = score;
-                                bestNode = node;
-                            }
+                for (com.qureon.locara.core.model.UIElementNode node : nodes) {
+                    if (!node.isDisplayed()) continue;
+                    if (com.qureon.locara.core.guard.DangerKeywordGuard.isPolarityViolation(effectiveHint, node)) continue;
+                    if (node.hasText()) {
+                        double score = com.qureon.locara.core.matcher.LocaraIntentMatcher.calculateIntentScore(node.getText(), effectiveHint);
+                        if (score > bestScore && score >= Math.max(0.85, ENGINE.getConfig().getMinConfidenceThreshold())) {
+                            bestScore = score;
+                            bestNode = node;
                         }
                     }
+                }
 
-                    if (bestNode != null) {
-                        String generatedXPath = new com.qureon.locara.core.generator.DynamicXPathGenerator().generateOptimalXPath(bestNode, nodes, "VERIFY_PRESENT");
-                        com.qureon.locara.core.model.HealCandidate candidate = new com.qureon.locara.core.model.HealCandidate(bestNode, generatedXPath, bestScore, "SEMANTIC_INTENT_MATCH");
-                        result = new HealResult(true, candidate, null, "Healed via Semantic Intent Matching (" + String.format(java.util.Locale.US, "%.1f%%", bestScore * 100.0) + ")");
-                    }
-                } catch (Exception ignored) {}
+                if (bestNode != null) {
+                    String generatedXPath = XPATH_GENERATOR.generateOptimalXPath(bestNode, nodes, "VERIFY_PRESENT");
+                    com.qureon.locara.core.model.HealCandidate candidate = new com.qureon.locara.core.model.HealCandidate(bestNode, generatedXPath, bestScore, "SEMANTIC_INTENT_MATCH");
+                    result = new HealResult(true, candidate, null, "Healed via Semantic Intent Matching (" + String.format(java.util.Locale.US, "%.1f%%", bestScore * 100.0) + ")");
+                }
             }
 
             // Note: Presence checks (waitForElementPresent, verifyElementPresent, isElementPresent)
             // are strictly read-only probes. They MUST NEVER mutate or scroll the viewport.
 
             if (!result.isSuccess() || result.getCandidate() == null) {
-                return false;
+                return null;
             }
 
             String healedXPath = result.getCandidate().getSuggestedXPath();
+            if (healedXPath == null || healedXPath.isEmpty()) {
+                return null;
+            }
+
             System.out.println("[Locara by Qureon] 🌟 HEALED PRESENT: " + hint + " -> XPath: " + healedXPath + " (Score: " +
                     String.format(java.util.Locale.US, "%.1f%%", result.getCandidate().getConfidenceScore() * 100.0) + ")");
 
@@ -375,28 +428,10 @@ public class Locara {
                 KatalonDriverBridge.patchTestObject(testObject, result.getCandidate().getNode(), healedXPath);
             }
 
-            return verifyElementExists(driver, healedXPath);
+            return healedXPath;
         } catch (Throwable t) {
             System.out.println("[Locara by Qureon] Probing heal error: " + t.getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Directly triggers self-healing for verifyElementVisible.
-     */
-    public static boolean healAndVerifyVisible(Object testObject, int timeoutSeconds, String hint) {
-        if (!ENGINE.getConfig().isEnabled()) return false;
-        boolean present = healAndVerifyPresent(testObject, timeoutSeconds, hint);
-        if (!present) return false;
-        try {
-            Object driver = KatalonDriverBridge.getMobileDriver();
-            if (driver == null) return true;
-            String healedXPath = extractLocator(testObject);
-            if (healedXPath == null || healedXPath.isEmpty()) return true;
-            return verifyElementDisplayed(driver, healedXPath);
-        } catch (Throwable t) {
-            return true;
+            return null;
         }
     }
 
@@ -432,6 +467,35 @@ public class Locara {
         return true;
     }
 
+    private static HealContext buildHealContext(Object testObject,
+                                              String hint,
+                                              String action,
+                                              String value,
+                                              String explicitRsPath) {
+        String rsPath = explicitRsPath != null ? explicitRsPath : extractObjectId(testObject);
+        String origLocator = extractLocator(testObject);
+        String rawHint = (hint != null && !hint.isEmpty()) ? hint : rsPath;
+        String effectiveHint = resolveEffectiveHint(testObject, rawHint, origLocator);
+
+        return HealContext.builder()
+                .targetHint(effectiveHint)
+                .action(action)
+                .value(value)
+                .targetRsPath(rsPath)
+                .screenName(deriveScreenName(rsPath))
+                .originalLocator(origLocator)
+                .expectedTag(extractExpectedTag(rsPath))
+                .build();
+    }
+
+    private static List<com.qureon.locara.core.model.UIElementNode> safeParsePageSource(String pageSource) {
+        try {
+            return ENGINE.parsePageSource(pageSource);
+        } catch (Exception ignored) {
+            return java.util.Collections.emptyList();
+        }
+    }
+
     private static boolean executeHealing(Object testObject,
                                           String hint,
                                           String action,
@@ -448,56 +512,45 @@ public class Locara {
             throw new RuntimeException("[Locara by Qureon] Failed to capture getPageSource() from active driver!");
         }
 
-        String rsPath = explicitRsPath != null ? explicitRsPath : extractObjectId(testObject);
-        String origLocator = extractLocator(testObject);
-        String rawHint = (hint != null && !hint.isEmpty()) ? hint : rsPath;
-        String effectiveHint = resolveEffectiveHint(testObject, rawHint, origLocator);
+        HealContext context = buildHealContext(testObject, hint, action, value, explicitRsPath);
+        String rsPath = context.getTargetRsPath();
+        String effectiveHint = context.getTargetHint();
 
-        String expectedTag = extractExpectedTag(rsPath);
-
-        HealContext context = HealContext.builder()
-                .targetHint(effectiveHint)
-                .action(action)
-                .value(value)
-                .targetRsPath(rsPath)
-                .screenName(deriveScreenName(rsPath))
-                .originalLocator(origLocator)
-                .expectedTag(expectedTag)
-                .build();
-
-        HealResult result = ENGINE.heal(pageSource, context);
+        List<com.qureon.locara.core.model.UIElementNode> nodes = safeParsePageSource(pageSource);
+        HealResult result = ENGINE.heal(nodes, pageSource, context);
 
         // Overlay Airbag Fallback: If target not found, check for blocking OS permission or modal overlay
         if (!result.isSuccess()) {
-            boolean dismissed = OVERLAY_AIRBAG.dismissBlockingOverlay(driver, pageSource);
+            boolean dismissed = OVERLAY_AIRBAG.dismissBlockingOverlay(driver, nodes);
             if (dismissed) {
                 pageSource = KatalonDriverBridge.getPageSource(driver);
-                if (pageSource != null) {
-                    result = ENGINE.heal(pageSource, context);
+                if (pageSource != null && !pageSource.isEmpty()) {
+                    nodes = safeParsePageSource(pageSource);
+                    result = ENGINE.heal(nodes, pageSource, context);
                 }
             }
         }
 
         // Auto-Scroll Fallback: If not found, attempt scroll recovery on scrollable containers
-        if (!result.isSuccess() && ENGINE.getConfig().isScrollRecoveryEnabled()) {
+        ScrollRecoveryEngine activeScrollEngine = getScrollEngine();
+        if (!result.isSuccess() && ENGINE.getConfig().isScrollRecoveryEnabled() && activeScrollEngine.getMaxScrollAttempts() > 0) {
             try {
-                java.util.List<com.qureon.locara.core.model.UIElementNode> nodes = new com.qureon.locara.core.parser.PageSourceParser().parse(pageSource);
-                if (SCROLL_ENGINE.isScrollEligible(effectiveHint, rsPath, action, nodes)) {
-                    for (int attempt = 1; attempt <= SCROLL_ENGINE.getMaxScrollAttempts(); attempt++) {
+                if (activeScrollEngine.isScrollEligible(effectiveHint, rsPath, action, nodes)) {
+                    for (int attempt = 1; attempt <= activeScrollEngine.getMaxScrollAttempts(); attempt++) {
                         System.out.println("[Locara by Qureon] 📜 Target '" + hint + "' not found in active viewport. Attempting auto-scroll recovery #" + attempt + "...");
-                        boolean scrolled = SCROLL_ENGINE.performScrollDown(driver);
+                        boolean scrolled = activeScrollEngine.performScrollDown(driver);
                         if (!scrolled) break;
 
                         pageSource = KatalonDriverBridge.getPageSource(driver);
-                        if (pageSource != null) {
-                            result = ENGINE.heal(pageSource, context);
+                        if (pageSource != null && !pageSource.isEmpty()) {
+                            result = ENGINE.heal(safeParsePageSource(pageSource), pageSource, context);
                             if (result.isSuccess()) {
                                 System.out.println("[Locara by Qureon] 🎯 Target '" + hint + "' successfully discovered after scroll recovery!");
                                 break;
                             }
                         }
                     }
-                } else if (SCROLL_ENGINE.isOverlayOrDialogTarget(effectiveHint, rsPath)) {
+                } else if (activeScrollEngine.isOverlayOrDialogTarget(effectiveHint, rsPath)) {
                     System.out.println("[Locara by Qureon] 🛡️ Target '" + hint + "' identified as Transient Popup / Overlay / Permission Dialog. Auto-scroll strictly inhibited to preserve screen state.");
                 }
             } catch (Exception ignored) {}
@@ -526,17 +579,12 @@ public class Locara {
         }
 
         // Execute action directly on driver using healed locator
-        return executeDirectDriverAction(driver, healedXPath, action, value);
+        return executeDirectDriverAction(driver, healedXPath, action, value, timeoutSeconds);
     }
 
-    private static boolean executeDirectDriverAction(Object driver, String xpath, String action, String value) {
+    private static boolean executeDirectDriverAction(Object driver, String xpath, String action, String value, int timeoutSeconds) {
         try {
-            Class<?> byClass = Class.forName("org.openqa.selenium.By");
-            Method xpathMethod = byClass.getMethod("xpath", String.class);
-            Object by = xpathMethod.invoke(null, xpath);
-
-            Method findElementMethod = driver.getClass().getMethod("findElement", byClass);
-            Object element = findElementMethod.invoke(driver, by);
+            Object element = findElementWithTimeout(driver, xpath, timeoutSeconds);
 
             if ("TAP".equalsIgnoreCase(action) || "CLICK".equalsIgnoreCase(action)) {
                 Method clickMethod = element.getClass().getMethod("click");
@@ -546,7 +594,7 @@ public class Locara {
                 Method clearMethod = element.getClass().getMethod("clear");
                 clearMethod.invoke(element);
                 Method sendKeysMethod = element.getClass().getMethod("sendKeys", CharSequence[].class);
-                sendKeysMethod.invoke(element, (Object) new CharSequence[]{value});
+                sendKeysMethod.invoke(element, (Object) new CharSequence[]{value != null ? value : ""});
                 return true;
             } else if ("CLEAR_TEXT".equalsIgnoreCase(action)) {
                 Method clearMethod = element.getClass().getMethod("clear");
@@ -559,14 +607,9 @@ public class Locara {
         }
     }
 
-    private static String executeDirectGetText(Object driver, String xpath) {
+    private static String executeDirectGetText(Object driver, String xpath, int timeoutSeconds) {
         try {
-            Class<?> byClass = Class.forName("org.openqa.selenium.By");
-            Method xpathMethod = byClass.getMethod("xpath", String.class);
-            Object by = xpathMethod.invoke(null, xpath);
-
-            Method findElementMethod = driver.getClass().getMethod("findElement", byClass);
-            Object element = findElementMethod.invoke(driver, by);
+            Object element = findElementWithTimeout(driver, xpath, timeoutSeconds);
 
             Method getTextMethod = element.getClass().getMethod("getText");
             Object textObj = getTextMethod.invoke(element);
@@ -594,18 +637,88 @@ public class Locara {
         }
     }
 
+    private static Class<?> getByClass() throws ClassNotFoundException {
+        Class<?> cls = cachedByClass;
+        if (cls == null) {
+            cls = Class.forName("org.openqa.selenium.By");
+            cachedByClass = cls;
+        }
+        return cls;
+    }
+
+    private static Object createByXPath(String xpath) throws Exception {
+        Method m = cachedByXPathMethod;
+        if (m == null) {
+            m = getByClass().getMethod("xpath", String.class);
+            cachedByXPathMethod = m;
+        }
+        return m.invoke(null, xpath);
+    }
+
+    private static List<?> findElementsByXPath(Object driver, String xpath) throws Exception {
+        Object by = createByXPath(xpath);
+        Method findElementsMethod = driver.getClass().getMethod("findElements", getByClass());
+        Object result = findElementsMethod.invoke(driver, by);
+        return result instanceof List ? (List<?>) result : java.util.Collections.emptyList();
+    }
+
+    private static Object findElementWithTimeout(Object driver, String xpath, int timeoutSeconds) throws Exception {
+        long maxWaitMs = Math.max(0, timeoutSeconds) * 1000L;
+        long deadline = System.currentTimeMillis() + maxWaitMs;
+        Object by = createByXPath(xpath);
+        Class<?> byClass = getByClass();
+        Method findElementMethod = driver.getClass().getMethod("findElement", byClass);
+        Exception lastException = null;
+
+        while (true) {
+            try {
+                return findElementMethod.invoke(driver, by);
+            } catch (Exception e) {
+                lastException = e;
+                long remaining = deadline - System.currentTimeMillis();
+                if (remaining <= 0) {
+                    throw lastException;
+                }
+                try {
+                    Thread.sleep(Math.min(250L, remaining));
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw lastException;
+                }
+            }
+        }
+    }
+
+    private static Class<?> getMobileKeywordsClass() throws ClassNotFoundException {
+        Class<?> cls = cachedMobileKeywordsClass;
+        if (cls == null) {
+            cls = Class.forName("com.kms.katalon.core.mobile.keyword.MobileBuiltInKeywords");
+            cachedMobileKeywordsClass = cls;
+        }
+        return cls;
+    }
+
+    private static Class<?> getTestObjectClass() throws ClassNotFoundException {
+        Class<?> cls = cachedTestObjectClass;
+        if (cls == null) {
+            cls = Class.forName("com.kms.katalon.core.testobject.TestObject");
+            cachedTestObjectClass = cls;
+        }
+        return cls;
+    }
+
+    private static Method getMobileKeywordMethod(String name, Class<?>... parameterTypes) throws Exception {
+        return getMobileKeywordsClass().getMethod(name, parameterTypes);
+    }
+
     private static boolean invokeKatalonTap(Object testObject, int timeout) throws Exception {
-        Class<?> mobileKeywords = Class.forName("com.kms.katalon.core.mobile.keyword.MobileBuiltInKeywords");
-        Class<?> toClass = Class.forName("com.kms.katalon.core.testobject.TestObject");
-        Method tapMethod = mobileKeywords.getMethod("tap", toClass, int.class);
+        Method tapMethod = getMobileKeywordMethod("tap", getTestObjectClass(), int.class);
         tapMethod.invoke(null, testObject, timeout);
         return true;
     }
 
     private static boolean invokeKatalonSetText(Object testObject, String text, int timeout) throws Exception {
-        Class<?> mobileKeywords = Class.forName("com.kms.katalon.core.mobile.keyword.MobileBuiltInKeywords");
-        Class<?> toClass = Class.forName("com.kms.katalon.core.testobject.TestObject");
-        Method setTextMethod = mobileKeywords.getMethod("setText", toClass, String.class, int.class);
+        Method setTextMethod = getMobileKeywordMethod("setText", getTestObjectClass(), String.class, int.class);
         setTextMethod.invoke(null, testObject, text, timeout);
         return true;
     }
@@ -666,7 +779,7 @@ public class Locara {
         }
         // Fallback 2: Extract @text='...' or @content-desc='...' from originalLocator
         if (originalLocator != null && !originalLocator.isEmpty()) {
-            java.util.regex.Matcher m = java.util.regex.Pattern.compile("@(?:text|content-desc)\\s*=\\s*['\"]([^'\"]+)['\"]").matcher(originalLocator);
+            Matcher m = LOCATOR_ATTR_PATTERN.matcher(originalLocator);
             if (m.find()) {
                 String extracted = m.group(1).trim();
                 if (!isGenericOrEmptyHint(extracted)) {
@@ -693,7 +806,7 @@ public class Locara {
         if (name.contains("/")) {
             name = name.substring(name.lastIndexOf('/') + 1);
         }
-        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("^(?:[0-9]+\\.\\s*)?(ViewGroup|TextView|Button|EditText|ImageView|ImageButton|CheckBox|RadioButton|View)\\b", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(name);
+        Matcher matcher = EXPECTED_TAG_PATTERN.matcher(name);
         if (matcher.find()) {
             return matcher.group(1);
         }
@@ -713,35 +826,34 @@ public class Locara {
     }
 
     private static boolean verifyElementExists(Object driver, String xpath) {
+        if (driver == null || xpath == null || xpath.isEmpty()) {
+            return false;
+        }
         try {
-            Class<?> byClass = Class.forName("org.openqa.selenium.By");
-            Method xpathMethod = byClass.getMethod("xpath", String.class);
-            Object by = xpathMethod.invoke(null, xpath);
-
-            Method findElementsMethod = driver.getClass().getMethod("findElements", byClass);
-            java.util.List<?> elements = (java.util.List<?>) findElementsMethod.invoke(driver, by);
+            List<?> elements = findElementsByXPath(driver, xpath);
             return elements != null && !elements.isEmpty();
         } catch (Throwable t) {
-            return true; // Node was already verified from XML DOM
+            System.out.println("[Locara by Qureon] Element existence verification failed: " + t.getMessage());
+            return false;
         }
     }
 
     private static boolean verifyElementDisplayed(Object driver, String xpath) {
+        if (driver == null || xpath == null || xpath.isEmpty()) {
+            return false;
+        }
         try {
-            Class<?> byClass = Class.forName("org.openqa.selenium.By");
-            Method xpathMethod = byClass.getMethod("xpath", String.class);
-            Object by = xpathMethod.invoke(null, xpath);
-
-            Method findElementsMethod = driver.getClass().getMethod("findElements", byClass);
-            java.util.List<?> elements = (java.util.List<?>) findElementsMethod.invoke(driver, by);
+            List<?> elements = findElementsByXPath(driver, xpath);
             if (elements != null && !elements.isEmpty()) {
                 Object el = elements.get(0);
                 Method isDisplayed = el.getClass().getMethod("isDisplayed");
-                return (Boolean) isDisplayed.invoke(el);
+                Object visible = isDisplayed.invoke(el);
+                return Boolean.TRUE.equals(visible);
             }
             return false;
         } catch (Throwable t) {
-            return true;
+            System.out.println("[Locara by Qureon] Element visibility verification failed: " + t.getMessage());
+            return false;
         }
     }
 
@@ -810,13 +922,11 @@ public class Locara {
             return false;
         }
         String xpath = getSafeCardTapXPath(driver, targetAccountNumber);
+        if (xpath == null || xpath.isEmpty()) {
+            return false;
+        }
         try {
-            Class<?> byClass = Class.forName("org.openqa.selenium.By");
-            Method xpathMethod = byClass.getMethod("xpath", String.class);
-            Object by = xpathMethod.invoke(null, xpath);
-
-            Method findElementsMethod = driver.getClass().getMethod("findElements", byClass);
-            java.util.List<?> elements = (java.util.List<?>) findElementsMethod.invoke(driver, by);
+            List<?> elements = findElementsByXPath(driver, xpath);
             if (elements != null && !elements.isEmpty()) {
                 Object el = elements.get(0);
                 Method clickMethod = el.getClass().getMethod("click");

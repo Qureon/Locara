@@ -25,8 +25,36 @@ import java.util.regex.Pattern;
  */
 public class PageSourceParser {
     private static final Pattern BOUNDS_PATTERN = Pattern.compile("\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]");
+    private static final DocumentBuilderFactory XML_FACTORY = createHardenedFactory();
+    private static final ThreadLocal<DocumentBuilder> THREAD_LOCAL_BUILDER = new ThreadLocal<>();
 
     public PageSourceParser() {}
+
+    private static DocumentBuilderFactory createHardenedFactory() {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        try {
+            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+            factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+            factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+        } catch (Exception ignored) {}
+        factory.setXIncludeAware(false);
+        factory.setExpandEntityReferences(false);
+        return factory;
+    }
+
+    private static DocumentBuilder acquireDocumentBuilder() throws Exception {
+        DocumentBuilder builder = THREAD_LOCAL_BUILDER.get();
+        if (builder == null) {
+            synchronized (XML_FACTORY) {
+                builder = XML_FACTORY.newDocumentBuilder();
+            }
+            THREAD_LOCAL_BUILDER.set(builder);
+        } else {
+            builder.reset();
+        }
+        return builder;
+    }
 
     /**
      * Parses the raw XML page source string into an indexed list of UIElementNodes.
@@ -42,13 +70,7 @@ public class PageSourceParser {
             return new HtmlDomParser().parse(xmlSource);
         }
 
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        // Disallow external entity resolution for security and speed
-        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-        factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
-        factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
-
-        DocumentBuilder builder = factory.newDocumentBuilder();
+        DocumentBuilder builder = acquireDocumentBuilder();
         Document document = builder.parse(new InputSource(new StringReader(xmlSource)));
         document.getDocumentElement().normalize();
 

@@ -1,14 +1,16 @@
 /**
  * ==============================================================================
- * ZERO-HEALING DASHBOARD — REGRESSION HEALTH & ANALYTICS MODULE
+ * LOCARA MISSION CONTROL — REGRESSION HEALTH & ANALYTICS MODULE
  * Module healing frequency bars and top volatile locators.
  * ==============================================================================
  */
 
+import { escapeHtml } from "../utils.js";
+
 export const MODULE_ANALYTICS_DATA = [
     { module: "Transfer (Overbooking & BI-FAST)", count: 542, pct: 38 },
     { module: "Payment & Billers (PLN, PDAM, BPJS)", count: 320, pct: 22 },
-    { module: "Top-Up e-Wallet (GoPay, OVO, ShopeePay)", count: 264, pct: 19 },
+    { module: "Top-Up e-Wallet (Digital Wallet)", count: 264, pct: 19 },
     { module: "QRIS Merchant & Payment", count: 182, pct: 13 },
     { module: "Account, KYC & Biometric Login", count: 88, pct: 6 },
     { module: "Settings & Card Management", count: 32, pct: 2 }
@@ -16,7 +18,7 @@ export const MODULE_ANALYTICS_DATA = [
 
 export const VOLATILE_LOCATORS_DATA = [
     {
-        id: "com.bankmega.msmile:id/btn_next_transfer",
+        id: "com.example.app:id/btn_next_transfer",
         screen: "Transfer / Konfirmasi",
         changes: 48,
         cause: "ID renamed in Sprint 24 (btn_next -> btn_next_transfer)",
@@ -24,15 +26,15 @@ export const VOLATILE_LOCATORS_DATA = [
         orTarget: "Object Repository/Transfer/btn_next_transfer.rs"
     },
     {
-        id: "com.bankmega.msmile:id/input_security_code",
-        screen: "Otorisasi / M-PIN",
+        id: "com.example.app:id/input_security_code",
+        screen: "Otorisasi / Security PIN",
         changes: 36,
         cause: "Migration to Jetpack Compose SecureTextField",
         action: "SET_TEXT",
         orTarget: "Object Repository/Transfer/input_security_code.rs"
     },
     {
-        id: "com.bankmega.msmile:id/btn_submit_pln",
+        id: "com.example.app:id/btn_submit_pln",
         screen: "Payment / PLN",
         changes: 29,
         cause: "Dynamic view injection causing index displacement",
@@ -40,7 +42,7 @@ export const VOLATILE_LOCATORS_DATA = [
         orTarget: "Object Repository/Payment/btn_submit_pln.rs"
     },
     {
-        id: "com.bankmega.msmile:id/tv_wallet_title",
+        id: "com.example.app:id/tv_wallet_title",
         screen: "Top Up / e-Wallet",
         changes: 19,
         cause: "Nested inside Compose Box with dynamic tags",
@@ -58,17 +60,20 @@ function renderModuleBars() {
     const container = document.getElementById("module-bars-container");
     if (!container) return;
 
-    container.innerHTML = MODULE_ANALYTICS_DATA.map(item => `
+    container.innerHTML = MODULE_ANALYTICS_DATA.map(item => {
+        const safePct = Math.max(0, Math.min(100, Number(item.pct) || 0));
+        return `
         <div class="module-bar-item">
             <div class="module-meta">
-                <span class="module-name"><strong>${item.module}</strong></span>
-                <span class="module-count">${item.count} perbaikan (${item.pct}%)</span>
+                <span class="module-name"><strong>${escapeHtml(item.module)}</strong></span>
+                <span class="module-count">${escapeHtml(String(item.count))} perbaikan (${safePct}%)</span>
             </div>
             <div class="progress-track">
-                <div class="progress-fill cyan" style="width: ${item.pct}%;"></div>
+                <div class="progress-fill cyan" style="width: ${safePct}%;"></div>
             </div>
         </div>
-    `).join("");
+    `;
+    }).join("");
 }
 
 function renderVolatileLocators() {
@@ -79,7 +84,7 @@ function renderVolatileLocators() {
         <div class="volatile-card">
             <div class="v-header">
                 <span class="v-id font-mono text-cyan">${escapeHtml(v.id)}</span>
-                <span class="v-badge">${v.changes}x Flaky/Changed</span>
+                <span class="v-badge">${escapeHtml(String(v.changes))}x Flaky/Changed</span>
             </div>
             <div class="v-body">
                 <p class="v-cause"><strong>Root Cause:</strong> ${escapeHtml(v.cause)}</p>
@@ -89,9 +94,4 @@ function renderVolatileLocators() {
             </div>
         </div>
     `).join("");
-}
-
-function escapeHtml(str) {
-    if (!str) return "";
-    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }

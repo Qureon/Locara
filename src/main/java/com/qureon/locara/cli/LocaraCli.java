@@ -18,7 +18,6 @@ import com.qureon.locara.katalon.variable.TestCaseVariable;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -205,7 +204,7 @@ public class LocaraCli {
 
         if (result.isSuccess() && result.getCandidate() != null) {
             HealCandidate candidate = result.getCandidate();
-            System.out.printf("\n🎯 MATCH FOUND! Confidence: %.1f%%\n", candidate.getConfidenceScore() * 100.0);
+            System.out.printf(java.util.Locale.US, "\n🎯 MATCH FOUND! Confidence: %.1f%%\n", candidate.getConfidenceScore() * 100.0);
             System.out.println("--------------------------------------------------------------");
             System.out.println("Tag          : " + candidate.getNode().getTag());
             System.out.println("Resource ID  : " + candidate.getNode().getResourceId());
@@ -328,7 +327,7 @@ public class LocaraCli {
         }
         try {
             AutoVariableSynthesizer synthesizer = new AutoVariableSynthesizer();
-            boolean changed = synthesizer.syncVariableDefault(tcFile, varName, defVal);
+            boolean changed = synthesizer.syncVariableDefault(tcFile, varName, defVal, desc);
             System.out.println("==============================================================");
             System.out.println("  Locara by Qureon · Autonomous Variable Synthesizer (AVS)    ");
             System.out.println("==============================================================");
@@ -391,7 +390,7 @@ public class LocaraCli {
     }
 
     private static void printUsage() {
-        System.out.println("Locara by Qureon CLI v1.14.0 — Autonomous Mobile Recon & Synthesizer");
+        System.out.println("Locara by Qureon CLI v1.15.0 — Autonomous Mobile Recon & Synthesizer");
         System.out.println("Usage:");
         System.out.println("  locara --xml <path> --hint <hint> [options]");
         System.out.println("  locara sanitize-or --path <path> [--fix] [--no-backup]");

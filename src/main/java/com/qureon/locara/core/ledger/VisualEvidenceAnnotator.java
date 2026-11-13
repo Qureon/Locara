@@ -16,6 +16,8 @@ import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Visual evidence generator that annotates screenshots with high-contrast
@@ -23,6 +25,7 @@ import java.time.format.DateTimeFormatter;
  */
 public class VisualEvidenceAnnotator {
     private static final DateTimeFormatter FILE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+    private static final AtomicInteger FILE_SEQ = new AtomicInteger(0);
 
     public VisualEvidenceAnnotator() {}
 
@@ -46,7 +49,8 @@ public class VisualEvidenceAnnotator {
                 evidenceDir.mkdirs();
             }
 
-            String filename = "healed_" + LocalDateTime.now().format(FILE_FMT) + "_" + (System.currentTimeMillis() % 1000) + ".png";
+            int seq = FILE_SEQ.getAndUpdate(n -> (n + 1) % 10000);
+            String filename = "healed_" + LocalDateTime.now().format(FILE_FMT) + "_" + String.format(Locale.US, "%04d", seq) + ".png";
             File outputFile = new File(evidenceDir, filename);
             ImageIO.write(image, "png", outputFile);
 
@@ -57,62 +61,63 @@ public class VisualEvidenceAnnotator {
     }
 
     public void annotateBufferedImage(BufferedImage image, HealCandidate candidate) {
-        if (image == null || candidate == null) return;
+        if (image == null || candidate == null || candidate.getNode() == null) return;
 
         Graphics2D g2d = image.createGraphics();
-        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        try {
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-        Rectangle bounds = candidate.getNode().getBounds();
-        if (bounds.width <= 0 || bounds.height <= 0) {
+            Rectangle bounds = candidate.getNode().getBounds();
+            if (bounds == null || bounds.width <= 0 || bounds.height <= 0) {
+                return;
+            }
+
+            // Draw vibrant bounding box outline
+            g2d.setColor(new Color(255, 68, 68, 230)); // High-visibility Coral/Red
+            g2d.setStroke(new BasicStroke(5.0f));
+            g2d.drawRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 12, 12);
+
+            // Subtle highlight fill
+            g2d.setColor(new Color(255, 68, 68, 35));
+            g2d.fillRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 12, 12);
+
+            // Badge Text
+            String identifier = candidate.getNode().getStrippedResourceId();
+            if (identifier.isEmpty()) {
+                identifier = candidate.getNode().getText();
+            }
+            if (identifier.isEmpty()) {
+                identifier = candidate.getNode().getTag();
+            }
+
+            String badgeText = String.format(Locale.US, "HEALED (%.0f%%): %s",
+                    candidate.getConfidenceScore() * 100.0,
+                    identifier);
+
+            Font font = new Font("SansSerif", Font.BOLD, 22);
+            g2d.setFont(font);
+            FontMetrics fm = g2d.getFontMetrics();
+            int textWidth = fm.stringWidth(badgeText);
+            int textHeight = fm.getHeight();
+
+            int badgeX = Math.max(0, bounds.x);
+            int badgeY = Math.max(textHeight + 12, bounds.y - 12);
+
+            // Badge Container Background
+            g2d.setColor(new Color(20, 20, 20, 220));
+            g2d.fillRoundRect(badgeX, badgeY - textHeight, textWidth + 24, textHeight + 8, 10, 10);
+
+            // Badge Border
+            g2d.setColor(new Color(255, 68, 68));
+            g2d.setStroke(new BasicStroke(2.0f));
+            g2d.drawRoundRect(badgeX, badgeY - textHeight, textWidth + 24, textHeight + 8, 10, 10);
+
+            // Badge Text Fill
+            g2d.setColor(Color.WHITE);
+            g2d.drawString(badgeText, badgeX + 12, badgeY - 6);
+        } finally {
             g2d.dispose();
-            return;
         }
-
-        // Draw vibrant bounding box outline
-        g2d.setColor(new Color(255, 68, 68, 230)); // High-visibility Coral/Red
-        g2d.setStroke(new BasicStroke(5.0f));
-        g2d.drawRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 12, 12);
-
-        // Subtle highlight fill
-        g2d.setColor(new Color(255, 68, 68, 35));
-        g2d.fillRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 12, 12);
-
-        // Badge Text
-        String identifier = candidate.getNode().getStrippedResourceId();
-        if (identifier.isEmpty()) {
-            identifier = candidate.getNode().getText();
-        }
-        if (identifier.isEmpty()) {
-            identifier = candidate.getNode().getTag();
-        }
-
-        String badgeText = String.format("HEALED (%.0f%%): %s",
-                candidate.getConfidenceScore() * 100.0,
-                identifier);
-
-        Font font = new Font("SansSerif", Font.BOLD, 22);
-        g2d.setFont(font);
-        FontMetrics fm = g2d.getFontMetrics();
-        int textWidth = fm.stringWidth(badgeText);
-        int textHeight = fm.getHeight();
-
-        int badgeX = Math.max(0, bounds.x);
-        int badgeY = Math.max(textHeight + 12, bounds.y - 12);
-
-        // Badge Container Background
-        g2d.setColor(new Color(20, 20, 20, 220));
-        g2d.fillRoundRect(badgeX, badgeY - textHeight, textWidth + 24, textHeight + 8, 10, 10);
-
-        // Badge Border
-        g2d.setColor(new Color(255, 68, 68));
-        g2d.setStroke(new BasicStroke(2.0f));
-        g2d.drawRoundRect(badgeX, badgeY - textHeight, textWidth + 24, textHeight + 8, 10, 10);
-
-        // Badge Text Fill
-        g2d.setColor(Color.WHITE);
-        g2d.drawString(badgeText, badgeX + 12, badgeY - 6);
-
-        g2d.dispose();
     }
 }

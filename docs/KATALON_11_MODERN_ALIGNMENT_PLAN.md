@@ -3,7 +3,7 @@
 > **Target Platform**: Katalon Studio 8.x – 11.7.0+ (Universal & Project-Agnostic)  
 > **Runtime**: Eclipse Temurin 21.0.12 LTS & Java 17  
 > **Status**: Ready for Surgical Execution  
-> **Architect**: Kaela Kovalskia (Ela 🌸) for Rio  
+> **Architect**: Qureon QA Engineering  
 
 ---
 
@@ -51,4 +51,4 @@ Analysis of Katalon Studio 11.0.0 through 11.7.0 (with emphasis on 11.6.0 & 11.7
 ### Phase 5: Verification, Build & Packaging
 - [ ] **Task 5.1**: Run `gradle test` to verify 100% test pass rate across all suites.
 - [ ] **Task 5.2**: Build lean `locara-1.7.0.jar` with `gradle jar`.
-- [ ] **Task 5.3**: Synchronize jar artifact to `Revamp_M-Smile/Drivers/` and update `README.md`.
+- [x] **Task 5.3**: Build and integrate the Locara JAR artifact into `YourKatalonProject/Drivers/` and update `README.md`.

@@ -33,14 +33,14 @@ Use the extended `test` fixture from `@qureon/playwright-locara`:
 ```typescript
 import { test, expect } from '@qureon/playwright-locara';
 
-test('Bank Mega Web Checkout with Auto-Healing', async ({ page, locara }) => {
-  await page.goto('https://checkout.bankmega.com');
+test('Enterprise Web Checkout with Auto-Healing', async ({ page, locara }) => {
+  await page.goto('https://checkout.example.com');
 
   // Even if #btn-old-submit changes to a random hash, Locara recovers via 'Bayar Sekarang'
   await locara.click('#btn-old-submit', 'Bayar Sekarang');
 
   // Fill credentials with semantic hint recovery
-  await locara.fill('input#user_field', 'mega_user_01', 'Masukkan User ID');
+  await locara.fill('input#user_field', 'demo_user_01', 'Masukkan User ID');
 
   // Self-healing locator
   const confirmation = await locara.locator('#status-badge', 'Konfirmasi Pembayaran');
@@ -81,14 +81,14 @@ public class WebCheckoutTest {
         try (Playwright playwright = Playwright.create()) {
             Browser browser = playwright.chromium().launch();
             Page page = browser.newPage();
-            page.navigate("https://checkout.bankmega.com");
+            page.navigate("https://checkout.example.com");
 
             // Autonomous self-healing click
             boolean clicked = PlaywrightLocara.click(page, "#btn-broken-id", "Bayar Sekarang");
             assertTrue(clicked);
 
             // Autonomous self-healing input fill
-            boolean filled = PlaywrightLocara.fill(page, "input.user", "mega_user_01", "Masukkan User ID");
+            boolean filled = PlaywrightLocara.fill(page, "input.user", "demo_user_01", "Masukkan User ID");
             assertTrue(filled);
         }
     }
@@ -109,7 +109,7 @@ npx playwright test
 npx playwright test --ui
 
 # Record and inspect with Playwright Codegen
-npx playwright codegen https://checkout.bankmega.com
+npx playwright codegen https://checkout.example.com
 
 # Open deep Trace Viewer after run
 npx playwright show-trace trace.zip

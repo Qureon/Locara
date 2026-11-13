@@ -3,10 +3,12 @@ package com.qureon.locara.appium;
 import com.qureon.locara.core.LocaraEngine;
 import com.qureon.locara.core.model.HealContext;
 import com.qureon.locara.core.model.HealResult;
+import com.qureon.locara.core.model.UIElementNode;
 import com.qureon.locara.katalon.KeyboardGuard;
 import com.qureon.locara.katalon.ScrollRecoveryEngine;
 
 import java.lang.reflect.Method;
+import java.util.List;
 
 /**
  * First-Class Standalone Appium Self-Healing & Auto-Recovery API.
@@ -16,7 +18,6 @@ import java.lang.reflect.Method;
 public class AppiumLocara {
     private static final LocaraEngine ENGINE = new LocaraEngine();
     private static final KeyboardGuard KEYBOARD_GUARD = new KeyboardGuard();
-    private static final ScrollRecoveryEngine SCROLL_ENGINE = new ScrollRecoveryEngine(2);
 
     public static LocaraEngine getEngine() {
         return ENGINE;
@@ -90,6 +91,10 @@ public class AppiumLocara {
      * Finds a WebElement by healing it in real-time if the original locator is broken.
      */
     public static Object findElement(Object driver, String locatorOrXPath, String targetHint) {
+        if (driver == null) {
+            throw new IllegalArgumentException("[AppiumLocara] Driver instance cannot be null!");
+        }
+
         try {
             Object el = findElementDirectly(driver, locatorOrXPath);
             if (el != null) return el;
@@ -99,87 +104,13 @@ public class AppiumLocara {
             throw new RuntimeException("[AppiumLocara] Element not found and self-healing is disabled: " + locatorOrXPath);
         }
 
-        String pageSource = extractPageSource(driver);
-        HealContext context = HealContext.builder()
-                .targetHint(targetHint)
-                .action("FIND")
-                .originalLocator(locatorOrXPath)
-                .screenName("AppiumScreen")
-                .build();
-
-        HealResult result = ENGINE.heal(pageSource, context);
-
-        // Auto-Scroll recovery if not in current viewport
-        if (!result.isSuccess() && ENGINE.getConfig().isScrollRecoveryEnabled()) {
-            try {
-                java.util.List<com.qureon.locara.core.model.UIElementNode> nodes = new com.qureon.locara.core.parser.PageSourceParser().parse(pageSource);
-                if (SCROLL_ENGINE.isScrollEligible(targetHint, locatorOrXPath, "FIND", nodes)) {
-                    for (int attempt = 1; attempt <= SCROLL_ENGINE.getMaxScrollAttempts(); attempt++) {
-                        System.out.println("[AppiumLocara] Scrolling down to find '" + targetHint + "' (attempt #" + attempt + ")...");
-                        boolean scrolled = SCROLL_ENGINE.performScrollDown(driver);
-                        if (!scrolled) break;
-
-                        pageSource = extractPageSource(driver);
-                        if (pageSource != null) {
-                            result = ENGINE.heal(pageSource, context);
-                            if (result.isSuccess()) break;
-                        }
-                    }
-                } else if (SCROLL_ENGINE.isOverlayOrDialogTarget(targetHint, locatorOrXPath)) {
-                    System.out.println("[AppiumLocara] 🛡️ Target '" + targetHint + "' is an overlay/dialog. Auto-scroll strictly inhibited.");
-                }
-            } catch (Exception ignored) {}
-        }
-
-        if (!result.isSuccess() || result.getCandidate() == null) {
-            throw new RuntimeException("[AppiumLocara Failed] " + result.getMessage());
-        }
-
+        HealResult result = healWithScrollRecovery(driver, locatorOrXPath, targetHint, "FIND", "");
         String healedXPath = result.getCandidate().getSuggestedXPath();
         return findElementDirectly(driver, healedXPath);
     }
 
     private static boolean executeHealing(Object driver, String locatorOrXPath, String targetHint, String action, String value) {
-        String pageSource = extractPageSource(driver);
-        if (pageSource == null || pageSource.isEmpty()) {
-            throw new RuntimeException("[AppiumLocara] Unable to capture page source from Appium driver!");
-        }
-
-        HealContext context = HealContext.builder()
-                .targetHint(targetHint)
-                .action(action)
-                .value(value)
-                .originalLocator(locatorOrXPath)
-                .screenName("AppiumScreen")
-                .build();
-
-        HealResult result = ENGINE.heal(pageSource, context);
-
-        // Auto-Scroll recovery if not in current viewport
-        if (!result.isSuccess() && ENGINE.getConfig().isScrollRecoveryEnabled()) {
-            try {
-                java.util.List<com.qureon.locara.core.model.UIElementNode> nodes = new com.qureon.locara.core.parser.PageSourceParser().parse(pageSource);
-                if (SCROLL_ENGINE.isScrollEligible(targetHint, locatorOrXPath, action, nodes)) {
-                    for (int attempt = 1; attempt <= SCROLL_ENGINE.getMaxScrollAttempts(); attempt++) {
-                        System.out.println("[AppiumLocara] Scrolling down to find '" + targetHint + "' (attempt #" + attempt + ")...");
-                        boolean scrolled = SCROLL_ENGINE.performScrollDown(driver);
-                        if (!scrolled) break;
-
-                        pageSource = extractPageSource(driver);
-                        if (pageSource != null) {
-                            result = ENGINE.heal(pageSource, context);
-                            if (result.isSuccess()) break;
-                        }
-                    }
-                } else if (SCROLL_ENGINE.isOverlayOrDialogTarget(targetHint, locatorOrXPath)) {
-                    System.out.println("[AppiumLocara] 🛡️ Target '" + targetHint + "' is an overlay/dialog. Auto-scroll strictly inhibited.");
-                }
-            } catch (Exception ignored) {}
-        }
-
-        if (!result.isSuccess() || result.getCandidate() == null) {
-            throw new RuntimeException("[AppiumLocara Failed] " + result.getMessage());
-        }
+        HealResult result = healWithScrollRecovery(driver, locatorOrXPath, targetHint, action, value);
 
         String healedXPath = result.getCandidate().getSuggestedXPath();
         System.out.printf(java.util.Locale.US, "[AppiumLocara] SUCCESS! Healed '%s' -> %s (Confidence: %.1f%%)%n",
@@ -190,6 +121,58 @@ public class AppiumLocara {
 
         // Execute action directly on driver
         return performDriverAction(driver, healedXPath, action, value);
+    }
+
+    private static HealResult healWithScrollRecovery(Object driver, String locatorOrXPath, String targetHint,
+                                                     String action, String value) {
+        String pageSource = extractPageSource(driver);
+        if (pageSource == null || pageSource.isEmpty()) {
+            throw new RuntimeException("[AppiumLocara] Unable to capture page source from Appium driver!");
+        }
+
+        HealContext context = HealContext.builder()
+                .targetHint(targetHint)
+                .action(action)
+                .value(value != null ? value : "")
+                .originalLocator(locatorOrXPath)
+                .screenName("AppiumScreen")
+                .build();
+
+        List<UIElementNode> nodes;
+        HealResult result;
+        try {
+            nodes = ENGINE.parsePageSource(pageSource);
+            result = ENGINE.heal(nodes, pageSource, context);
+        } catch (Exception e) {
+            throw new RuntimeException("[AppiumLocara Failed] Failed to parse page source: " + e.getMessage(), e);
+        }
+
+        // Auto-Scroll recovery if not in current viewport (reusing already-parsed nodes for eligibility)
+        if (!result.isSuccess() && ENGINE.getConfig().isScrollRecoveryEnabled()) {
+            ScrollRecoveryEngine scrollEngine = new ScrollRecoveryEngine(ENGINE.getConfig().getMaxScrollAttempts());
+            if (scrollEngine.isScrollEligible(targetHint, locatorOrXPath, action, nodes)) {
+                for (int attempt = 1; attempt <= scrollEngine.getMaxScrollAttempts(); attempt++) {
+                    System.out.println("[AppiumLocara] Scrolling down to find '" + targetHint + "' (attempt #" + attempt + ")...");
+                    if (!scrollEngine.performScrollDown(driver)) {
+                        break;
+                    }
+                    String scrolledSource = extractPageSource(driver);
+                    if (scrolledSource != null && !scrolledSource.isEmpty()) {
+                        result = ENGINE.heal(scrolledSource, context);
+                        if (result.isSuccess()) {
+                            break;
+                        }
+                    }
+                }
+            } else if (scrollEngine.isOverlayOrDialogTarget(targetHint, locatorOrXPath)) {
+                System.out.println("[AppiumLocara] 🛡️ Target '" + targetHint + "' is an overlay/dialog. Auto-scroll strictly inhibited.");
+            }
+        }
+
+        if (!result.isSuccess() || result.getCandidate() == null) {
+            throw new RuntimeException("[AppiumLocara Failed] " + result.getMessage());
+        }
+        return result;
     }
 
     private static Object findElementDirectly(Object driver, String locatorOrXPath) {
@@ -230,25 +213,7 @@ public class AppiumLocara {
 
     private static boolean performDriverAction(Object driver, String xpath, String action, String value) {
         try {
-            Object element = null;
-            try {
-                Class<?> byClass = Class.forName("org.openqa.selenium.By");
-                Method xpathMethod = byClass.getMethod("xpath", String.class);
-                Object by = xpathMethod.invoke(null, xpath);
-
-                Method findElementMethod = driver.getClass().getMethod("findElement", byClass);
-                element = findElementMethod.invoke(driver, by);
-            } catch (ClassNotFoundException e) {
-                // Fallback for mock drivers
-                try {
-                    Method m = driver.getClass().getMethod("findElementByXPath", String.class);
-                    element = m.invoke(driver, xpath);
-                } catch (Exception ignored) {
-                    Method m = driver.getClass().getMethod("findElement", Object.class);
-                    element = m.invoke(driver, xpath);
-                }
-            }
-
+            Object element = findElementDirectly(driver, xpath);
             if (element == null) {
                 throw new RuntimeException("Element not found by driver for XPath: " + xpath);
             }

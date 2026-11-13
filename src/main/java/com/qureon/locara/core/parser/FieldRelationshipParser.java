@@ -13,6 +13,9 @@ import java.util.*;
  */
 public class FieldRelationshipParser {
 
+    private static final java.util.regex.Pattern NORM_NON_ALNUM = java.util.regex.Pattern.compile("[^a-z0-9\\s]");
+    private static final java.util.regex.Pattern NORM_SPACES = java.util.regex.Pattern.compile("\\s+");
+
     private final SpatialAlignmentEngine spatialEngine = new SpatialAlignmentEngine();
 
     public static class FieldEntry {
@@ -120,9 +123,7 @@ public class FieldRelationshipParser {
 
     private static String normalizeKey(String label) {
         if (label == null) return "";
-        return label.toLowerCase()
-                .replaceAll("[^a-z0-9\\s]", " ")
-                .replaceAll("\\s+", "_")
-                .trim();
+        String clean = NORM_NON_ALNUM.matcher(label.toLowerCase()).replaceAll(" ");
+        return NORM_SPACES.matcher(clean).replaceAll("_").trim();
     }
 }

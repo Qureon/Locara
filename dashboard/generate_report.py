@@ -11,9 +11,12 @@ attaching to Jira tickets, Jenkins artifacts, or UAT sign-off documentation.
 import sys
 import os
 import json
+import math
 import html as html_lib
 from pathlib import Path
 from datetime import datetime
+
+ENGINE_VERSION = "v1.15.0"
 
 REPORT_TEMPLATE = """<!DOCTYPE html>
 <html lang="id">
@@ -190,7 +193,7 @@ REPORT_TEMPLATE = """<!DOCTYPE html>
             <div class="meta-right">
                 <p><strong>Target App:</strong> Mobile Application (Android/iOS) &amp; Web</p>
                 <p><strong>Generated:</strong> {generated_time}</p>
-                <p><strong>Engine:</strong> Locara Core v1.9.4 (Katalon 11.7.0+ Ready)</p>
+                <p><strong>Engine:</strong> Locara Core v1.15.0 (Katalon 11.7.0+ Ready)</p>
             </div>
         </header>
 
@@ -246,17 +249,41 @@ REPORT_TEMPLATE = """<!DOCTYPE html>
 </html>
 """
 
-def generate_report(output_path=None):
+def _safe_confidence_pct(raw_value):
+    try:
+        val = float(raw_value if raw_value is not None else 0.0)
+        if not math.isfinite(val):
+            return "0.0%"
+        return f"{val * 100:.1f}%"
+    except (TypeError, ValueError):
+        return "0.0%"
+
+
+def _resolve_audit_candidates(base_dir):
+    candidates = []
+    env_log = os.environ.get("LOCARA_AUDIT_LOG")
+    if env_log:
+        candidates.append(Path(env_log).expanduser())
+
+    roots = [base_dir, Path.cwd()]
+    env_dirs = os.environ.get("LOCARA_AUDIT_DIRS", "")
+    for raw_dir in env_dirs.split(os.pathsep):
+        cleaned = raw_dir.strip()
+        if cleaned:
+            roots.append(Path(cleaned).expanduser())
+
+    for root in roots:
+        candidates.append(root / "Include" / "evidence" / "locara_audit.json")
+        candidates.append(root / "Include" / "evidence" / "healing_audit.json")
+    return candidates
+
+
+def generate_report(output_path=None, audit_path=None):
     base_dir = Path(__file__).resolve().parent.parent
-    candidates = [
-        base_dir / "Include" / "evidence" / "locara_audit.json",
-        base_dir / "Include" / "evidence" / "healing_audit.json",
-        base_dir.parent / "Revamp_M-Smile" / "Include" / "evidence" / "locara_audit.json",
-        base_dir.parent / "Revamp_M-Smile" / "Include" / "evidence" / "healing_audit.json"
-    ]
+    candidates = ([Path(audit_path)] if audit_path else []) + _resolve_audit_candidates(base_dir)
 
     events = []
-    target_file = next((f for f in candidates if f.exists()), None)
+    target_file = next((f for f in candidates if f.exists() and f.is_file()), None)
 
     if target_file and target_file.exists():
         try:
@@ -273,42 +300,43 @@ def generate_report(output_path=None):
 
     # Fallback to curated baseline if empty
     if not events:
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         events = [
             {
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "timestamp": now_str,
                 "screen": "Transfer / Konfirmasi",
-                "hint": "Lanjut",
+                "targetHint": "Lanjut",
                 "status": "SUCCESS",
                 "confidence": 0.942,
-                "healedXPath": "//android.widget.Button[@resource-id='com.bankmega.msmile:id/btn_next_transfer' and @text='Lanjut']",
-                "rsFile": "Object Repository/Transfer/btn_next_transfer.rs"
+                "healedLocator": "//android.widget.Button[@resource-id='com.example.app:id/btn_next_transfer' and @text='Lanjut']",
+                "generatedRs": "Object Repository/Transfer/btn_next_transfer.rs"
             },
             {
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "screen": "Transfer / Input M-PIN",
-                "hint": "Input MPIN 6 Digit",
+                "timestamp": now_str,
+                "screen": "Transfer / Verifikasi PIN",
+                "targetHint": "Input Security PIN 6 Digit",
                 "status": "SUCCESS",
                 "confidence": 0.912,
-                "healedXPath": "//android.widget.EditText[@resource-id='com.bankmega.msmile:id/input_security_code']",
-                "rsFile": "Object Repository/Transfer/input_security_code.rs"
+                "healedLocator": "//android.widget.EditText[@resource-id='com.example.app:id/input_security_code']",
+                "generatedRs": "Object Repository/Transfer/input_security_code.rs"
             },
             {
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "screen": "Payment / PLN Pascabayar",
-                "hint": "Bayar Tagihan",
+                "timestamp": now_str,
+                "screen": "Payment / Tagihan Utilitas",
+                "targetHint": "Bayar Tagihan",
                 "status": "SCROLLED",
                 "confidence": 0.895,
-                "healedXPath": "//android.widget.Button[@resource-id='com.bankmega.msmile:id/btn_submit_pln']",
-                "rsFile": "Object Repository/Payment/btn_submit_pln.rs"
+                "healedLocator": "//android.widget.Button[@resource-id='com.example.app:id/btn_submit_bill']",
+                "generatedRs": "Object Repository/Payment/btn_submit_bill.rs"
             },
             {
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "timestamp": now_str,
                 "screen": "Pengaturan / Blokir Kartu",
-                "hint": "Batal Blokir",
+                "targetHint": "Batal Blokir",
                 "status": "LOCKOUT",
                 "confidence": 0.450,
-                "healedXPath": "[BLOCKED BY SAFETY POLARITY GUARD]",
-                "rsFile": "N/A"
+                "healedLocator": "[BLOCKED BY SAFETY POLARITY GUARD]",
+                "generatedRs": "N/A"
             }
         ]
 
@@ -324,13 +352,13 @@ def generate_report(output_path=None):
         badge_cls = "badge-success" if status == "SUCCESS" else ("badge-scrolled" if status == "SCROLLED" else "badge-lockout")
         tier = str(e.get("intentionTier", "INTERACTION"))
         tier_style = "background:rgba(0,229,255,0.15); color:var(--cyan);" if tier == "INTERACTION" else ("background:rgba(16,185,129,0.15); color:var(--emerald);" if tier == "CHECKPOINT" else "background:rgba(139,92,246,0.15); color:var(--violet);")
-        conf = f"{float(e.get('confidence', 0.0)) * 100:.1f}%"
-        xpath = html_lib.escape(str(e.get("healedXPath", "-")))
-        rs_raw = e.get("rsFile") or e.get("generatedRs") or "-"
+        conf = _safe_confidence_pct(e.get("confidence", 0.0))
+        xpath = html_lib.escape(str(e.get("healedLocator") or e.get("healedXPath") or "-"))
+        rs_raw = e.get("generatedRs") or e.get("rsFile") or "-"
         rs = html_lib.escape(Path(str(rs_raw)).name if rs_raw != "-" else "-")
         ts = html_lib.escape(str(e.get("timestamp", "-")))
         screen = html_lib.escape(str(e.get("screen", "-")))
-        hint = html_lib.escape(str(e.get("hint") or e.get("targetHint") or "-"))
+        hint = html_lib.escape(str(e.get("targetHint") or e.get("hint") or "-"))
         tier_esc = html_lib.escape(tier)
         status_esc = html_lib.escape(status)
 

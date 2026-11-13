@@ -4,13 +4,24 @@
  * Playwright, and WebdriverIO.
  */
 
-import { Given, When, Then } from '@cucumber/cucumber';
+import { When, Then } from '@cucumber/cucumber';
 
 // Generic world context type representing active driver/page
 export interface LocaraCucumberWorld {
   page?: any;
   driver?: any;
   locara?: any;
+}
+
+export function toXPathLiteral(value: string): string {
+  if (!value.includes("'")) {
+    return `'${value}'`;
+  }
+  if (!value.includes('"')) {
+    return `"${value}"`;
+  }
+  const parts = value.split("'").map((part) => `'${part}'`);
+  return `concat(${parts.join(', "\'", ')})`;
 }
 
 /**
@@ -28,7 +39,8 @@ When(/(?:User clicks on|Pengguna menekan tombol|User taps on|Pengguna memilih)\s
     await btn.click({ timeout: 5000 });
   } else if (this.driver) {
     // Appium mobile driver
-    const el = await this.driver.$(`//*[@text='${targetHint}' or @content-desc='${targetHint}']`);
+    const lit = toXPathLiteral(targetHint);
+    const el = await this.driver.$(`//*[@text=${lit} or @content-desc=${lit}]`);
     await el.click();
   }
 });
@@ -46,7 +58,8 @@ When(/(?:User fills|Pengguna memasukkan|User types|Pengguna mengisi)\s+"([^"]+)"
     const input = this.page.getByLabel(targetHint).or(this.page.getByPlaceholder(targetHint)).or(this.page.getByTestId(targetHint));
     await input.fill(value, { timeout: 5000 });
   } else if (this.driver) {
-    const el = await this.driver.$(`//*[@hint='${targetHint}' or @text='${targetHint}' or contains(@resource-id, '${targetHint}')]`);
+    const lit = toXPathLiteral(targetHint);
+    const el = await this.driver.$(`//*[@hint=${lit} or @text=${lit} or contains(@resource-id, ${lit})]`);
     await el.setValue(value);
   }
 });
@@ -65,7 +78,8 @@ Then(/(?:User verifies|Pengguna melihat status|User should see|Pengguna memastik
     const el = this.page.getByText(targetHint);
     await el.waitFor({ state: 'visible', timeout: 5000 });
   } else if (this.driver) {
-    const el = await this.driver.$(`//*[@text='${targetHint}']`);
+    const lit = toXPathLiteral(targetHint);
+    const el = await this.driver.$(`//*[@text=${lit}]`);
     await el.waitForDisplayed({ timeout: 5000 });
   }
 });

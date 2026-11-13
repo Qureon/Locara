@@ -17,7 +17,8 @@ import java.lang.reflect.Method;
  */
 public class PlaywrightLocara {
     private static final LocaraEngine ENGINE = new LocaraEngine();
-    private static int defaultProbeTimeoutMs = 2500;
+    private static final Object UNSUPPORTED_OPTIONS = new Object();
+    private static volatile int defaultProbeTimeoutMs = 2500;
 
     static {
         // Enforce WEB target profile by default for web semantics & WAI-ARIA weighting
@@ -73,7 +74,7 @@ public class PlaywrightLocara {
 
         // 2. Self-Healing Execution
         if (!ENGINE.getConfig().isEnabled()) return false;
-        return executeHealing(page, selectorOrXPath, targetHint, "CLICK", null);
+        return executeHealing(page, selectorOrXPath, targetHint, "CLICK", null, probeTimeoutMs);
     }
 
     /**
@@ -86,6 +87,13 @@ public class PlaywrightLocara {
      * @return true if successfully filled
      */
     public static boolean fill(Object page, String selectorOrXPath, String text, String targetHint) {
+        return fill(page, selectorOrXPath, text, targetHint, defaultProbeTimeoutMs);
+    }
+
+    /**
+     * Fills/types text into an input field on a Playwright Page with configurable probe timeout before healing.
+     */
+    public static boolean fill(Object page, String selectorOrXPath, String text, String targetHint, int probeTimeoutMs) {
         if (page == null) {
             throw new IllegalArgumentException("[PlaywrightLocara] Page instance cannot be null!");
         }
@@ -93,7 +101,7 @@ public class PlaywrightLocara {
         try {
             Object locator = findLocator(page, selectorOrXPath);
             if (locator != null) {
-                boolean filled = invokeFill(locator, text);
+                boolean filled = invokeFill(locator, text, probeTimeoutMs);
                 if (filled) {
                     return true;
                 }
@@ -103,7 +111,7 @@ public class PlaywrightLocara {
         }
 
         if (!ENGINE.getConfig().isEnabled()) return false;
-        return executeHealing(page, selectorOrXPath, targetHint, "FILL", text);
+        return executeHealing(page, selectorOrXPath, targetHint, "FILL", text, probeTimeoutMs);
     }
 
     /**
@@ -117,8 +125,7 @@ public class PlaywrightLocara {
         try {
             Object locator = findLocator(page, selectorOrXPath);
             if (locator != null) {
-                Method textMethod = locator.getClass().getMethod("textContent");
-                Object result = textMethod.invoke(locator);
+                Object result = invokeTextContent(locator, defaultProbeTimeoutMs);
                 if (result != null) return result.toString();
             }
         } catch (Throwable ignored) {}
@@ -128,8 +135,7 @@ public class PlaywrightLocara {
             try {
                 Object locator = findLocator(page, healedSelector);
                 if (locator != null) {
-                    Method textMethod = locator.getClass().getMethod("textContent");
-                    Object res = textMethod.invoke(locator);
+                    Object res = invokeTextContent(locator, Math.max(5000, defaultProbeTimeoutMs));
                     return res != null ? res.toString() : "";
                 }
             } catch (Throwable t) {
@@ -204,23 +210,12 @@ public class PlaywrightLocara {
      * 2. Feeds DOM into LocaraEngine with WAI-ARIA & Modern Web weight profile.
      * 3. Dispatches action to healed Playwright Locator.
      */
-    private static boolean executeHealing(Object page, String originalSelector, String targetHint, String action, String textArg) {
-        String htmlContent = extractHtmlContent(page);
-        if (htmlContent == null || htmlContent.trim().isEmpty()) {
-            System.err.println("[PlaywrightLocara] Error: Page HTML DOM is empty or inaccessible!");
+    private static boolean executeHealing(Object page, String originalSelector, String targetHint,
+                                          String action, String textArg, int probeTimeoutMs) {
+        HealResult result = runHealing(page, originalSelector, targetHint, action);
+        if (result == null) {
             return false;
         }
-
-        String screenName = extractPageTitleOrUrl(page);
-        HealContext context = HealContext.builder()
-                .targetHint(targetHint)
-                .action(action)
-                .originalLocator(originalSelector)
-                .screenName(screenName)
-                .build();
-
-        HealResult result = ENGINE.heal(htmlContent, context);
-
         if (!result.isSuccess() || result.getCandidate() == null) {
             System.err.println("[PlaywrightLocara] Healing FAILED for hint '" + targetHint + "': " + result.getMessage());
             return false;
@@ -228,11 +223,12 @@ public class PlaywrightLocara {
 
         String healedXPath = result.getCandidate().getSuggestedXPath();
         double confidence = result.getCandidate().getConfidenceScore();
-        System.out.println(String.format("[PlaywrightLocara] SUCCESS: Healed '%s' -> '%s' (Confidence: %.1f%%)",
+        System.out.println(String.format(java.util.Locale.US, "[PlaywrightLocara] SUCCESS: Healed '%s' -> '%s' (Confidence: %.1f%%)",
                 originalSelector, healedXPath, confidence * 100.0));
 
         // Format selector for Playwright (Playwright accepts raw xpath starting with // or xpath=...)
         String playwrightSelector = toPlaywrightSelector(healedXPath);
+        int actionTimeoutMs = Math.max(5000, probeTimeoutMs);
 
         try {
             Object healedLocator = findLocator(page, playwrightSelector);
@@ -243,9 +239,9 @@ public class PlaywrightLocara {
 
             if (healedLocator != null) {
                 if ("FILL".equalsIgnoreCase(action)) {
-                    return invokeFill(healedLocator, textArg != null ? textArg : "");
+                    return invokeFill(healedLocator, textArg != null ? textArg : "", actionTimeoutMs);
                 } else {
-                    return invokeClick(healedLocator, 5000);
+                    return invokeClick(healedLocator, actionTimeoutMs);
                 }
             }
         } catch (Throwable t) {
@@ -259,11 +255,20 @@ public class PlaywrightLocara {
      * Resolves the healed selector string without executing an immediate click or fill.
      */
     public static String healSelector(Object page, String originalSelector, String targetHint, String action) {
+        HealResult result = runHealing(page, originalSelector, targetHint, action);
+        if (result != null && result.isSuccess() && result.getCandidate() != null) {
+            return toPlaywrightSelector(result.getCandidate().getSuggestedXPath());
+        }
+        return null;
+    }
+
+    private static HealResult runHealing(Object page, String originalSelector, String targetHint, String action) {
         if (!ENGINE.getConfig().isEnabled()) {
             return null;
         }
         String htmlContent = extractHtmlContent(page);
         if (htmlContent == null || htmlContent.trim().isEmpty()) {
+            System.err.println("[PlaywrightLocara] Error: Page HTML DOM is empty or inaccessible!");
             return null;
         }
 
@@ -275,12 +280,7 @@ public class PlaywrightLocara {
                 .screenName(screenName)
                 .build();
 
-        HealResult result = ENGINE.heal(htmlContent, context);
-        if (result.isSuccess() && result.getCandidate() != null) {
-            String xpath = result.getCandidate().getSuggestedXPath();
-            return toPlaywrightSelector(xpath);
-        }
-        return null;
+        return ENGINE.heal(htmlContent, context);
     }
 
     private static String toPlaywrightSelector(String xpath) {
@@ -308,27 +308,70 @@ public class PlaywrightLocara {
 
     private static boolean invokeClick(Object locator, int timeoutMs) {
         try {
-            // Try click with ClickOptions if class exists
-            Method[] methods = locator.getClass().getMethods();
-            for (Method m : methods) {
-                if ("click".equals(m.getName()) && m.getParameterCount() == 0) {
-                    m.invoke(locator);
-                    return true;
-                }
+            Object res = invokeWithTimeoutOptions(locator, "click",
+                    "com.microsoft.playwright.Locator$ClickOptions", timeoutMs, new Class<?>[0]);
+            if (res != UNSUPPORTED_OPTIONS) {
+                return true;
             }
+            Method clickMethod = locator.getClass().getMethod("click");
+            clickMethod.invoke(locator);
+            return true;
         } catch (Throwable t) {
-            // Click failed or timed out
+            return false;
         }
-        return false;
     }
 
-    private static boolean invokeFill(Object locator, String text) {
+    private static boolean invokeFill(Object locator, String text, int timeoutMs) {
         try {
+            Object res = invokeWithTimeoutOptions(locator, "fill",
+                    "com.microsoft.playwright.Locator$FillOptions", timeoutMs, new Class<?>[]{String.class}, text);
+            if (res != UNSUPPORTED_OPTIONS) {
+                return true;
+            }
             Method fillMethod = locator.getClass().getMethod("fill", String.class);
             fillMethod.invoke(locator, text);
             return true;
         } catch (Throwable t) {
             return false;
+        }
+    }
+
+    private static Object invokeTextContent(Object locator, int timeoutMs) throws Exception {
+        Object res = invokeWithTimeoutOptions(locator, "textContent",
+                "com.microsoft.playwright.Locator$TextContentOptions", timeoutMs, new Class<?>[0]);
+        if (res != UNSUPPORTED_OPTIONS) {
+            return res;
+        }
+        Method textMethod = locator.getClass().getMethod("textContent");
+        return textMethod.invoke(locator);
+    }
+
+    private static Object invokeWithTimeoutOptions(Object locator, String methodName, String optionsClassName,
+                                                   int timeoutMs, Class<?>[] prefixTypes, Object... prefixArgs) {
+        if (timeoutMs <= 0) {
+            return UNSUPPORTED_OPTIONS;
+        }
+        try {
+            Class<?> optsClz = Class.forName(optionsClassName);
+            Object opts = optsClz.getDeclaredConstructor().newInstance();
+            optsClz.getMethod("setTimeout", double.class).invoke(opts, (double) timeoutMs);
+
+            Class<?>[] paramTypes = new Class<?>[prefixTypes.length + 1];
+            System.arraycopy(prefixTypes, 0, paramTypes, 0, prefixTypes.length);
+            paramTypes[prefixTypes.length] = optsClz;
+
+            Object[] args = new Object[prefixArgs.length + 1];
+            System.arraycopy(prefixArgs, 0, args, 0, prefixArgs.length);
+            args[prefixArgs.length] = opts;
+
+            Method methodWithOpts = locator.getClass().getMethod(methodName, paramTypes);
+            return methodWithOpts.invoke(locator, args);
+        } catch (ClassNotFoundException | NoSuchMethodException ignored) {
+            return UNSUPPORTED_OPTIONS;
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            throw new RuntimeException(e.getCause() != null ? e.getCause() : e);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 

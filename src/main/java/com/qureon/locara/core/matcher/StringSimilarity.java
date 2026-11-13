@@ -9,6 +9,17 @@ import java.util.Set;
  */
 public final class StringSimilarity {
 
+    private static final java.util.regex.Pattern STOPWORD_SPLIT_PATTERN =
+            java.util.regex.Pattern.compile("[^a-z0-9]+");
+    private static final java.util.regex.Pattern NUMERIC_TOKEN_PATTERN =
+            java.util.regex.Pattern.compile("\\b\\d+\\b");
+    private static final java.util.regex.Pattern CAMEL_CASE_PATTERN =
+            java.util.regex.Pattern.compile("([a-z])([A-Z])");
+    private static final java.util.regex.Pattern TOKEN_SPLIT_PATTERN =
+            java.util.regex.Pattern.compile("[_\\-\\.\\:\\s/&'()+,;\"#@!?\\[\\]]+");
+    private static final java.util.regex.Pattern NON_ALNUM_PATTERN =
+            java.util.regex.Pattern.compile("[^a-z0-9]");
+
     private StringSimilarity() {}
 
     /**
@@ -77,7 +88,7 @@ public final class StringSimilarity {
     public static String normalizeWithoutStopwords(String str) {
         if (str == null) return "";
         String s = str.toLowerCase().replace("&", "dan");
-        String[] words = s.split("[^a-z0-9]+");
+        String[] words = STOPWORD_SPLIT_PATTERN.split(s);
         StringBuilder sb = new StringBuilder();
         for (String w : words) {
             if (w.isEmpty()) continue;
@@ -170,7 +181,7 @@ public final class StringSimilarity {
     private static Set<String> extractNumericTokens(String input) {
         Set<String> nums = new HashSet<>();
         if (input == null) return nums;
-        java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\b\\d+\\b").matcher(input);
+        java.util.regex.Matcher m = NUMERIC_TOKEN_PATTERN.matcher(input);
         while (m.find()) {
             nums.add(m.group());
         }
@@ -252,8 +263,7 @@ public final class StringSimilarity {
         Set<String> set = new HashSet<>();
         if (input == null) return set;
         // Split on camelCase, underscores, dashes, dots, colons, spaces, ampersand, quotes, parentheses, slashes, plus
-        String[] parts = input.replaceAll("([a-z])([A-Z])", "$1 $2")
-                .split("[_\\-\\.\\:\\s/&'()+,;\"#@!?\\[\\]]+");
+        String[] parts = TOKEN_SPLIT_PATTERN.split(CAMEL_CASE_PATTERN.matcher(input).replaceAll("$1 $2"));
         for (String p : parts) {
             String norm = normalize(p);
             if (!norm.isEmpty()) {
@@ -315,7 +325,7 @@ public final class StringSimilarity {
 
     public static String normalize(String str) {
         if (str == null) return "";
-        return str.toLowerCase().replaceAll("[^a-z0-9]", "").trim();
+        return NON_ALNUM_PATTERN.matcher(str.toLowerCase()).replaceAll("").trim();
     }
 
     private static int levenshteinDistance(String s1, String s2) {

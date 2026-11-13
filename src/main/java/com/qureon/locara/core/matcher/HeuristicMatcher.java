@@ -214,7 +214,7 @@ public class HeuristicMatcher {
                 score = node.isClickable() ? 0.90 : 0.60;
             } else if (tag.contains("textview") || className.contains("textview") || "span".equals(tag) || "p".equals(tag)) {
                 // If TextView is clickable, 0.85. If not clickable but wrapped by a clickable container (React Native CButton / TouchableOpacity), 0.85.
-                boolean hasClickableParent = hasClickableAncestor(node);
+                boolean hasClickableParent = node.hasClickableAncestor(4);
                 score = (node.isClickable() || hasClickableParent) ? 0.85 : 0.60;
             } else if (tag.contains("viewgroup") || className.contains("viewgroup") || tag.contains("view") || className.contains("view") || "div".equals(tag)) {
                 score = (node.isClickable() || node.isCheckable()) ? 0.90 : 0.75;
@@ -241,25 +241,13 @@ public class HeuristicMatcher {
 
     private double calculateProximityScore(UIElementNode node, String action) {
         double score = 0.5;
-        if (node.isClickable() || node.isCheckable() || (("TAP".equalsIgnoreCase(action) || "CLICK".equalsIgnoreCase(action)) && hasClickableAncestor(node))) {
+        if (node.isClickable() || node.isCheckable() || (("TAP".equalsIgnoreCase(action) || "CLICK".equalsIgnoreCase(action)) && node.hasClickableAncestor(4))) {
             score += 0.3;
         }
         if (node.isEnabled()) {
             score += 0.2;
         }
         return Math.min(1.0, score);
-    }
-
-    private boolean hasClickableAncestor(UIElementNode node) {
-        if (node == null) return false;
-        UIElementNode current = node.getParent();
-        int levels = 0;
-        while (current != null && levels < 4) {
-            if (current.isClickable()) return true;
-            current = current.getParent();
-            levels++;
-        }
-        return false;
     }
 
     private String buildHealReason(double textScore, double idScore, double descScore, double classScore) {

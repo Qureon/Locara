@@ -72,14 +72,14 @@ public class AutoVariableSynthesizerTest {
         String updated = synthesizer.syncVariableDefaultContent(
                 existingTc,
                 "nomorRekeningSumber",
-                "'010740021025853'",
+                "'900040021025853'",
                 "Updated by Locara"
         );
 
-        assertTrue(updated.contains("<defaultValue>'010740021025853'</defaultValue>"));
+        assertTrue(updated.contains("<defaultValue>'900040021025853'</defaultValue>"));
         List<TestCaseVariable> vars = synthesizer.parseVariablesFromContent(updated);
         assertEquals(1, vars.size(), "Should not duplicate variable block");
-        assertEquals("'010740021025853'", vars.get(0).getDefaultValue());
+        assertEquals("'900040021025853'", vars.get(0).getDefaultValue());
     }
 
     @Test
@@ -88,7 +88,7 @@ public class AutoVariableSynthesizerTest {
         String scriptInsideTry = """
                 println('Start test')
                 try {
-                    String passwordLogin = binding.hasVariable("passwordLogin") ? binding.getVariable("passwordLogin") : "Bankmega1"
+                    String passwordLogin = binding.hasVariable("passwordLogin") ? binding.getVariable("passwordLogin") : "DemoPass1"
                     Mobile.callTestCase(findTestCase("Login"), [:])
                 } catch (Exception e) {
                     throw e

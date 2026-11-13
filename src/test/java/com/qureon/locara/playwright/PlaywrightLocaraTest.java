@@ -115,7 +115,7 @@ public class PlaywrightLocaraTest {
                 "</div>" +
                 "</body></html>";
 
-        MockPlaywrightPage page = new MockPlaywrightPage(html, "Mega Checkout Page", "https://checkout.bankmega.com");
+        MockPlaywrightPage page = new MockPlaywrightPage(html, "Sample Checkout Page", "https://checkout.example.com");
 
         // Old broken selector: "#btn-broken-old-checkout"
         // Semantic hint: "Bayar Sekarang"
@@ -136,14 +136,14 @@ public class PlaywrightLocaraTest {
                 "</form>" +
                 "</body></html>";
 
-        MockPlaywrightPage page = new MockPlaywrightPage(html, "Login Internet Banking", "https://ib.bankmega.com/login");
+        MockPlaywrightPage page = new MockPlaywrightPage(html, "Login Internet Banking", "https://ib.example.com/login");
 
         // Old broken selector: "input#old_user_id_broken"
         // Semantic hint: "Masukkan User ID"
-        boolean filled = PlaywrightLocara.fill(page, "input#old_user_id_broken", "mega_user_01", "Masukkan User ID");
+        boolean filled = PlaywrightLocara.fill(page, "input#old_user_id_broken", "demo_user_01", "Masukkan User ID");
 
         assertTrue(filled, "PlaywrightLocara should heal and fill input with target user ID");
-        assertEquals("mega_user_01", page.getLastFilledText(), "Filled text should match argument");
+        assertEquals("demo_user_01", page.getLastFilledText(), "Filled text should match argument");
     }
 
     @Test

@@ -5,9 +5,9 @@
 ### Adaptive Locator Intelligence & Universal Self-Healing Engine
 *An autonomous, offline-first self-healing engine for resilient mobile & hybrid test automation.*
 
-[![Version](https://img.shields.io/badge/version-1.14.0-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
+[![Version](https://img.shields.io/badge/version-1.15.0-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-99%2F99%20passing-10B981?style=flat-square)](build.gradle)
+[![Tests](https://img.shields.io/badge/tests-110%2F110%20passing-10B981?style=flat-square)](build.gradle)
 [![Java](https://img.shields.io/badge/java-17%20%7C%2021%20%7C%2024-orange?style=flat-square&logo=openjdk)](build.gradle)
 [![Katalon](https://img.shields.io/badge/katalon-8.x%20%7C%209.x%20%7C%2010.x%20%7C%2011.x%20(11.7.0%2B%20Ready)-00B0FF?style=flat-square)](https://katalon.com)
 [![Appium](https://img.shields.io/badge/appium-2.x%20%7C%201.x-662d91?style=flat-square&logo=appium)](https://appium.io)
@@ -47,6 +47,7 @@ Locara menerapkan prinsip **In-Flight Zero-Interruption**:
 15. **Corporate Issuer Header Isolation & OR Strategy Conflict Harmonizer (v1.12.0)**: Proteksi polaritas entitas hukum perbankan & manajer investasi (*Rule 0B: anti-salah klik atau salah heal header PT Manulife / PT Schroder saat mencari kartu produk*), serta sinkronisasi otonom berkas `.rs` yang mengalami konflik strategi (`<selectorMethod>BASIC</selectorMethod>` tetapi memiliki `<locator>XPath</locator>`) agar Katalon Studio tidak mengabaikan XPath kustom.
 16. **Dynamic Multi-Account Resolution & Centroid-Safe Card Tap (v1.13.0)**: Resolusi target kartu rekening secara deterministik berbasis `targetAccountNumber` pada carousel multi-rekening dan sintesis XPath aman (`_art` / `_title` / `ImageView`) yang menghindari tombol salin/mata (*copy button centroid trap*).
 17. **Code Naming Intelligence & Convention Auditor (v1.14.0)**: Deduplikasi & standarisasi penamaan `.rs` (`Btn*`, `Txt*`, `Inp*`, `Pnl*`, `Img*`, `Chk*`, `Rdo*`), hygiene guard variabel AVS terhadap nama generik (`data`, `temp`, `val`), preservasi akronim perbankan (`QRIS`, `RTGS`, `BI-FAST`, `MPIN`), serta subcommand CLI `locara audit-naming` (Mode A Read-Only).
+18. **Multi-Stack Security Hardening, ThreadLocal Isolation & Persistence (v1.15.0)**: Eliminasi false-green di seluruh wrapper (`Locara`, `CucumberLocara`, `PlaywrightLocara`, Katalon/TS), isolasi thread-safe `ThreadLocal<AppTarget>` (`setThreadAppTarget`/`clearThreadAppTarget`), guard XXE/ReDoS/CSRF/XSS (`PageSourceParser`, `HtmlDomParser`, `dashboard/server.py`, `dashboard/js/utils.js`), persistensi `locara.properties`, Gradle Wrapper (`./gradlew`), serta perluasan suite uji (`110` JUnit + `8` Python `unittest`).
 
 ---
 
@@ -101,8 +102,8 @@ Tolong unduh engine test automation offline "Locara" versi rilis terbaru dari re
 https://github.com/Qureon/Locara/releases/latest
 
 Langkah yang perlu kamu lakukan:
-1. Cek tag rilis terbaru dari API GitHub (misal v1.6.0).
-2. Download asset file .jar biner (contoh: locara-1.6.0.jar) dari Releases tersebut.
+1. Cek tag rilis terbaru dari API GitHub (misal `v1.15.0`).
+2. Download asset file `.jar` biner (contoh: `locara-1.15.0.jar`) dari Releases tersebut.
 3. Simpan file .jar tersebut langsung ke dalam folder: Drivers/ di root workspace proyek Katalon ini.
 4. Hapus versi locara-*.jar lama jika sebelumnya ada di dalam folder Drivers/.
 5. Pastikan ukuran file terunduh sekitar ~200 KB dan tidak korup.
@@ -185,13 +186,13 @@ Tersedia integrasi multi-bahasa untuk ekosistem modern Microsoft Playwright Web:
 import { test, expect } from '@qureon/playwright-locara';
 
 test('Web Checkout with Auto-Healing', async ({ page, locara }) => {
-  await page.goto('https://checkout.bankmega.com');
+  await page.goto('https://checkout.example.com');
 
   // Klik tombol bermutasi dengan pemulihan semantik instan
   await locara.click('#btn-broken-old-checkout', 'Bayar Sekarang');
 
   // Isi form input kredensial
-  await locara.fill('input#user_input', 'mega_user_01', 'Masukkan User ID');
+  await locara.fill('input#user_input', 'demo_user_01', 'Masukkan User ID');
 
   // Self-healing locator
   const badge = await locara.locator('.status-badge', 'Konfirmasi Pembayaran');
@@ -208,7 +209,7 @@ import com.qureon.locara.playwright.PlaywrightLocara;
 PlaywrightLocara.click(page, "#btn-broken-id", "Bayar Sekarang");
 
 // 2. Fill input text dengan auto-healing
-PlaywrightLocara.fill(page, "input.user", "mega_user_01", "Masukkan User ID");
+PlaywrightLocara.fill(page, "input.user", "demo_user_01", "Masukkan User ID");
 
 // 3. Healed Locator
 Locator healed = (Locator) PlaywrightLocara.locator(page, "#broken-selector", "Bayar Sekarang");
@@ -235,7 +236,7 @@ public void fillInput(String textValue, String fieldLabel) {
 
 #### B. Modern Cucumber-JS (`@qureon/cucumber-locara`)
 ```gherkin
-Feature: Pembayaran Tagihan M-Smile
+Feature: Pembayaran Tagihan Mobile Banking
 
   Scenario: Nasabah melakukan pembayaran
     Given Pengguna berada di halaman tagihan
@@ -251,10 +252,13 @@ Jalankan evaluasi heuristik dan inspeksi langsung dari terminal:
 
 ```bash
 # 1. Evaluasi & generate file .rs dari berkas XML dump
-java -jar locara-1.8.1.jar --xml dump.xml --hint "Lanjut Transfer" --out "Object Repository/Transfer/btn_Lanjut.rs"
+java -jar locara-1.15.0.jar --xml dump.xml --hint "Lanjut Transfer" --out "Object Repository/Transfer/btn_Lanjut.rs"
 
 # 2. Inspeksi seluruh elemen interaktif dalam XML / HTML
-java -jar locara-1.8.1.jar --xml dump.xml --inspect
+java -jar locara-1.15.0.jar --xml dump.xml --inspect
+
+# 3. Audit konvensi penamaan .rs, .tc, dan script Groovy
+java -jar locara-1.15.0.jar audit-naming --dir .
 ```
 
 ---
@@ -264,13 +268,13 @@ java -jar locara-1.8.1.jar --xml dump.xml --inspect
 | Fitur | Komponen | Fungsi & Manfaat |
 |---|---|---|
 | **Universal Hybrid WebView** | `WebViewContextDetector.java` & `HtmlDomParser.java` | Deteksi dan self-healing instan untuk embedded HTML DOM (Cordova, Capacitor, React Native WebView) dengan atribut web modern (`data-testid`, `aria-label`). |
-| **2D Spatial Proximity** | `SpatialProximityScorer.java` | Evaluasi geometris sumbu X & Y untuk menemukan input atau tombol yang posisinya bergeser berdasarkan tetangga jangkar (*anchor*). |
-| **Universal Semantic Tensor** | `UniversalSemanticDictionary.java` | Kamus sinonim 15 kluster (ID & EN) 100% offline untuk penyesuaian otomatis saat kata berubah (*Masuk* $\leftrightarrow$ *Login*). |
+| **2D Spatial Alignment** | `SpatialAlignmentEngine.java` | Evaluasi geometris sumbu X & Y untuk menemukan input atau tombol yang posisinya bergeser berdasarkan tetangga jangkar (*anchor*). |
+| **Universal Semantic Tensor** | `UniversalSemanticDictionary.java` | Kamus sinonim 25 kluster (ID & EN) 100% offline untuk penyesuaian otomatis saat kata berubah (*Masuk* $\leftrightarrow$ *Login*). |
 | **Danger-Lockout Policy** | `DangerKeywordGuard.java` | Mencegah salah klik fatal. Jika mencari aksi positif (*"Lanjut"* / *"Bayar"*), engine menolak tombol berpolaritas bahaya (*"Batal"*, *"Hapus"*, *"Blokir"*). |
 | **The Golden Triad** | `KeyboardGuard.java` | Deteksi posisi elemen yang tertutup keyboard virtual Android/iOS (`y > 58%`), otomatis memanggil dismiss keyboard. |
 | **Auto-Scroll Fallback** | `ScrollRecoveryEngine.java` | Otomatis melakukan *swipe down* jika tombol berada di bawah lipatan layar (*below the fold*), lalu re-dump XML. |
 | **Parallel Concurrency** | `HealingAuditLedger.java` | Thread-safe atomic file lock untuk eksekusi paralel multi-device (Katalon 11.4+) tanpa korupsi log. |
-| **Dual Telemetry Ledger** | `HealingAuditLedger.java` | Mencatat audit log ganda (`healing_audit.json` & `healing_audit.md`) dengan mask PII untuk integrasi CI/CD. |
+| **Dual Telemetry Ledger** | `HealingAuditLedger.java` | Mencatat audit log ganda (`locara_audit.json` & `locara_audit.md`) dengan masking PII untuk integrasi CI/CD. |
 
 ---
 
@@ -352,33 +356,43 @@ Locara/
 │   ├── ARCHITECTURE_AND_FLOW.md              # Deep-dive Architecture, Scoring Radars & Flow
 │   ├── USER_TUTORIAL_GUIDE.md                # Tim Tutorial, Ghost Mode & Troubleshooting
 │   ├── IMPLEMENTATION_PLAN.md                # Evolutionary Roadmap & Architecture Baseline
+│   ├── KATALON_11_MODERN_ALIGNMENT_PLAN.md   # Katalon 11.6+ Alignment Specification
 │   └── v1.6_HYBRID_AND_UNIVERSAL_ENTERPRISE_PLAN.md # v1.6.0 Verification & Release Plan
+├── wiki/                                     # Synchronized GitHub Wiki Pages
+├── tools/                                    # Maintenance & Wiki Sync Scripts
 ├── dashboard/                                # Mission Control Dashboard & Telemetry Platform
 │   ├── assets/                               # Vector SVG Logo & Favicon
 │   ├── css/                                  # Modular Stylesheets
-│   ├── js/                                   # Modular ES Architecture
+│   ├── js/                                   # Modular ES Architecture (incl. utils.js)
 │   ├── index.html                            # Master Telemetry & Recon Web UI
 │   ├── server.py                             # Python HTTP & live API telemetry server
 │   └── generate_report.py                    # Standalone HTML UAT sign-off report generator
 ├── integrations/
-│   └── katalon/
-│       ├── LocaraHook.groovy                 # Transparent In-Flight Dynamic Reflection Interceptor
-│       ├── LocaraKeywords.groovy             # Native Katalon Custom Keyword wrapper
-│       └── LocaraTestListener.groovy         # Test Listener lifecycle integration
+│   ├── katalon/
+│   │   ├── LocaraHook.groovy                 # Transparent In-Flight Dynamic Reflection Interceptor
+│   │   ├── LocaraKeywords.groovy             # Native Katalon Custom Keyword wrapper
+│   │   └── LocaraTestListener.groovy         # Test Listener lifecycle integration
+│   ├── playwright/                           # @qureon/playwright-locara (TS/JS + MCP Adapter)
+│   └── cucumber/                             # @qureon/cucumber-locara (BDD Step Helpers)
 └── src/
     ├── main/java/
-    │   ├── com/qureon/locara/                # Core Locara by Qureon Engine
-    │   │   ├── cli/LocaraCli.java            # Standalone CLI entrypoint
-    │   │   ├── core/LocaraEngine.java        # Core facade & orchestrator
-    │   │   ├── core/framework/               # AppFramework, FrameworkDetector, WebViewContextDetector
-    │   │   ├── core/generator/               # Dynamic XPath & .rs XML Synthesizer
-    │   │   ├── core/guard/                   # Danger polarity lockout guard
-    │   │   ├── core/ledger/                  # Audit ledger & visual annotator
-    │   │   ├── core/matcher/                 # HeuristicMatcher, StringSimilarity, UniversalSemanticDictionary
-    │   │   ├── core/model/                   # Immutable domain models (UIElementNode, etc.)
-    │   │   ├── core/parser/                  # PageSourceParser & HtmlDomParser
-    │   │   ├── katalon/                      # In-flight hooks & keyboard/scroll guards
-    │   │   └── appium/                       # Standalone Appium driver wrappers
+    │   └── com/qureon/locara/                # Core Locara by Qureon Engine
+    │       ├── cli/                          # LocaraCli & CodeNamingAuditor
+    │       ├── core/LocaraEngine.java        # Core facade & orchestrator
+    │       ├── core/context/                 # ContextualEntityResolver & ResolvedAccount
+    │       ├── core/framework/               # AppFramework, FrameworkDetector, WebViewContextDetector
+    │       ├── core/generator/               # Dynamic XPath & .rs XML Synthesizer
+    │       ├── core/guard/                   # Danger polarity lockout & OverlayAirbag
+    │       ├── core/ledger/                  # Audit ledger & visual annotator
+    │       ├── core/matcher/                 # HeuristicMatcher, StringSimilarity, SemanticDictionary
+    │       ├── core/model/                   # Domain models (UIElementNode, HealConfig, etc.)
+    │       ├── core/parser/                  # PageSourceParser, HtmlDomParser, FieldRelationshipParser
+    │       ├── core/sanitizer/               # LocaraOrSanitizer
+    │       ├── core/spatial/                 # SpatialAlignmentEngine
+    │       ├── katalon/                      # In-flight hooks, guards & variable synthesizers
+    │       ├── appium/                       # Standalone Appium driver wrappers
+    │       ├── cucumber/                     # Standalone Cucumber JVM helpers
+    │       └── playwright/                   # Standalone Playwright Java wrappers
     └── test/                                 # Unit & E2E Simulation Suite
 ```
 

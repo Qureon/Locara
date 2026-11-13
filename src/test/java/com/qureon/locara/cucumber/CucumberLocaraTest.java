@@ -36,9 +36,9 @@ public class CucumberLocaraTest {
     @Test
     @DisplayName("CucumberLocara: Gherkin Step parsing for SET_TEXT input")
     public void testGherkinStepParsingInput() {
-        CucumberLocara.GherkinStepIntent intent = CucumberLocara.parseStep("And User fills \"mega_user_01\" into \"Username\" field");
+        CucumberLocara.GherkinStepIntent intent = CucumberLocara.parseStep("And User fills \"demo_user_01\" into \"Username\" field");
         assertEquals(CucumberLocara.GherkinStepIntent.ActionType.SET_TEXT, intent.getActionType());
-        assertEquals("mega_user_01", intent.getValue());
+        assertEquals("demo_user_01", intent.getValue());
         assertEquals("Username", intent.getTargetHint());
 
         CucumberLocara.GherkinStepIntent intentId = CucumberLocara.parseStep("When pada kolom \"M-PIN\" masukkan \"123456\"");
@@ -67,10 +67,10 @@ public class CucumberLocaraTest {
         MockAppiumDriver driver = new MockAppiumDriver(xml);
 
         // Broken fallback locator: "//android.widget.Button[@id='broken_btn_id']"
-        // Gherkin step contains natural language semantic hint: "Lanjut"
+        // Gherkin step contains natural language semantic hint: "Lanjut Transfer"
         boolean success = CucumberLocara.executeGherkinStep(
                 driver,
-                "When Pengguna menekan tombol \"Lanjut\"",
+                "When Pengguna menekan tombol \"Lanjut Transfer\"",
                 "//android.widget.Button[@id='broken_btn_id']"
         );
 

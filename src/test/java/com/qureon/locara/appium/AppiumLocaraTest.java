@@ -1,5 +1,6 @@
 package com.qureon.locara.appium;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
@@ -8,6 +9,11 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class AppiumLocaraTest {
+
+    @BeforeAll
+    static void disableAuditLedgerForUnitTests() {
+        AppiumLocara.getEngine().getConfig().setAuditLedgerEnabled(false);
+    }
 
     // Dummy mock driver mimicking AppiumDriver
     public static class MockAppiumDriver {
@@ -27,6 +33,9 @@ public class AppiumLocaraTest {
         }
 
         public MockWebElement findElement(Object by) {
+            if (by != null && String.valueOf(by).contains("broken")) {
+                return null;
+            }
             return new MockWebElement(this);
         }
     }
@@ -58,8 +67,8 @@ public class AppiumLocaraTest {
         MockAppiumDriver driver = new MockAppiumDriver(xml);
 
         // Intentionally broken locator: "btn_broken_id"
-        // Semantic hint: "Lanjut"
-        boolean success = AppiumLocara.tap(driver, "//android.widget.Button[@id='btn_broken_id']", "Lanjut");
+        // Semantic hint: "Lanjut Transfer" (satisfies DangerKeywordGuard financial isolation)
+        boolean success = AppiumLocara.tap(driver, "//android.widget.Button[@id='btn_broken_id']", "Lanjut Transfer");
 
         assertTrue(success, "AppiumLocara should heal and click the element");
         assertTrue(driver.isClicked(), "Mock element click() should be executed");

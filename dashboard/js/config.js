@@ -1,14 +1,14 @@
 /**
  * ==============================================================================
- * ZERO-HEALING DASHBOARD — CONFIGURATION & CONSTANTS
+ * LOCARA MISSION CONTROL — CONFIGURATION & CONSTANTS
  * ==============================================================================
  */
 
 export const APP_CONFIG = {
     name: "Locara Mission Control",
     byline: "Powered by Qureon",
-    version: "1.3.0",
-    semver: "v1.3.0",
+    version: "1.15.0",
+    semver: "v1.15.0",
     organization: "Qureon Autonomous QA Platform",
     targetProject: "Mobile & Web Automation Suite",
     defaultPageSize: 6,

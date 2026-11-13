@@ -5,10 +5,10 @@
 ### Adaptive Locator Intelligence
 *Next-generation in-flight autonomous self-healing engine for mobile test automation.*
 
-[![Version](https://img.shields.io/badge/version-1.5.0-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara)
+[![Version](https://img.shields.io/badge/version-1.15.0-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square)](https://github.com/Qureon/Locara/blob/main/LICENSE)
 [![Java](https://img.shields.io/badge/java-17%20%7C%2021%20%7C%2024-orange?style=flat-square&logo=openjdk)](https://github.com/Qureon/Locara)
-[![Katalon](https://img.shields.io/badge/katalon-8.x%20%7C%209.x%20%7C%2010.x-00B0FF?style=flat-square)](https://katalon.com)
+[![Katalon](https://img.shields.io/badge/katalon-8.x%20%7C%209.x%20%7C%2010.x%20%7C%2011.x-00B0FF?style=flat-square)](https://katalon.com)
 [![Appium](https://img.shields.io/badge/appium-2.x%20%7C%201.x-662d91?style=flat-square&logo=appium)](https://appium.io)
 
 </div>
@@ -38,10 +38,10 @@ Explore the topics below to get up and running:
 
 ---
 
-## ⚡ Key Highlights in v1.5.0
+## ⚡ Key Highlights in v1.15.0
 
 1. **Universal 2D Spatial Alignment**: Uses Euclidean centroid distance, bounding-box aspect ratio matching, and layout quadrant pinning.
 2. **Field Relationship Parser**: Anchors dynamic input fields to adjacent static text labels (supports Above, Left-Of, Below, and Inside-Container relationships).
 3. **Autonomous Overlay Airbag**: Automatically identifies and dismisses obstructive popups (permission dialogs, promos, announcements, dismiss buttons) before interacting with targets.
-4. **Tri-Target Heuristic Architecture**: Switch seamlessly between `UMUM` (generic cross-app), `REVAMP` (legacy hybrid banking), and `KMP` (modern testID-first banking).
-5. **Zero External Dependencies**: Distributed as an ultra-compact, self-contained Fat JAR (`locara-1.5.0.jar`) compatible with Katalon Studio 8.x–10.x and standard Appium 2.x suites.
+4. **Tri-Target Heuristic Architecture & Thread Isolation**: Switch seamlessly between `UMUM`, `REVAMP`, and `KMP`, with per-thread `ThreadLocal<AppTarget>` isolation (`setThreadAppTarget`/`clearThreadAppTarget`).
+5. **Hardened Security, Persistence & Zero External Dependencies**: Features XXE/ReDoS/XSS/CSRF defenses, persistent `locara.properties` Mission Control config, Gradle Wrapper portability, and a compact self-contained JAR (`locara-1.15.0.jar`).

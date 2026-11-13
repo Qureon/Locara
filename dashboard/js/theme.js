@@ -7,11 +7,23 @@
 import { renderIcon } from "./icons.js";
 
 const THEME_STORAGE_KEY = "locara-theme";
+const LEGACY_THEME_STORAGE_KEY = "zero-healing-theme";
+
+function normalizeTheme(candidate, prefersDark) {
+    if (candidate === "light" || candidate === "dark") {
+        return candidate;
+    }
+    return prefersDark ? "dark" : "light";
+}
 
 export function initTheme() {
-    const saved = localStorage.getItem(THEME_STORAGE_KEY) || localStorage.getItem("zero-healing-theme");
+    const legacySaved = localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
+    const saved = localStorage.getItem(THEME_STORAGE_KEY) || legacySaved;
+    if (legacySaved !== null) {
+        localStorage.removeItem(LEGACY_THEME_STORAGE_KEY);
+    }
     const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const initialTheme = saved || (prefersDark ? "dark" : "light");
+    const initialTheme = normalizeTheme(saved, prefersDark);
 
     applyTheme(initialTheme);
 
@@ -26,17 +38,18 @@ export function initTheme() {
 }
 
 export function applyTheme(theme) {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem(THEME_STORAGE_KEY, theme);
+    const normalized = theme === "light" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", normalized);
+    localStorage.setItem(THEME_STORAGE_KEY, normalized);
 
     const labelWrap = document.getElementById("theme-label");
     const iconWrap = document.getElementById("theme-icon");
 
     if (labelWrap) {
-        labelWrap.textContent = theme === "dark" ? "Dark Mode" : "Light Mode";
+        labelWrap.textContent = normalized === "dark" ? "Dark Mode" : "Light Mode";
     }
 
     if (iconWrap) {
-        iconWrap.innerHTML = theme === "dark" ? renderIcon("moon") : renderIcon("sun");
+        iconWrap.innerHTML = normalized === "dark" ? renderIcon("moon") : renderIcon("sun");
     }
 }

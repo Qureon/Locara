@@ -16,8 +16,8 @@
 ### Q3: What should I do if a healed selector targets the wrong element?
 Adjust the similarity threshold in `locara.properties`:
 ```properties
-# Raise threshold from default 0.72 to 0.85 for stricter matching
-locara.similarity.threshold=0.85
+# Raise threshold from default 0.70 to 0.85 for stricter matching
+locara.threshold=0.85
 ```
 
 ---

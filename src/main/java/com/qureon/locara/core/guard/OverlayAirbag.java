@@ -66,7 +66,22 @@ public class OverlayAirbag {
         try {
             PageSourceParser parser = new PageSourceParser();
             List<UIElementNode> nodes = parser.parse(xmlPageSource);
+            return dismissBlockingOverlay(driver, nodes);
+        } catch (Throwable t) {
+            System.out.println("[Locara by Qureon] OverlayAirbag scan bypassed: " + t.getMessage());
+            return false;
+        }
+    }
 
+    /**
+     * Inspects pre-parsed UI hierarchy nodes and dismisses any blocking OS permission or modal overlay.
+     */
+    public boolean dismissBlockingOverlay(Object driver, List<UIElementNode> nodes) {
+        if (driver == null || nodes == null || nodes.isEmpty()) {
+            return false;
+        }
+
+        try {
             // 1. Check for OS System Permission Dialog
             UIElementNode permButton = findPermissionAllowButton(nodes);
             if (permButton != null) {
@@ -140,7 +155,7 @@ public class OverlayAirbag {
             Class<?> byClass = Class.forName("org.openqa.selenium.By");
             String xpath;
             if (node.hasResourceId()) {
-                xpath = "//*[@resource-id='" + node.getResourceId() + "']";
+                xpath = "//*[@resource-id=" + com.qureon.locara.core.generator.DynamicXPathGenerator.toXPathLiteral(node.getResourceId()) + "]";
             } else if (node.hasText()) {
                 xpath = "//*[@text=" + com.qureon.locara.core.generator.DynamicXPathGenerator.toXPathLiteral(node.getText()) + "]";
             } else if (node.hasContentDesc()) {
@@ -159,6 +174,9 @@ public class OverlayAirbag {
             clickMethod.invoke(element);
             Thread.sleep(600);
             return true;
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            return false;
         } catch (Throwable t) {
             return false;
         }

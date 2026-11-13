@@ -8,30 +8,34 @@ Locara provides both zero-code automatic healing (via test listeners) and explic
 
 ### Class: `LocaraKeywords`
 
-#### 1. `smartTap(TestObject to, int timeoutSeconds = 10)`
-Performs an intelligent tap on the target element with automatic self-healing and overlay airbag dismissal.
+#### 1. `smartTap(TestObject to, String targetHint = "")` & `tap(TestObject to, int timeoutSeconds = 10, String targetHint = "")`
+Performs an intelligent tap on the target element with automatic self-healing, keyboard protection, and scroll fallback.
 ```groovy
-import com.qureon.locara.katalon.LocaraKeywords
-import com.kms.katalon.core.testobject.ObjectRepository
+import core.LocaraKeywords
+import static com.kms.katalon.core.testobject.ObjectRepository.findTestObject
 
 TestObject btnTransfer = findTestObject('Object Repository/Transfer/btn_Lanjut')
-LocaraKeywords.smartTap(btnTransfer, 10)
+new LocaraKeywords().smartTap(btnTransfer, 'Lanjut')
 ```
 
-#### 2. `smartSetText(TestObject to, String text, int timeoutSeconds = 10)`
+#### 2. `smartSetText(TestObject to, String text, int timeoutSeconds = 10, String targetHint = "")`
 Safely inputs text into the target field, utilizing the Field Relationship Parser if the original input selector is broken.
 ```groovy
-LocaraKeywords.smartSetText(findTestObject('Object Repository/Auth/input_Password'), 'MegaPass123', 10)
+new LocaraKeywords().smartSetText(findTestObject('Object Repository/Auth/input_Password'), 'DemoPass123!', 10, 'Password')
 ```
 
-#### 3. `dismissBlockingOverlays()`
-Explicitly inspects the screen for unexpected system alerts or promotional popups and dismisses them if detected.
+#### 3. `tapByHint(String targetHint, String saveRsPath = null, int timeoutSeconds = 10)`
+Zero-Spy navigation directly by semantic intent hint, optionally synthesizing a Katalon `.rs` file.
 ```groovy
-LocaraKeywords.dismissBlockingOverlays()
+new LocaraKeywords().tapByHint('Konfirmasi Bayar', 'Object Repository/Payment/btn_Konfirmasi', 10)
 ```
 
-#### 4. `healSelector(TestObject to)`
-Manually triggers healing resolution for a `TestObject` and returns the newly healed Appium `WebElement`.
+#### 4. Core Java Overlay & Engine API (`com.qureon.locara.katalon.Locara`)
+For programmatic overlay dismissal or direct XPath recovery inside helpers:
 ```groovy
-WebElement healedElement = LocaraKeywords.healSelector(findTestObject('Object Repository/Home/icon_QRIS'))
+import com.qureon.locara.katalon.Locara
+import com.qureon.locara.core.guard.OverlayAirbag
+
+new OverlayAirbag().dismissBlockingOverlay(driver, pageSource)
+Locara.tapByHint('Icon QRIS', 'Object Repository/Home/icon_QRIS')
 ```

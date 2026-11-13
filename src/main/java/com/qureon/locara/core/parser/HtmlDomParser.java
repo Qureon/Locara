@@ -39,7 +39,7 @@ public class HtmlDomParser {
     private static final Pattern STYLE_PATTERN = Pattern.compile("<style\\b[^>]*>.*?</style>", Pattern.DOTALL | Pattern.CASE_INSENSITIVE);
     private static final Pattern COMMENT_PATTERN = Pattern.compile("<!--.*?-->", Pattern.DOTALL);
     private static final Pattern ATTR_PATTERN = Pattern.compile("([a-zA-Z0-9_:-]+)(?:\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s>]+)))?");
-    private static final Pattern TAG_PATTERN = Pattern.compile("</?([a-zA-Z0-9:-]+)((?:\\s+(?:\"[^\"]*\"|'[^']*'|/(?!>)|[^>/\"'])*)?)\\s*(/?)>", Pattern.DOTALL);
+    private static final Pattern TAG_PATTERN = Pattern.compile("</?([a-zA-Z0-9:-]+)((?:\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*'|/(?!>)|[^>/\"'])*+)\\s*(/?)>", Pattern.DOTALL);
 
     public HtmlDomParser() {}
 
@@ -110,7 +110,7 @@ public class HtmlDomParser {
                 String currentXpath;
                 String idAttr = attributes.get("id");
                 if (idAttr != null && !idAttr.trim().isEmpty()) {
-                    currentXpath = "//" + tagName + "[@id='" + idAttr.trim() + "']";
+                    currentXpath = "//" + tagName + "[@id=" + com.qureon.locara.core.generator.DynamicXPathGenerator.toXPathLiteral(idAttr.trim()) + "]";
                 } else {
                     currentXpath = parentXpath + "/" + tagName + "[" + tagIndex + "]";
                 }

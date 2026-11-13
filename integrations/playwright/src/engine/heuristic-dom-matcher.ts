@@ -176,6 +176,14 @@ export class HeuristicDomMatcher {
    * 4. getByText
    * 5. XPath fallback
    */
+  private quoteJsString(value: string): string {
+    return value
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "\\'")
+      .replace(/\r/g, '\\r')
+      .replace(/\n/g, '\\n');
+  }
+
   private synthesizePlaywrightLocator(
     el: any,
     text: string,
@@ -184,22 +192,22 @@ export class HeuristicDomMatcher {
     role: string
   ): string {
     if (testId) {
-      return `getByTestId('${testId}')`;
+      return `getByTestId('${this.quoteJsString(testId)}')`;
     }
     if (role && (text || ariaLabel)) {
       const name = ariaLabel || text;
-      return `getByRole('${role}', { name: '${name.replace(/'/g, "\\'")}' })`;
+      return `getByRole('${this.quoteJsString(role)}', { name: '${this.quoteJsString(name)}' })`;
     }
     if (ariaLabel) {
-      return `getByLabel('${ariaLabel.replace(/'/g, "\\'")}')`;
+      return `getByLabel('${this.quoteJsString(ariaLabel)}')`;
     }
     if (text && text.length < 50) {
-      return `getByText('${text.replace(/'/g, "\\'")}')`;
+      return `getByText('${this.quoteJsString(text)}')`;
     }
     if (el.id) {
-      return `locator('#${el.id}')`;
+      return `locator('${this.quoteJsString(`[id=${JSON.stringify(el.id)}]`)}')`;
     }
-    return el.xpath ? `locator('xpath=${el.xpath}')` : `locator('${el.tag}')`;
+    return el.xpath ? `locator('xpath=${this.quoteJsString(el.xpath)}')` : `locator('${this.quoteJsString(el.tag)}')`;
   }
 
   private calculateActionCompatibility(tag: string, role: string, action: string): number {

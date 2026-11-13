@@ -98,6 +98,21 @@ public class UIElementNode {
     public boolean isFocused() { return focused; }
     public int getDepth() { return depth; }
     public UIElementNode getParent() { return parent; }
+
+    public boolean hasClickableAncestor() {
+        return hasClickableAncestor(4);
+    }
+
+    public boolean hasClickableAncestor(int maxDepth) {
+        UIElementNode current = this.parent;
+        int levels = 0;
+        while (current != null && levels < maxDepth) {
+            if (current.isClickable()) return true;
+            current = current.getParent();
+            levels++;
+        }
+        return false;
+    }
     public List<UIElementNode> getChildren() { return Collections.unmodifiableList(children); }
 
     public int getCenterX() {

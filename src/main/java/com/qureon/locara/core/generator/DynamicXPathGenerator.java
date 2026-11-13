@@ -18,10 +18,6 @@ public class DynamicXPathGenerator {
         return generateOptimalXPath(targetNode, allNodes, null);
     }
 
-    /**
-     * Generates the most deterministic and minimal XPath for the given candidate node,
-     * taking into account the intended UI action (e.g., TAP vs GET_TEXT).
-     */
     private static final java.util.Set<String> HTML_TAGS = new java.util.HashSet<>(java.util.Arrays.asList(
             "html", "body", "div", "span", "p", "a", "button", "input", "select", "option",
             "textarea", "form", "table", "tr", "td", "th", "tbody", "thead", "ul", "ol", "li",
@@ -34,10 +30,6 @@ public class DynamicXPathGenerator {
         return HTML_TAGS.contains(tag) || node.getAttributes().containsKey("data-testid") || node.getAttributes().containsKey("role");
     }
 
-    /**
-     * Generates the most deterministic and minimal XPath for the given candidate node,
-     * taking into account the intended UI action (e.g., TAP vs GET_TEXT).
-     */
     /**
      * Generates a ranked map of alternative XPath locators for the given node,
      * mirroring Katalon Studio 11.6.0+ Object's XPaths table (xpath:attributes, xpath:idRelative, xpath:position, xpath:custom).
@@ -53,16 +45,19 @@ public class DynamicXPathGenerator {
 
         String tag = targetNode.getTag().isEmpty() ? "*" : targetNode.getTag();
         String text = targetNode.getText();
-        String resourceId = targetNode.getResourceId();
 
         // 1. Structural / Relative Parent Strategy
         if (targetNode.getParent() != null) {
             UIElementNode parent = targetNode.getParent();
-            String parentId = parent.getResourceId().isEmpty() ? parent.getAttribute("id") : parent.getResourceId();
-            if (!parentId.isEmpty()) {
-                ranked.put("xpath:idRelative", String.format("//*[@id=%s]//%s", toXPathLiteral(parentId), tag));
-            } else if (!parent.getTag().isEmpty()) {
-                ranked.put("xpath:idRelative", String.format("//%s/%s", parent.getTag(), tag));
+            if (!isHtmlNode(targetNode) && !parent.getResourceId().isEmpty()) {
+                ranked.put("xpath:idRelative", String.format("//*[@resource-id=%s]//%s", toXPathLiteral(parent.getResourceId()), tag));
+            } else {
+                String parentId = !parent.getAttribute("id").isEmpty() ? parent.getAttribute("id") : parent.getResourceId();
+                if (!parentId.isEmpty()) {
+                    ranked.put("xpath:idRelative", String.format("//*[@id=%s]//%s", toXPathLiteral(parentId), tag));
+                } else if (!parent.getTag().isEmpty()) {
+                    ranked.put("xpath:idRelative", String.format("//%s/%s", parent.getTag(), tag));
+                }
             }
         }
 
@@ -498,7 +493,23 @@ public class DynamicXPathGenerator {
         start += prefix.length();
         if (start >= xpath.length()) return "";
         if (xpath.startsWith("concat(", start)) {
-            int closeParen = xpath.indexOf(')', start + 7);
+            int pos = start + 7;
+            int closeParen = -1;
+            char activeQuote = 0;
+            while (pos < xpath.length()) {
+                char ch = xpath.charAt(pos);
+                if (activeQuote == 0) {
+                    if (ch == '\'' || ch == '"') {
+                        activeQuote = ch;
+                    } else if (ch == ')') {
+                        closeParen = pos;
+                        break;
+                    }
+                } else if (ch == activeQuote) {
+                    activeQuote = 0;
+                }
+                pos++;
+            }
             if (closeParen == -1) return "";
             String inner = xpath.substring(start + 7, closeParen);
             StringBuilder sb = new StringBuilder();

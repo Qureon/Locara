@@ -1,36 +1,37 @@
 /**
  * ==============================================================================
- * ZERO-HEALING DASHBOARD — XML RECON LAB MODULE
+ * LOCARA MISSION CONTROL — XML RECON LAB MODULE
  * Client-side Appium XML AST parser, heuristic matcher, and .rs generator.
  * ==============================================================================
  */
 
 import { APP_CONFIG } from "../config.js";
 import { renderIcon } from "../icons.js";
+import { escapeHtml, escapeXml, toXPathLiteral } from "../utils.js";
 
 const SAMPLE_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <hierarchy rotation="0">
   <android.widget.FrameLayout bounds="[0,0][1080,2400]">
     <android.widget.LinearLayout bounds="[0,0][1080,2400]">
       <!-- Header -->
-      <android.widget.TextView resource-id="com.bankmega.msmile:id/tv_title" text="Konfirmasi Transfer" bounds="[300,120][780,200]" />
+      <android.widget.TextView resource-id="com.example.app:id/tv_title" text="Konfirmasi Transfer" bounds="[300,120][780,200]" />
       
       <!-- Account Info -->
-      <android.widget.TextView resource-id="com.bankmega.msmile:id/tv_source_acc" text="Mega Dana •••• 5678" bounds="[60,300][600,360]" />
-      <android.widget.TextView resource-id="com.bankmega.msmile:id/tv_dest_bank" text="Bank Central Asia (BCA)" bounds="[60,420][700,480]" />
-      <android.widget.TextView resource-id="com.bankmega.msmile:id/tv_dest_acc" text="0123456789 - SITI AMINAH" bounds="[60,480][800,540]" />
+      <android.widget.TextView resource-id="com.example.app:id/tv_source_acc" text="Tabungan Utama •••• 5678" bounds="[60,300][600,360]" />
+      <android.widget.TextView resource-id="com.example.app:id/tv_dest_bank" text="Bank Tujuan Contoh" bounds="[60,420][700,480]" />
+      <android.widget.TextView resource-id="com.example.app:id/tv_dest_acc" text="0123456789 - NASABAH CONTOH" bounds="[60,480][800,540]" />
       
       <!-- Nominal Transfer -->
-      <android.widget.TextView resource-id="com.bankmega.msmile:id/tv_amount" text="Rp 1.500.000" bounds="[60,600][600,680]" />
+      <android.widget.TextView resource-id="com.example.app:id/tv_amount" text="Rp 1.500.000" bounds="[60,600][600,680]" />
       
       <!-- Security Input -->
-      <android.widget.EditText resource-id="com.bankmega.msmile:id/input_security_code" content-desc="Input M-PIN 6 Digit" text="" bounds="[60,1200][1020,1350]" clickable="true" />
+      <android.widget.EditText resource-id="com.example.app:id/input_security_code" content-desc="Input Security PIN 6 Digit" text="" bounds="[60,1200][1020,1350]" clickable="true" />
       
       <!-- Dangerous Element -->
-      <android.widget.Button resource-id="com.bankmega.msmile:id/btn_cancel" text="Batal" bounds="[60,1920][480,2060]" clickable="true" />
+      <android.widget.Button resource-id="com.example.app:id/btn_cancel" text="Batal" bounds="[60,1920][480,2060]" clickable="true" />
       
       <!-- Target Action Button -->
-      <android.widget.Button resource-id="com.bankmega.msmile:id/btn_next_transfer" content-desc="Tombol Lanjut Transfer Dana" text="Lanjut" bounds="[540,1920][1020,2060]" clickable="true" />
+      <android.widget.Button resource-id="com.example.app:id/btn_next_transfer" content-desc="Tombol Lanjut Transfer Dana" text="Lanjut" bounds="[540,1920][1020,2060]" clickable="true" />
     </android.widget.LinearLayout>
   </android.widget.FrameLayout>
 </hierarchy>`;
@@ -187,22 +188,24 @@ function renderReconResult(result) {
 
     const confPct = (w.score * 100).toFixed(1);
     const isSuccess = w.score >= APP_CONFIG.defaultThresholds.minSimilarity && !w.lockout;
+    const safeTag = /^[A-Za-z_][A-Za-z0-9_.:-]*$/.test(w.clazz || "") ? w.clazz : "*";
 
-    let xpathAttributes = `//${w.clazz}`;
-    if (w.resId && w.text) xpathAttributes += `[@resource-id='${w.resId}' and @text='${w.text}']`;
-    else if (w.resId) xpathAttributes += `[@resource-id='${w.resId}']`;
-    else if (w.desc) xpathAttributes += `[@content-desc='${w.desc}']`;
-    else if (w.text) xpathAttributes += `[@text='${w.text}']`;
+    let xpathAttributes = `//${safeTag}`;
+    if (w.resId && w.text) xpathAttributes += `[@resource-id=${toXPathLiteral(w.resId)} and @text=${toXPathLiteral(w.text)}]`;
+    else if (w.resId) xpathAttributes += `[@resource-id=${toXPathLiteral(w.resId)}]`;
+    else if (w.desc) xpathAttributes += `[@content-desc=${toXPathLiteral(w.desc)}]`;
+    else if (w.text) xpathAttributes += `[@text=${toXPathLiteral(w.text)}]`;
 
-    const xpathRelative = w.resId ? `//*[@id='${w.resId}']//${w.clazz}` : `//android.widget.LinearLayout/${w.clazz}`;
-    const xpathCustom = w.text ? `//${w.clazz}[text()='${w.text}' or .='${w.text}']` : "";
-    const xpathPosition = `//${w.clazz}[1]`;
+    const xpathRelative = w.resId ? `//*[@resource-id=${toXPathLiteral(w.resId)}]//${safeTag}` : `//android.widget.LinearLayout/${safeTag}`;
+    const xpathCustom = w.text ? `//${safeTag}[text()=${toXPathLiteral(w.text)} or .=${toXPathLiteral(w.text)}]` : "";
+    const xpathPosition = `//${safeTag}[1]`;
 
-    const rsName = (w.resId ? w.resId.split("/").pop() : "element_healed") + ".rs";
+    const rawRsBase = (w.resId ? w.resId.split("/").pop() : "element_healed").replace(/[^A-Za-z0-9_.-]/g, "_");
+    const rsName = `${rawRsBase || "element_healed"}.rs`;
     const rsXml = `<?xml version="1.0" encoding="UTF-8"?>
 <WebElementEntity>
-   <description>Autonomous In-Flight Healed by Locara Engine · Qureon (Confidence: ${confPct}%)</description>
-   <name>${rsName.replace(".rs", "")}</name>
+   <description>Autonomous In-Flight Healed by Locara Engine · Qureon (Confidence: ${escapeXml(confPct)}%)</description>
+   <name>${escapeXml(rsName.replace(/\.rs$/, ""))}</name>
    <tag></tag>
    <elementGuidId>${generateGuid()}</elementGuidId>
    <selectorMethod>XPATH</selectorMethod>
@@ -212,7 +215,7 @@ function renderReconResult(result) {
       <matchCondition>equals</matchCondition>
       <name>xpath:attributes</name>
       <type>Main</type>
-      <value>${xpathAttributes}</value>
+      <value>${escapeXml(xpathAttributes)}</value>
       <webElementGuid>${generateGuid()}</webElementGuid>
    </webElementProperties>
    <webElementProperties>
@@ -220,7 +223,7 @@ function renderReconResult(result) {
       <matchCondition>equals</matchCondition>
       <name>xpath:idRelative</name>
       <type>Main</type>
-      <value>${xpathRelative}</value>
+      <value>${escapeXml(xpathRelative)}</value>
       <webElementGuid>${generateGuid()}</webElementGuid>
    </webElementProperties>
    <webElementProperties>
@@ -228,13 +231,13 @@ function renderReconResult(result) {
       <matchCondition>equals</matchCondition>
       <name>xpath:position</name>
       <type>Main</type>
-      <value>${xpathPosition}</value>
+      <value>${escapeXml(xpathPosition)}</value>
       <webElementGuid>${generateGuid()}</webElementGuid>
    </webElementProperties>
    <selectorCollection>
       <entry>
          <key>XPATH</key>
-         <value>${xpathAttributes}</value>
+         <value>${escapeXml(xpathAttributes)}</value>
       </entry>
    </selectorCollection>
 </WebElementEntity>`;
@@ -246,7 +249,7 @@ function renderReconResult(result) {
                     <div style="display:flex; align-items:center; gap:8px;">
                         <span class="text-xs text-muted font-mono">TARGET MATCHED:</span>
                         <span class="font-mono text-xs" style="padding: 2px 6px; border-radius: 4px; background: var(--cyan-subtle); color: var(--cyan); border: 1px solid var(--cyan-border);">Framework: ${escapeHtml(fw.name)}</span>
-                        <span class="badge" style="background:rgba(16,185,129,0.15); color:var(--emerald); border:1px solid rgba(16,185,129,0.3); font-size:0.72rem; padding:2px 6px;">KS 11.6+ Object XPaths Table Ready</span>
+                        <span class="badge" style="background:rgba(16,185,129,0.15); color:var(--emerald); border:1px solid rgba(16,185,129,0.3); font-size:0.72rem; padding:2px 6px;">KS 11.7.0+ Object XPaths Table Ready</span>
                     </div>
                     <h4 class="font-mono text-cyan" style="font-size: 1.1rem; margin-top: 4px;">&lt;${escapeHtml(w.clazz)}&gt;</h4>
                 </div>
@@ -325,9 +328,4 @@ function generateGuid() {
         const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
         return v.toString(16);
     });
-}
-
-function escapeHtml(str) {
-    if (!str) return "";
-    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }

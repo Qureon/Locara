@@ -78,7 +78,7 @@ public class LocaraIntentMatcherTest {
 
     @Test
     public void shouldRejectSingleWordMatchingFullSentenceAsFalsePositive() {
-        // Specifically reproducing Rio's incident: Dashboard menu icon "Zaku" vs Portal Title "Selamat datang Di Zaku"
+        // Reproducing single-token asymmetry incident: Dashboard menu icon "Zaku" vs Portal Title "Selamat datang Di Zaku"
         double zakuScore = LocaraIntentMatcher.calculateIntentScore("Zaku", "Selamat datang Di Zaku");
         assertTrue(zakuScore < 0.70, "Single token 'Zaku' must NOT match 'Selamat datang Di Zaku' with high confidence. Actual score: " + zakuScore);
 

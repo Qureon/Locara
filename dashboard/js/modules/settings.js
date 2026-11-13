@@ -1,13 +1,13 @@
 /**
  * ==============================================================================
- * ZERO-HEALING DASHBOARD — ENGINE SETTINGS MODULE
+ * LOCARA MISSION CONTROL — ENGINE SETTINGS MODULE
  * Configuration tuning for heuristic weights, target presets (UMUM, REVAMP, KMP),
  * safety thresholds, and audit rules.
  * ==============================================================================
  */
 
-import { APP_CONFIG } from "../config.js";
 import { saveEngineConfig } from "../api.js";
+import { escapeHtml } from "../utils.js";
 
 const TARGET_PRESETS = {
     "AUTO": {
@@ -29,8 +29,8 @@ const TARGET_PRESETS = {
         descWeight: 0.20
     },
     "REVAMP": {
-        name: "REVAMP (React Native M-Smile)",
-        pillText: "TARGET: REVAMP (React Native M-Smile)",
+        name: "REVAMP (React Native Hybrid)",
+        pillText: "TARGET: REVAMP (React Native Hybrid)",
         desc: "Dioptimalkan untuk pohon ViewGroup bersarang dalam, resolusi parent-container click, dan prioritas teks/deskripsi.",
         minSim: 0.70,
         textWeight: 0.55,
@@ -72,7 +72,7 @@ function initProfileSwitcher() {
             const preset = TARGET_PRESETS[key] || TARGET_PRESETS["AUTO"];
 
             if (pill) {
-                pill.innerHTML = `<span style="color: var(--cyan);">●</span> ${preset.pillText}`;
+                pill.innerHTML = `<span style="color: var(--cyan);">●</span> ${escapeHtml(preset.pillText)}`;
             }
 
             if (desc) {

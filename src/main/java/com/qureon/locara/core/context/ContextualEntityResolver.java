@@ -15,9 +15,9 @@ import java.util.regex.Pattern;
 public class ContextualEntityResolver {
 
     private static final Pattern ACCOUNT_NUMBER_PATTERN = Pattern.compile("\\b(\\d{10,16})\\b");
-    private static final Pattern SPACED_ACCOUNT_PATTERN = Pattern.compile("\\b(\\d{4}\\s+\\d{4}\\s+\\d{4,8})\\b");
     private static final Pattern GREETING_PATTERN = Pattern.compile("(?i)^Halo,?\\s*([^\\n\\r]+)");
     private static final Pattern MASKED_BALANCE_PATTERN = Pattern.compile("[*•]{3,}");
+    private static final Pattern KMP_SAVINGS_NUMBER_PATTERN = Pattern.compile("my_account_savings_(\\d+)_number");
 
     private final PageSourceParser parser;
 
@@ -103,7 +103,7 @@ public class ContextualEntityResolver {
             return null;
         }
 
-        // 2. Scan for Holder Name (e.g. "Halo, Rio Griya")
+        // 2. Scan for Holder Name (e.g. "Halo, Budi Santoso")
         String holderName = null;
         for (UIElementNode node : nodes) {
             String text = node.getText();
@@ -144,16 +144,21 @@ public class ContextualEntityResolver {
 
         if (isKmp) {
             if (!cleanTarget.isEmpty() && pageSource != null) {
-                Matcher m = Pattern.compile("my_account_savings_(\\d+)_number").matcher(pageSource);
-                while (m.find()) {
-                    String idx = m.group(1);
-                    if (pageSource.contains("my_account_savings_" + idx)) {
-                        Pattern cardPattern = Pattern.compile("my_account_savings_" + idx + ".*?" + cleanTarget, Pattern.DOTALL);
-                        if (cardPattern.matcher(pageSource).find()) {
+                try {
+                    List<UIElementNode> nodes = parser.parse(pageSource);
+                    for (UIElementNode node : nodes) {
+                        String resId = node.getResourceId();
+                        if (resId == null || resId.isEmpty()) continue;
+                        Matcher idMatcher = KMP_SAVINGS_NUMBER_PATTERN.matcher(resId);
+                        if (!idMatcher.find()) continue;
+                        String textDigits = node.getText() != null ? node.getText().replaceAll("[^0-9]", "") : "";
+                        String descDigits = node.getContentDesc() != null ? node.getContentDesc().replaceAll("[^0-9]", "") : "";
+                        if (textDigits.contains(cleanTarget) || descDigits.contains(cleanTarget)) {
+                            String idx = idMatcher.group(1);
                             return "//*[@resource-id='my_account_savings_" + idx + "_art'] | //*[@resource-id='my_account_savings_" + idx + "_title']";
                         }
                     }
-                }
+                } catch (Exception ignored) {}
                 return "//*[contains(@resource-id, 'my_account_savings_') and contains(@resource-id, '_number') and (contains(translate(@text, ' ', ''), '" + cleanTarget + "') or contains(translate(@content-desc, ' ', ''), '" + cleanTarget + "'))]/preceding-sibling::*[contains(@resource-id, '_art') or contains(@resource-id, '_title')]";
             }
             return "//*[@resource-id='my_account_savings_0_art'] | //*[@resource-id='my_account_savings_0_title']";
@@ -171,7 +176,7 @@ public class ContextualEntityResolver {
             return null;
         }
         String cleanSpaced = val.trim();
-        // If string consists purely of digits and whitespace (e.g. "0107 4002 1025 853")
+        // If string consists purely of digits and whitespace (e.g. "9000 1234 5678 901")
         String numericOnly = cleanSpaced.replaceAll("[^0-9]", "");
         if (numericOnly.length() >= 10 && numericOnly.length() <= 16) {
             if (cleanSpaced.replaceAll("[0-9\\s]", "").isEmpty()) {

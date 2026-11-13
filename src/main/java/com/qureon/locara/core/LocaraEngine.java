@@ -70,10 +70,42 @@ public class LocaraEngine {
 
         List<UIElementNode> nodes;
         try {
-            nodes = parser.parse(xmlPageSource);
+            nodes = parsePageSource(xmlPageSource);
         } catch (Exception e) {
             ledger.recordEvent(context, null, null, "XML_PARSE_ERROR: " + e.getMessage(), config);
             return new HealResult(false, null, null, "Failed to parse XML: " + e.getMessage());
+        }
+
+        return heal(nodes, xmlPageSource, context);
+    }
+
+    /**
+     * Parses raw XML or HTML page source once so downstream healing/overlay/scroll stages
+     * can reuse the resulting UI hierarchy without redundant DOM parses.
+     */
+    public List<UIElementNode> parsePageSource(String xmlPageSource) throws Exception {
+        return parser.parse(xmlPageSource);
+    }
+
+    /**
+     * Executes autonomous healing using pre-parsed hierarchy nodes when available.
+     */
+    public HealResult heal(List<UIElementNode> parsedNodes, String rawPageSource, HealContext context) {
+        if (context == null) {
+            context = new HealContext.Builder().build();
+        }
+        List<UIElementNode> nodes = parsedNodes;
+        if (nodes == null) {
+            if (rawPageSource == null || rawPageSource.trim().isEmpty()) {
+                ledger.recordEvent(context, null, null, "EMPTY_PAGE_SOURCE", config);
+                return new HealResult(false, null, null, "XML Page Source is empty or null");
+            }
+            try {
+                nodes = parsePageSource(rawPageSource);
+            } catch (Exception e) {
+                ledger.recordEvent(context, null, null, "XML_PARSE_ERROR: " + e.getMessage(), config);
+                return new HealResult(false, null, null, "Failed to parse XML: " + e.getMessage());
+            }
         }
 
         if (nodes.isEmpty()) {
@@ -82,7 +114,7 @@ public class LocaraEngine {
         }
 
         // Framework Fingerprinting Detection / Profile Enforcement
-        com.qureon.locara.core.framework.FrameworkFingerprint fingerprint = resolveFingerprint(nodes, xmlPageSource);
+        com.qureon.locara.core.framework.FrameworkFingerprint fingerprint = resolveFingerprint(nodes, rawPageSource);
 
         List<HealCandidate> candidates = matcher.findCandidates(nodes, context, config, fingerprint);
         String cleanedHint = HeuristicMatcher.cleanSemanticHint(context.getTargetHint());
@@ -94,7 +126,7 @@ public class LocaraEngine {
             String expTag = context.getExpectedTag() != null ? context.getExpectedTag().toLowerCase() : "";
             boolean isTextViewLabel = topNode != null &&
                     (topNode.getTag().toLowerCase().contains("textview") || topNode.getClassName().toLowerCase().contains("textview")) &&
-                    !topNode.isClickable() && !hasClickableAncestor(topNode);
+                    !topNode.isClickable() && !topNode.hasClickableAncestor(4);
             boolean expectsInteractiveControl = expTag.contains("checkbox") || expTag.contains("viewgroup") ||
                     expTag.contains("edittext") || com.qureon.locara.core.spatial.SpatialAlignmentEngine.isCheckboxSemanticHint(cleanedHint);
 
@@ -176,7 +208,7 @@ public class LocaraEngine {
      * or screen contexts may change across deliberate test suite pauses.
      */
     public void resetSessionContext() {
-        // Clear in-memory caches or dynamic context
+        config.clearThreadAppTarget();
     }
 
     /**
@@ -260,17 +292,5 @@ public class LocaraEngine {
         }
 
         return java.util.Optional.empty();
-    }
-
-    private boolean hasClickableAncestor(UIElementNode node) {
-        if (node == null) return false;
-        UIElementNode curr = node.getParent();
-        int levels = 0;
-        while (curr != null && levels < 4) {
-            if (curr.isClickable()) return true;
-            curr = curr.getParent();
-            levels++;
-        }
-        return false;
     }
 }

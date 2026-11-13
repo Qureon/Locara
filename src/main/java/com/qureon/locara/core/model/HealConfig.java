@@ -25,10 +25,11 @@ public class HealConfig {
     private String defaultRsFolder = "Object Repository";
     private String auditLogFolder = "Include/evidence";
 
-    private AppTarget appTarget = AppTarget.AUTO;
+    private volatile AppTarget appTarget = AppTarget.AUTO;
     private final ThreadLocal<AppTarget> threadAppTarget = new ThreadLocal<>();
     private boolean enabled = true;
     private boolean scrollRecoveryEnabled = true;
+    private int maxScrollAttempts = 2;
 
     public HealConfig() {}
 
@@ -111,6 +112,18 @@ public class HealConfig {
                 props.getProperty("qureon.project.path",
                 props.getProperty("healing.project.path", config.katalonProjectPath)));
 
+        String scrollMaxProp = props.getProperty("locara.scroll.max_attempts",
+                props.getProperty("qureon.scroll.max_attempts",
+                props.getProperty("healing.scroll.max_attempts")));
+        config.setMaxScrollAttempts(parseIntSafe(scrollMaxProp, config.maxScrollAttempts));
+
+        String auditFolderProp = props.getProperty("locara.audit.folder",
+                props.getProperty("qureon.audit.folder",
+                props.getProperty("healing.audit.folder", config.auditLogFolder)));
+        if (auditFolderProp != null && !auditFolderProp.trim().isEmpty()) {
+            config.setAuditLogFolder(auditFolderProp.trim());
+        }
+
         // 3. System properties override (highest precedence)
         String sysEnabled = System.getProperty("locara.enabled",
                 System.getProperty("qureon.enabled",
@@ -130,6 +143,18 @@ public class HealConfig {
                 System.getProperty("healing.target"))));
         if (sysTarget != null) {
             config.setAppTarget(AppTarget.fromString(sysTarget));
+        }
+        String sysScrollMax = System.getProperty("locara.scroll.max_attempts",
+                System.getProperty("qureon.scroll.max_attempts",
+                System.getProperty("healing.scroll.max_attempts")));
+        if (sysScrollMax != null) {
+            config.setMaxScrollAttempts(parseIntSafe(sysScrollMax, config.maxScrollAttempts));
+        }
+        String sysAuditFolder = System.getProperty("locara.audit.folder",
+                System.getProperty("qureon.audit.folder",
+                System.getProperty("healing.audit.folder")));
+        if (sysAuditFolder != null && !sysAuditFolder.trim().isEmpty()) {
+            config.setAuditLogFolder(sysAuditFolder.trim());
         }
 
         // 4. Environment variable override
@@ -158,8 +183,20 @@ public class HealConfig {
         }
     }
 
+    private static int parseIntSafe(String val, int defaultVal) {
+        if (val == null || val.trim().isEmpty()) return defaultVal;
+        try {
+            return Integer.parseInt(val.trim());
+        } catch (NumberFormatException e) {
+            return defaultVal;
+        }
+    }
+
     public boolean isScrollRecoveryEnabled() { return scrollRecoveryEnabled; }
     public void setScrollRecoveryEnabled(boolean val) { this.scrollRecoveryEnabled = val; }
+
+    public int getMaxScrollAttempts() { return maxScrollAttempts; }
+    public void setMaxScrollAttempts(int val) { this.maxScrollAttempts = Math.max(0, val); }
 
     public AppTarget getAppTarget() {
         AppTarget local = threadAppTarget.get();
@@ -169,7 +206,7 @@ public class HealConfig {
     public void setAppTarget(AppTarget target) {
         AppTarget resolved = target != null ? target : AppTarget.AUTO;
         this.appTarget = resolved;
-        this.threadAppTarget.set(resolved);
+        this.threadAppTarget.remove();
     }
 
     public void setThreadAppTarget(AppTarget target) {
@@ -178,6 +215,10 @@ public class HealConfig {
         } else {
             this.threadAppTarget.set(target);
         }
+    }
+
+    public void clearThreadAppTarget() {
+        this.threadAppTarget.remove();
     }
 
     public boolean isEnabled() { return enabled; }

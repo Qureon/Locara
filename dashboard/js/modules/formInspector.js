@@ -1,6 +1,6 @@
 /**
  * ==============================================================================
- * LOCARA MISSION CONTROL — SPATIAL & FORM INSPECTOR MODULE (v1.5.0)
+ * LOCARA MISSION CONTROL — SPATIAL & FORM INSPECTOR MODULE (v1.15.0)
  * Visualizes 2D bounding box Left-to-Right and Top-to-Bottom field alignment,
  * section boundary detection, and key-value receipt pairing.
  * ==============================================================================
@@ -8,6 +8,7 @@
 
 import { extractFields } from "../api.js";
 import { renderIcon } from "../icons.js";
+import { escapeHtml, escapeCodeString } from "../utils.js";
 
 const SAMPLE_TRANSACTION_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <hierarchy rotation="0">
@@ -140,7 +141,7 @@ function renderSpatialResults(pairs, emptyEl, wrapperEl) {
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
             <div style="display: flex; align-items: center; gap: 10px;">
                 <h4 style="font-size: 0.95rem; font-weight: 600; margin: 0;">Terdeteksi ${pairs.length} Pasang Field Spasial</h4>
-                <span class="badge badge-accent" style="font-size: 0.75rem;">Universal Spatial Engine v1.5.0</span>
+                <span class="badge badge-accent" style="font-size: 0.75rem;">Universal Spatial Engine v1.15.0</span>
             </div>
             <button class="btn btn-sm btn-secondary" id="btn-copy-all-json">
                 <span class="btn-icon-wrap" data-icon="download"></span> Export JSON
@@ -173,9 +174,9 @@ function renderSpatialResults(pairs, emptyEl, wrapperEl) {
     // Wire individual copy button
     wrapperEl.querySelectorAll(".copy-field-btn").forEach(btn => {
         btn.addEventListener("click", () => {
-            const key = btn.dataset.key;
-            const val = btn.dataset.val;
-            const snippet = `// Locara v1.5.0 Spatial Field Assertion\nString actual = Locara.getFieldValue("${key}")\nassert actual == "${val}" : "Expected ${key} to be '${val}' but got '$actual'"`;
+            const key = escapeCodeString(btn.dataset.key || "");
+            const val = escapeCodeString(btn.dataset.val || "");
+            const snippet = `// Locara v1.15.0 Spatial Field Assertion\nString actual = Locara.getFieldValue("${key}")\nassert actual == "${val}" : "Expected ${key} to be '${val}' but got '\${actual}'"`;
             navigator.clipboard.writeText(snippet).then(() => {
                 const orig = btn.innerHTML;
                 btn.innerHTML = `<span style="color: var(--emerald);">✓ Copied</span>`;
@@ -197,14 +198,14 @@ function renderSpatialResults(pairs, emptyEl, wrapperEl) {
 }
 
 /**
- * Fallback browser-side spatial parser using DOMParser for XML
+ * Fallback browser-side spatial parser matching server-side Left-to-Right & Top-to-Bottom rules
  */
 function parseXmlSpatialClient(xmlText) {
     try {
         const parser = new DOMParser();
         const doc = parser.parseFromString(xmlText, "text/xml");
         const elements = Array.from(doc.querySelectorAll("*"));
-        const boundsPattern = /\[(\d+),(\d+)\]\[(\d+),(\d+)\]/;
+        const boundsPattern = /\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]/;
 
         const nodes = [];
         elements.forEach(el => {
@@ -215,6 +216,7 @@ function parseXmlSpatialClient(xmlText) {
             if (m) {
                 const [_, x1, y1, x2, y2] = m.map(Number);
                 nodes.push({
+                    tag: (el.tagName || "").toLowerCase(),
                     text: text,
                     desc: desc,
                     x1, y1, x2, y2,
@@ -226,14 +228,16 @@ function parseXmlSpatialClient(xmlText) {
         });
 
         const pairs = [];
-        const labels = nodes.filter(n => n.text && n.w > 0);
+        const nonButtons = nodes.filter(n => !n.tag.includes("button") && n.w > 0);
+        const labels = nonButtons.filter(n => n.text);
         const claimed = new Set();
 
         labels.forEach(lbl => {
+            if (claimed.has(lbl)) return;
             let bestVal = null;
             let bestScore = 0;
 
-            nodes.forEach(cand => {
+            nonButtons.forEach(cand => {
                 if (cand === lbl || claimed.has(cand)) return;
 
                 // Left-to-right alignment check
@@ -252,6 +256,18 @@ function parseXmlSpatialClient(xmlText) {
                     }
                 }
             });
+
+            if (!bestVal) {
+                for (const cand of nonButtons) {
+                    if (cand === lbl || claimed.has(cand) || !cand.text) continue;
+                    const vDist = cand.y1 - lbl.y2;
+                    if (vDist >= 0 && vDist <= 40 && Math.abs(cand.x1 - lbl.x1) <= 40) {
+                        bestVal = cand;
+                        bestScore = 0.90;
+                        break;
+                    }
+                }
+            }
 
             if (bestVal && (bestVal.text || bestVal.desc)) {
                 const valText = bestVal.text || bestVal.desc;
@@ -272,9 +288,4 @@ function parseXmlSpatialClient(xmlText) {
         console.error("Client spatial parse error:", e);
         return { pairs: [] };
     }
-}
-
-function escapeHtml(str) {
-    if (!str) return "";
-    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }

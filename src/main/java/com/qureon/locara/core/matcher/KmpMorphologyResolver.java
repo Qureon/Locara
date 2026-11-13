@@ -112,6 +112,9 @@ public final class KmpMorphologyResolver {
     /**
      * Resolves dynamic template tokens such as <key>, <id>, <code>, <i>, <n>.
      */
+    private static final Pattern PACKAGE_ID_PREFIX_PATTERN = Pattern.compile("(?:[a-zA-Z0-9_.]+:|(?<=^|\\s))id/");
+    private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
+
     public static boolean matchesDynamicToken(String candId, String targetHint) {
         if (candId == null || targetHint == null) return false;
 
@@ -125,10 +128,24 @@ public final class KmpMorphologyResolver {
             }
         }
 
-        // Convert <key> into regex [a-zA-Z0-9_-]+
-        String regex = "^" + DYNAMIC_TOKEN_PATTERN.matcher(template).replaceAll("[a-zA-Z0-9_-]+") + "$";
+        // Convert <key> into [a-zA-Z0-9_-]+ while quoting literal segments safely
+        java.util.regex.Matcher matcher = DYNAMIC_TOKEN_PATTERN.matcher(template);
+        StringBuilder regex = new StringBuilder("^");
+        int lastEnd = 0;
+        while (matcher.find()) {
+            if (matcher.start() > lastEnd) {
+                regex.append(Pattern.quote(template.substring(lastEnd, matcher.start())));
+            }
+            regex.append("[a-zA-Z0-9_-]+");
+            lastEnd = matcher.end();
+        }
+        if (lastEnd < template.length()) {
+            regex.append(Pattern.quote(template.substring(lastEnd)));
+        }
+        regex.append("$");
+
         try {
-            return Pattern.compile(regex).matcher(candId).matches();
+            return Pattern.compile(regex.toString()).matcher(candId).matches();
         } catch (Exception e) {
             return false;
         }
@@ -145,12 +162,10 @@ public final class KmpMorphologyResolver {
 
     private static String normalizeForTokens(String input) {
         if (input == null) return "";
-        return input.toLowerCase(Locale.ROOT)
-                .replace("com.bankmega.msmile:id/", "")
-                .replace("id/", "")
+        String lower = input.toLowerCase(Locale.ROOT);
+        String stripped = PACKAGE_ID_PREFIX_PATTERN.matcher(lower).replaceAll("")
                 .replace('_', ' ')
-                .replace('-', ' ')
-                .replaceAll("\\s+", " ")
-                .trim();
+                .replace('-', ' ');
+        return WHITESPACE_PATTERN.matcher(stripped).replaceAll(" ").trim();
     }
 }

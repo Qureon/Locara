@@ -5,12 +5,24 @@ This project adheres strictly to [Semantic Versioning (SemVer 2.0.0)](https://se
 
 ---
 
+## [v1.15.0] - 2026-11-13
+### Added
+- **Per-Thread Target Isolation API (`Locara` & `HealConfig`)**: Added `setThreadAppTarget(AppTarget)` and `clearThreadAppTarget()` (plus `LocaraHook.IN_FLIGHT.remove()` cleanup) so concurrent test runners never mutate or leak global profile state.
+- **Mission Control Persistence & Hardened Security (`dashboard/server.py`, `dashboard/generate_report.py`, `dashboard/js/utils.js`)**: Added allowlisted `locara.properties` persistence (`load_persisted_config` / `save_persisted_config`), `generate_report(output_path, audit_path)` override, dynamic `LOCARA_AUDIT_DIRS` discovery, shared HTML/XML/XPath escaping (`escapeHtml`, `escapeXml`, `toXPathLiteral`, `escapeCodeString`), loopback CORS + Origin/Host CSRF validation + small-body drain on `403`, and `2 MiB` request size enforcement.
+- **Cross-Lingual Multi-Word Concept Matching & Build Portability**: Wired multi-word phrase token scoring in `UniversalSemanticDictionary.calculateSemanticAffinity`, cross-card entity isolation in `ContextualEntityResolver`, bundled Gradle 9.8.2 Wrapper (`gradlew`, `gradlew.bat`) with `-Xlint:unchecked`, and 19 new regression tests across [RegressionHardeningTest.java](src/test/java/com/qureon/locara/RegressionHardeningTest.java) (110/110 JUnit passing) and [test_dashboard_server.py](dashboard/tests/test_dashboard_server.py) (8/8 Python `unittest` passing).
+
+### Fixed
+- **False-Green Elimination & Mock Realism**: Removed false-green exception catches in `Locara.verifyElementExists`, `verifyElementDisplayed`, `healAndVerifyVisible`, `CucumberLocara.verifyText`, `LocaraTestListener`, `KatalonDriverBridge`, Playwright/Cucumber TypeScript adapters, and fixed `AppiumLocaraTest.MockAppiumDriver` so broken locators genuinely exercise autonomous healing.
+- **XXE, ReDoS, Path Traversal & XSS Defenses**: Blocked `<!DOCTYPE`/`<!ENTITY` payloads in `PageSourceParser` (`ThreadLocal<DocumentBuilder>`) and `dashboard/server.py`, hardened regexes against backtracking in `HtmlDomParser` and `KmpMorphologyResolver`, blocked path traversal & unescaped descriptions in `KatalonRsSynthesizer`, synchronized CRLF `<webElementProperties>` updates in `LocaraOrSanitizer`, replaced token-in-URL auth with `gh auth setup-git` in `tools/sync-wiki.sh`, removed inline `onclick` DOM injection in `dashboard/js/modules/telemetry.js`, unified canonical `locara_audit.json` output in `HealingAuditLedger`, and scrubbed personal/corporate test artifacts.
+
+---
+
 ## [v1.14.0] - 2026-11-13
 ### Added
-- **Code Naming Intelligence & Convention Standardization Engine (`KatalonRsSynthesizer`)**: Added `deriveSemanticObjectName` enforcing 8-dimension communication standards. Automatically deduces standardized widget category prefixes (`Btn*`, `Txt*`, `Inp*`, `Pnl*`, `Img*`, `Chk*`, `Rdo*`) and converts semantic labels to PascalCase, eliminating generic names (`01. ViewGroup_3`, `Button_Submit`).
-- **Autonomous Variable Synthesizer (AVS) Hygiene Guard (`AutoVariableSynthesizer`)**: Added `isValidDomainVariableName` enforcing camelCase and blacklisting meaningless identifiers (`data`, `temp`, `val`, `value`, `item`, `object`, `obj`, `result`, `x`, `abc`) during `.tc` Menu Variable synthesis.
-- **Domain Acronyms & Abbreviation Policy Tensor (`UniversalSemanticDictionary`)**: Added `isEstablishedDomainAcronym` for preserving critical banking acronyms (`QRIS`, `RTGS`, `BI-FAST`, `SKN`, `MPIN`, `VA`, `OTP`, `KMP`) and `expandCrypticAbbreviation` for expanding ambiguous short forms (`rek` -> `rekening`, `trx` -> `transaksi`, `no` -> `nomor`).
-- **Code Naming Auditor CLI Subcommand (`locara audit-naming`)**: Introduced `CodeNamingAuditor` in `LocaraCli` allowing developers to execute Mode A (Audit Only) scans across Object Repositories, Test Cases, and Groovy scripts to produce comprehensive Markdown inventory reports.
+- **Code Naming Intelligence & Convention Standardization Engine (`KatalonRsSynthesizer`)**: Added `deriveSemanticObjectName` enforcing standardized widget category prefixes (`Btn*`, `Txt*`, `Inp*`, `Pnl*`, `Img*`, `Chk*`, `Rdo*`) and semantic PascalCase labels via `UniversalSemanticDictionary.isEstablishedDomainAcronym` and `expandCrypticAbbreviation`, eliminating generic names (`01. ViewGroup_3`, `Button_Submit`).
+- **Autonomous Variable Synthesizer (AVS) Hygiene Guard (`AutoVariableSynthesizer`)**: Added `isValidDomainVariableName` enforcing lowercase identifiers without generic placeholders (`data`, `temp`, `val`, `value`, `item`, `object`, `obj`, `result`, `x`, `abc`) during `.tc` Menu Variable synthesis.
+- **Domain Acronyms & Abbreviation Policy Tensor (`UniversalSemanticDictionary`)**: Added `isEstablishedDomainAcronym` for preserving critical domain acronyms (`QRIS`, `RTGS`, `BI-FAST`, `SKN`, `MPIN`, `VA`, `OTP`, `KMP`) and `expandCrypticAbbreviation` for expanding ambiguous short forms (`rek` -> `rekening`, `trx` -> `transaksi`, `no` -> `nomor`).
+- **Code Naming Auditor CLI Subcommand (`locara audit-naming`)**: Introduced `CodeNamingAuditor` in `LocaraCli` allowing developers to execute Mode A (Audit Only) scans across Object Repositories, Test Cases, and Groovy scripts to produce Markdown inventory reports.
 
 ---
 
@@ -31,7 +43,7 @@ This project adheres strictly to [Semantic Versioning (SemVer 2.0.0)](https://se
 
 ## [v1.11.0] - 2026-11-09
 ### Added
-- **Contextual Entity Resolver (`ContextualEntityResolver` & `ResolvedAccount`)**: Autonomous mobile banking dashboard entity extraction. Discovers active account numbers, account holder names, account types (e.g. Tabungan Mega Dana, Mega Payroll), and balance visibility states directly from Appium page source / Android UI hierarchy XML (`HorizontalScrollView`, `ViewGroup`, `RecyclerView`). Extracts clean 10–16 digit account numbers even from spaced card representations (`0107 4002 1025 853` -> `010740021025853`).
+- **Contextual Entity Resolver (`ContextualEntityResolver` & `ResolvedAccount`)**: Autonomous mobile banking dashboard entity extraction. Discovers active account numbers, account holder names, account types (e.g. Tabungan Mega Dana, Mega Payroll), and balance visibility states directly from Appium page source / Android UI hierarchy XML (`HorizontalScrollView`, `ViewGroup`, `RecyclerView`). Extracts clean 10–16 digit account numbers even from spaced card representations (`9000 4002 1025 853` -> `900040021025853`).
 - **Autonomous Variable Synthesizer (`AutoVariableSynthesizer`)**: Programmatic management and synchronization of Katalon Studio Menu Variables (`<variableLinks>` and `<variable>`) inside `.tc` XML entities with deterministic UUID v4 generation, schema validation, and zero duplication. Prevents blank variable lists in Katalon Studio UI and guarantees seamless data binding.
 - **Script Variable Scoping Aligner (`ScriptVariableAligner`)**: Enforces variable declarations (`passwordLogin`, `nomorRekeningSumber`, etc.) to be defined outside `try { ... }` blocks in Groovy test scripts, ensuring clean variable scoping, persistence across `catch`/`finally`, and standard compliance.
 - **Expanded CLI & Java Public API (`Locara`, `LocaraCli`)**: Added `extract-account`, `sync-tc`, and `align-script` commands to `locara` CLI and corresponding public methods `Locara.resolveActiveAccount(...)`, `Locara.synthesizeTestCaseVariables(...)`, `Locara.syncVariableDefault(...)`, and `Locara.alignScript(...)`.
@@ -53,7 +65,7 @@ This project adheres strictly to [Semantic Versioning (SemVer 2.0.0)](https://se
 - **Complete 38-Release SemVer `CHANGELOG.md`**: Full historical changelog from `v1.0.0` through `v1.9.4`.
 
 ### Fixed
-- **Pre-Healing `OverlayAirbag` Invocation (`Locara`)**: Added `OVERLAY_AIRBAG.dismissBlockingOverlay` prior to XML snapshot extraction inside `Locara.executeHealing` (`tap`, `setText`, `clearText`), and synchronized `isNegativeTestCaseRunning()` in `LocaraHook.groovy`.
+- **Post-Miss `OverlayAirbag` Recovery & Negative Probe Guard (`Locara`, `LocaraHook`)**: Triggered `OVERLAY_AIRBAG.dismissBlockingOverlay` automatically inside `Locara.executeHealing` when initial heuristic matching fails before scroll fallback, and synchronized negative test detection in `LocaraHook.groovy`.
 
 ---
 
@@ -87,7 +99,7 @@ This project adheres strictly to [Semantic Versioning (SemVer 2.0.0)](https://se
 
 ## [v1.8.3] - 2026-11-03
 ### Fixed
-- **Mission Control DOM XSS Remediation & HTTP Payload Hardening (`dashboard/`, `HtmlDomParser`)**: Replaced unsafe `innerHTML` rendering with safe DOM construction, enforced HTTP request body limits in `dashboard/server.py`, and hardened HTML/XML attribute parsing.
+- **Mission Control Dashboard Escaping & Report Sanitization (`dashboard/`, `HtmlDomParser`)**: Added initial HTML entity escaping utilities (`escapeHtml`) across dashboard views, `generate_report.py` output sanitization, and attribute hardening in `HtmlDomParser` (completed across all routes with payload size & loopback CORS enforcement in `v1.15.0`).
 
 ---
 

@@ -1,12 +1,13 @@
 /**
  * ==============================================================================
- * ZERO-HEALING DASHBOARD — VISUAL INSPECTOR MODULE
+ * LOCARA MISSION CONTROL — VISUAL INSPECTOR MODULE
  * Mobile device simulation, bounding box overlay, diff blocks, and vector bars.
  * ==============================================================================
  */
 
 import { appState } from "../state.js";
 import { renderIcon } from "../icons.js";
+import { escapeHtml } from "../utils.js";
 
 export function initInspectorModule() {
     appState.subscribe(state => {
@@ -76,20 +77,23 @@ function renderGuardsStatus(guards) {
     if (!container) return;
 
     const g = guards || { dangerLockout: "PASSED", keyboard: "CLEAR", viewport: "ON-SCREEN" };
-    const isLockout = g.dangerLockout.includes("LOCKOUT");
+    const dangerStr = String(g.dangerLockout || "PASSED");
+    const keyboardStr = String(g.keyboard || "CLEAR");
+    const viewportStr = String(g.viewport || "ON-SCREEN");
+    const isLockout = dangerStr.includes("LOCKOUT");
 
     container.innerHTML = `
         <div class="guard-pill ${isLockout ? 'danger' : 'safe'}">
             <span class="btn-icon-wrap">${renderIcon(isLockout ? "alertTriangle" : "shield")}</span>
-            <span>Danger Lockout: <strong>${g.dangerLockout}</strong></span>
+            <span>Danger Lockout: <strong>${escapeHtml(dangerStr)}</strong></span>
         </div>
         <div class="guard-pill safe">
             <span class="btn-icon-wrap">${renderIcon("checkCircle")}</span>
-            <span>Keyboard Guard: <strong>${g.keyboard}</strong></span>
+            <span>Keyboard Guard: <strong>${escapeHtml(keyboardStr)}</strong></span>
         </div>
         <div class="guard-pill safe">
             <span class="btn-icon-wrap">${renderIcon("activity")}</span>
-            <span>Viewport: <strong>${g.viewport}</strong></span>
+            <span>Viewport: <strong>${escapeHtml(viewportStr)}</strong></span>
         </div>
     `;
 }
