@@ -6,6 +6,9 @@ bin/
 .idea/
 *.iml
 .vscode/
+.classpath
+.project
+.settings/
 Include/
 
 zero-healing.local.properties
