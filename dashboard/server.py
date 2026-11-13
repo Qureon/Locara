@@ -19,7 +19,7 @@ from datetime import datetime
 from urllib.parse import urlparse
 from xml.etree.ElementTree import ParseError
 
-ENGINE_VERSION = "v1.15.0"
+ENGINE_VERSION = "v1.15.1"
 ENGINE_BANNER = f"Locara Core {ENGINE_VERSION} · Powered by Qureon (Katalon 11.7.0+ Ready)"
 MAX_REQUEST_BYTES = 2 * 1024 * 1024  # 2 MiB max JSON/XML payload
 LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})

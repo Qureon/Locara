@@ -1,9 +1,16 @@
 package com.qureon.locara.katalon;
 
+import com.qureon.locara.core.LocaraEngine;
+import com.qureon.locara.core.model.HealConfig;
+import com.qureon.locara.core.model.HealContext;
+import com.qureon.locara.core.model.HealResult;
 import com.qureon.locara.core.model.UIElementNode;
 
 import java.lang.reflect.Method;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Supplier;
 
 /**
  * Auto-Scroll Recovery Engine:
@@ -64,6 +71,10 @@ public class ScrollRecoveryEngine {
      * Prevents "ngide" scrolling when probing conditional elements, checking presence, or hunting for pop-ups.
      */
     public boolean isScrollEligible(String hint, String targetRsPath, String action, List<UIElementNode> nodes) {
+        return isMutativeNonOverlayTarget(hint, targetRsPath, action) && hasScrollableContainer(nodes);
+    }
+
+    private boolean isMutativeNonOverlayTarget(String hint, String targetRsPath, String action) {
         if (action == null || action.trim().isEmpty()) {
             return false;
         }
@@ -78,12 +89,7 @@ public class ScrollRecoveryEngine {
         }
 
         // 2. Overlays, Modals, System Permission Dialogs MUST NEVER scroll
-        if (isOverlayOrDialogTarget(hint, targetRsPath)) {
-            return false;
-        }
-
-        // 3. Must have an active scrollable container in the current view
-        return hasScrollableContainer(nodes);
+        return !isOverlayOrDialogTarget(hint, targetRsPath);
     }
 
     /**
@@ -130,26 +136,80 @@ public class ScrollRecoveryEngine {
      * Evaluates whether horizontal carousel swipe recovery is safe and eligible for the given action and target.
      */
     public boolean isCarouselEligible(String hint, String targetRsPath, String action, List<UIElementNode> nodes) {
-        if (action == null || action.trim().isEmpty()) {
-            return false;
+        return isMutativeNonOverlayTarget(hint, targetRsPath, action) && hasHorizontalCarousel(nodes);
+    }
+
+    /**
+     * Shared autonomous scroll recovery loop for Katalon and Appium bridges.
+     * Respects ManualScrollGuard (prevents double-scrolling after explicit script scrolls)
+     * and stops immediately if the viewport/page source stops changing (bottom/boundary reached).
+     */
+    public HealResult recoverWithScroll(
+            HealConfig config,
+            LocaraEngine engine,
+            HealContext context,
+            List<UIElementNode> initialNodes,
+            String initialPageSource,
+            HealResult initialResult,
+            Object driver,
+            Supplier<String> pageSourceSupplier,
+            String logPrefix) {
+        if (initialResult != null && initialResult.isSuccess()) {
+            return initialResult;
+        }
+        if ((config != null && !config.isScrollRecoveryEnabled()) || maxScrollAttempts <= 0
+                || engine == null || context == null || pageSourceSupplier == null) {
+            return initialResult;
         }
 
-        String act = action.trim().toUpperCase();
+        String hint = context.getTargetHint();
+        String rsPath = context.getTargetRsPath();
+        String action = context.getAction();
+        String prefix = (logPrefix != null && !logPrefix.isEmpty()) ? logPrefix : "[Locara by Qureon]";
 
-        // 1. Presence checks, probes, assertions, and checkpoints MUST NEVER swipe (strictly read-only)
-        if (act.contains("VERIFY") || act.contains("WAIT") || act.startsWith("IS_")
-                || act.contains("ASSERT") || act.contains("PRESENT") || act.contains("VISIBLE")
-                || act.contains("PROBE") || act.contains("CHECKPOINT") || act.contains("GET_TEXT")) {
-            return false;
+        if (!isScrollEligible(hint, rsPath, action, initialNodes)) {
+            if (isOverlayOrDialogTarget(hint, rsPath)) {
+                System.out.println(prefix + " 🛡️ Target '" + hint + "' identified as Transient Popup / Overlay / Permission Dialog. Auto-scroll strictly inhibited to preserve screen state.");
+            }
+            return initialResult;
         }
 
-        // 2. Overlays, Modals, System Permission Dialogs MUST NEVER swipe
-        if (isOverlayOrDialogTarget(hint, targetRsPath)) {
-            return false;
+        if (ManualScrollGuard.isAutoScrollSuppressed(config)) {
+            System.out.println(prefix + " 🛑 Auto-scroll skipped for '" + hint + "': recent manual scroll/swipe already performed by test script.");
+            return initialResult;
         }
 
-        // 3. Must have an active horizontal carousel in the current view
-        return hasHorizontalCarousel(nodes);
+        Set<String> seenPageSources = new HashSet<>();
+        if (initialPageSource != null && !initialPageSource.isEmpty()) {
+            seenPageSources.add(initialPageSource);
+        }
+
+        HealResult latestResult = initialResult;
+        try {
+            for (int attempt = 1; attempt <= maxScrollAttempts; attempt++) {
+                System.out.println(prefix + " 📜 Target '" + hint + "' not found in active viewport. Attempting auto-scroll recovery #" + attempt + "...");
+                if (!performScrollDown(driver)) {
+                    break;
+                }
+
+                String scrolledSource = pageSourceSupplier.get();
+                if (scrolledSource == null || scrolledSource.isEmpty()) {
+                    break;
+                }
+                if (!seenPageSources.add(scrolledSource)) {
+                    System.out.println(prefix + " ⏹️ Screen viewport unchanged after scroll #" + attempt + " (boundary reached). Stopping further auto-scroll.");
+                    break;
+                }
+
+                latestResult = engine.heal(scrolledSource, context);
+                if (latestResult.isSuccess()) {
+                    System.out.println(prefix + " 🎯 Target '" + hint + "' successfully discovered after scroll recovery!");
+                    return latestResult;
+                }
+            }
+        } catch (Exception ignored) {}
+
+        return latestResult;
     }
 
     /**
@@ -237,12 +297,15 @@ public class ScrollRecoveryEngine {
     }
 
     private static boolean invokeKatalonSwipe(int startX, int startY, int endX, int endY, long settleMs) {
+        ManualScrollGuard.beginInternalScroll();
         try {
             Class<?> mobileKeywords = Class.forName("com.kms.katalon.core.mobile.keyword.MobileBuiltInKeywords");
             Method swipeMethod = mobileKeywords.getMethod("swipe", int.class, int.class, int.class, int.class);
             swipeMethod.invoke(null, startX, startY, endX, endY);
         } catch (Exception ignored) {
             return false;
+        } finally {
+            ManualScrollGuard.endInternalScroll();
         }
         sleepWithInterruptRestore(settleMs);
         return true;
@@ -250,6 +313,7 @@ public class ScrollRecoveryEngine {
 
     private static boolean invokeAppiumGesture(Object driver, String gestureName, String direction,
                                                  int top, int areaWidth, int areaHeight, double percent, long settleMs) {
+        ManualScrollGuard.beginInternalScroll();
         try {
             Class<?> jsExecutor = Class.forName("org.openqa.selenium.JavascriptExecutor");
             if (!jsExecutor.isInstance(driver)) {
@@ -266,6 +330,8 @@ public class ScrollRecoveryEngine {
             executeScript.invoke(driver, gestureName, new Object[]{args});
         } catch (Exception ignored) {
             return false;
+        } finally {
+            ManualScrollGuard.endInternalScroll();
         }
         sleepWithInterruptRestore(settleMs);
         return true;

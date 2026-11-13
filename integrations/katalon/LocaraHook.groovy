@@ -145,7 +145,7 @@ class LocaraHook {
                 if (engine != null) {
                     Object cfg = engine.getClass().getMethod("getConfig").invoke(engine)
                     if (cfg != null) {
-                        double configured = ((Number) cfg.getClass().getMethod("getConfidenceThreshold").invoke(cfg)).doubleValue()
+                        double configured = ((Number) cfg.getClass().getMethod("getMinConfidenceThreshold").invoke(cfg)).doubleValue()
                         return Math.max(minimumFloor, configured)
                     }
                 }
@@ -184,8 +184,19 @@ class LocaraHook {
             installOptionalInterceptor(mobileCache, "verifyElementPresent", "com.kms.katalon.core.mobile.keyword.builtin.VerifyElementPresentKeyword", LocaraVerifyElementPresentKeyword.class, { IKeyword orig -> new LocaraVerifyElementPresentKeyword(orig) })
             installOptionalInterceptor(mobileCache, "verifyElementVisible", "com.kms.katalon.core.mobile.keyword.builtin.VerifyElementVisibleKeyword", LocaraVerifyElementVisibleKeyword.class, { IKeyword orig -> new LocaraVerifyElementVisibleKeyword(orig) })
 
+            // Manual-scroll interceptors: prevent Locara from double-scrolling when script explicitly scrolled
+            [
+                "swipe": "com.kms.katalon.core.mobile.keyword.builtin.SwipeKeyword",
+                "swipeWithDuration": "com.kms.katalon.core.mobile.keyword.builtin.SwipeWithDurationKeyword",
+                "scrollToText": "com.kms.katalon.core.mobile.keyword.builtin.ScrollToTextKeyword",
+                "scrollToTextHorizontal": "com.kms.katalon.core.mobile.keyword.builtin.ScrollToTextHorizontalKeyword",
+                "enhancedScrollToText": "com.kms.katalon.core.mobile.keyword.builtin.EnhancedScrollToTextKeyword"
+            ].each { String key, String className ->
+                installOptionalInterceptor(mobileCache, key, className, LocaraManualScrollInterceptor.class, { IKeyword orig -> new LocaraManualScrollInterceptor(orig) })
+            }
+
             installed = true
-            KeywordUtil.logInfo("[Locara by Qureon] Native KeywordExecutor Hook v1.15.0 successfully installed (tap, setText, getText, verifyElementText, waitForElementPresent, verifyElementPresent/Visible intercepted)")
+            KeywordUtil.logInfo("[Locara by Qureon] Native KeywordExecutor Hook v1.15.1 successfully installed (tap, setText, getText, verifyElementText, waitForElementPresent, verifyElementPresent/Visible, swipe/scrollToText manual-scroll guard)")
         } catch (Throwable t) {
             KeywordUtil.markWarning("[Locara by Qureon] Failed to install KeywordExecutor hook: " + t.getMessage())
         }
@@ -237,6 +248,35 @@ class LocaraHook {
                 ? (params[index] as FailureHandling)
                 : RunConfiguration.getDefaultFailureHandling()
     }
+
+    static void notifyManualScroll() {
+        try {
+            getLocaraClass()?.getMethod("notifyManualScroll")?.invoke(null)
+        } catch (Throwable ignored) {}
+    }
+
+    static AutoCloseable openActionWindow() {
+        try {
+            Object res = getLocaraClass()?.getMethod("openActionWindow")?.invoke(null)
+            return (res instanceof AutoCloseable) ? (AutoCloseable) res : null
+        } catch (Throwable ignored) {
+            return null
+        }
+    }
+
+    static void closeActionWindow(AutoCloseable window) {
+        if (window != null) {
+            try {
+                window.close()
+            } catch (Throwable ignored) {}
+        }
+    }
+
+    static void recordSuccessfulTap() {
+        try {
+            getLocaraClass()?.getMethod("recordSuccessfulTap")?.invoke(null)
+        } catch (Throwable ignored) {}
+    }
 }
 
 class LocaraTapKeyword implements IKeyword {
@@ -258,34 +298,41 @@ class LocaraTapKeyword implements IKeyword {
             return originalKeyword != null ? originalKeyword.execute(params) : null
         }
 
+        AutoCloseable actionWindow = LocaraHook.openActionWindow()
         try {
-            return originalKeyword != null ? originalKeyword.execute(params) : null
-        } catch (Throwable t) {
-            TestObject to = LocaraHook.extractTestObject(params)
-            int timeout = LocaraHook.extractTimeout(params, 1, 10)
-            FailureHandling flow = LocaraHook.extractFailureHandling(params, 2)
-
-            String objId = to != null ? to.getObjectId() : "UnknownElement"
-            KeywordUtil.logInfo("[Locara by Qureon] 🛡️ Intercepted failure on Mobile.tap('${objId}'). Activating in-flight self-healing...")
-
-            IN_FLIGHT.set(true)
             try {
-                def locara = LocaraHook.getLocaraClass()
-                boolean healed = locara != null && (locara.healAndTap(to, timeout, objId) as boolean)
-                if (healed) {
-                    KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight self-healing succeeded for '${objId}'!")
-                    return null
-                }
-            } catch (Throwable healEx) {
-                KeywordUtil.logInfo("[Locara by Qureon] ⚠️ Healing attempt failed: " + healEx.getMessage())
-            } finally {
-                IN_FLIGHT.remove()
-            }
+                Object res = originalKeyword != null ? originalKeyword.execute(params) : null
+                LocaraHook.recordSuccessfulTap()
+                return res
+            } catch (Throwable t) {
+                TestObject to = LocaraHook.extractTestObject(params)
+                int timeout = LocaraHook.extractTimeout(params, 1, 10)
+                FailureHandling flow = LocaraHook.extractFailureHandling(params, 2)
 
-            if (flow == FailureHandling.STOP_ON_FAILURE) {
-                throw t
+                String objId = to != null ? to.getObjectId() : "UnknownElement"
+                KeywordUtil.logInfo("[Locara by Qureon] 🛡️ Intercepted failure on Mobile.tap('${objId}'). Activating in-flight self-healing...")
+
+                IN_FLIGHT.set(true)
+                try {
+                    def locara = LocaraHook.getLocaraClass()
+                    boolean healed = locara != null && (locara.healAndTap(to, timeout, objId) as boolean)
+                    if (healed) {
+                        KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight self-healing succeeded for '${objId}'!")
+                        return null
+                    }
+                } catch (Throwable healEx) {
+                    KeywordUtil.logInfo("[Locara by Qureon] ⚠️ Healing attempt failed: " + healEx.getMessage())
+                } finally {
+                    IN_FLIGHT.remove()
+                }
+
+                if (flow == FailureHandling.STOP_ON_FAILURE) {
+                    throw t
+                }
+                return null
             }
-            return null
+        } finally {
+            LocaraHook.closeActionWindow(actionWindow)
         }
     }
 }
@@ -309,35 +356,40 @@ class LocaraSetTextKeyword implements IKeyword {
             return originalKeyword != null ? originalKeyword.execute(params) : null
         }
 
+        AutoCloseable actionWindow = LocaraHook.openActionWindow()
         try {
-            return originalKeyword != null ? originalKeyword.execute(params) : null
-        } catch (Throwable t) {
-            TestObject to = LocaraHook.extractTestObject(params)
-            String text = params != null && params.length > 1 && params[1] != null ? params[1].toString() : ""
-            int timeout = LocaraHook.extractTimeout(params, 2, 10)
-            FailureHandling flow = LocaraHook.extractFailureHandling(params, 3)
-
-            String objId = to != null ? to.getObjectId() : "UnknownElement"
-            KeywordUtil.logInfo("[Locara by Qureon] 🛡️ Intercepted failure on Mobile.setText('${objId}'). Activating in-flight self-healing...")
-
-            IN_FLIGHT.set(true)
             try {
-                def locara = LocaraHook.getLocaraClass()
-                boolean healed = locara != null && (locara.healAndSetText(to, text, timeout, objId) as boolean)
-                if (healed) {
-                    KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight self-healing succeeded for '${objId}'!")
-                    return null
-                }
-            } catch (Throwable healEx) {
-                KeywordUtil.logInfo("[Locara by Qureon] ⚠️ Healing attempt failed: " + healEx.getMessage())
-            } finally {
-                IN_FLIGHT.remove()
-            }
+                return originalKeyword != null ? originalKeyword.execute(params) : null
+            } catch (Throwable t) {
+                TestObject to = LocaraHook.extractTestObject(params)
+                String text = params != null && params.length > 1 && params[1] != null ? params[1].toString() : ""
+                int timeout = LocaraHook.extractTimeout(params, 2, 10)
+                FailureHandling flow = LocaraHook.extractFailureHandling(params, 3)
 
-            if (flow == FailureHandling.STOP_ON_FAILURE) {
-                throw t
+                String objId = to != null ? to.getObjectId() : "UnknownElement"
+                KeywordUtil.logInfo("[Locara by Qureon] 🛡️ Intercepted failure on Mobile.setText('${objId}'). Activating in-flight self-healing...")
+
+                IN_FLIGHT.set(true)
+                try {
+                    def locara = LocaraHook.getLocaraClass()
+                    boolean healed = locara != null && (locara.healAndSetText(to, text, timeout, objId) as boolean)
+                    if (healed) {
+                        KeywordUtil.logInfo("[Locara by Qureon] ✅ In-flight self-healing succeeded for '${objId}'!")
+                        return null
+                    }
+                } catch (Throwable healEx) {
+                    KeywordUtil.logInfo("[Locara by Qureon] ⚠️ Healing attempt failed: " + healEx.getMessage())
+                } finally {
+                    IN_FLIGHT.remove()
+                }
+
+                if (flow == FailureHandling.STOP_ON_FAILURE) {
+                    throw t
+                }
+                return null
             }
-            return null
+        } finally {
+            LocaraHook.closeActionWindow(actionWindow)
         }
     }
 }
@@ -641,6 +693,28 @@ class LocaraVerifyElementVisibleKeyword implements IKeyword {
             throw new com.kms.katalon.core.exception.StepFailedException("Element '" + objId + "' not visible after in-flight healing")
         }
         return false
+    }
+}
+
+class LocaraManualScrollInterceptor implements IKeyword {
+    private final IKeyword originalKeyword
+
+    LocaraManualScrollInterceptor(IKeyword originalKeyword) {
+        this.originalKeyword = originalKeyword
+    }
+
+    @Override
+    SupportLevel getSupportLevel(Object... params) {
+        return originalKeyword != null ? originalKeyword.getSupportLevel(params) : null
+    }
+
+    @Override
+    Object execute(Object... params) {
+        try {
+            return originalKeyword != null ? originalKeyword.execute(params) : null
+        } finally {
+            LocaraHook.notifyManualScroll()
+        }
     }
 }
 

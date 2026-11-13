@@ -1,6 +1,6 @@
 {
   "name": "@qureon/cucumber-locara",
-  "version": "1.15.0",
+  "version": "1.15.1",
   "description": "Locara by Qureon: Autonomous BDD & Gherkin Self-Healing Step Definitions for Cucumber, Playwright, and Appium",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

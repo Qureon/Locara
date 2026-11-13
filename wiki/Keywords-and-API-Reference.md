@@ -38,4 +38,8 @@ import com.qureon.locara.core.guard.OverlayAirbag
 
 new OverlayAirbag().dismissBlockingOverlay(driver, pageSource)
 Locara.tapByHint('Icon QRIS', 'Object Repository/Home/icon_QRIS')
+
+// For custom Appium driver.executeScript("mobile: scrollGesture", ...) helpers:
+Locara.notifyManualScroll()     // Prevents double scroll on the following tap/setText
+Locara.clearManualScrollState() // Explicitly resets ThreadLocal scroll guard state
 ```

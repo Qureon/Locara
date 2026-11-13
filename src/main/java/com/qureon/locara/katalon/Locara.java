@@ -129,6 +129,42 @@ public class Locara {
         scrollEngine = new ScrollRecoveryEngine(ENGINE.getConfig().getMaxScrollAttempts());
     }
 
+    /**
+     * Signals that the test script just executed an explicit manual scroll/swipe.
+     * Prevents Locara from performing redundant double scrolling on immediately following actions.
+     */
+    public static void notifyManualScroll() {
+        ManualScrollGuard.recordManualScroll();
+    }
+
+    /**
+     * Clears any tracked ThreadLocal manual scroll suppression state for the current thread.
+     */
+    public static void clearManualScrollState() {
+        ManualScrollGuard.clear();
+    }
+
+    public static void setManualScrollGuardEnabled(boolean enable) {
+        ENGINE.getConfig().setManualScrollGuardEnabled(enable);
+        System.out.println("[Locara by Qureon] Manual-scroll double-scroll guard: " + (enable ? "ENABLED" : "DISABLED"));
+    }
+
+    public static boolean isManualScrollGuardEnabled() {
+        return ENGINE.getConfig().isManualScrollGuardEnabled();
+    }
+
+    public static void setManualScrollCooldownMs(long cooldownMs) {
+        ENGINE.getConfig().setManualScrollCooldownMs(cooldownMs);
+    }
+
+    public static ManualScrollGuard.ActionWindow openActionWindow() {
+        return ManualScrollGuard.openActionWindow(ENGINE.getConfig());
+    }
+
+    public static void recordSuccessfulTap() {
+        ManualScrollGuard.markActionTapSucceeded();
+    }
+
     public static LocaraEngine getEngine() {
         return ENGINE;
     }
@@ -153,23 +189,32 @@ public class Locara {
     }
 
     public static boolean tap(Object testObject, int timeoutSeconds, String hint) {
-        if (!ENGINE.getConfig().isEnabled()) {
-            try {
-                return invokeKatalonTap(testObject, timeoutSeconds);
-            } catch (Throwable t) {
-                return false;
+        try (ManualScrollGuard.ActionWindow ignored = openActionWindow()) {
+            if (!ENGINE.getConfig().isEnabled()) {
+                try {
+                    boolean nativeOk = invokeKatalonTap(testObject, timeoutSeconds);
+                    if (nativeOk) {
+                        ManualScrollGuard.markActionTapSucceeded();
+                    }
+                    return nativeOk;
+                } catch (Throwable t) {
+                    return false;
+                }
             }
-        }
-        try {
-            // Attempt standard Katalon Mobile tap first
-            boolean success = invokeKatalonTap(testObject, timeoutSeconds);
-            if (success) return true;
-        } catch (Throwable t) {
-            System.out.println("[Locara by Qureon] Intercepted tap failure on: " + hint + " (" + t.getMessage() + ")");
-        }
+            try {
+                // Attempt standard Katalon Mobile tap first
+                boolean success = invokeKatalonTap(testObject, timeoutSeconds);
+                if (success) {
+                    ManualScrollGuard.markActionTapSucceeded();
+                    return true;
+                }
+            } catch (Throwable t) {
+                System.out.println("[Locara by Qureon] Intercepted tap failure on: " + hint + " (" + t.getMessage() + ")");
+            }
 
-        // Trigger Self-Healing
-        return executeHealing(testObject, hint, "TAP", "", timeoutSeconds, null);
+            // Trigger Self-Healing
+            return executeHealing(testObject, hint, "TAP", "", timeoutSeconds, null);
+        }
     }
 
     /**
@@ -178,7 +223,9 @@ public class Locara {
      */
     public static boolean healAndTap(Object testObject, int timeoutSeconds, String hint) {
         if (!ENGINE.getConfig().isEnabled()) return false;
-        return executeHealing(testObject, hint, "TAP", "", timeoutSeconds, null);
+        try (ManualScrollGuard.ActionWindow ignored = openActionWindow()) {
+            return executeHealing(testObject, hint, "TAP", "", timeoutSeconds, null);
+        }
     }
 
     /**
@@ -190,7 +237,9 @@ public class Locara {
 
     public static boolean tapByHint(String hint, int timeoutSeconds, String targetRsPath) {
         if (!ENGINE.getConfig().isEnabled()) return false;
-        return executeHealing(null, hint, "TAP", "", timeoutSeconds, targetRsPath);
+        try (ManualScrollGuard.ActionWindow ignored = openActionWindow()) {
+            return executeHealing(null, hint, "TAP", "", timeoutSeconds, targetRsPath);
+        }
     }
 
     /**
@@ -201,21 +250,23 @@ public class Locara {
     }
 
     public static boolean setText(Object testObject, String text, int timeoutSeconds, String hint) {
-        if (!ENGINE.getConfig().isEnabled()) {
-            try {
-                return invokeKatalonSetText(testObject, text, timeoutSeconds);
-            } catch (Throwable t) {
-                return false;
+        try (ManualScrollGuard.ActionWindow ignored = openActionWindow()) {
+            if (!ENGINE.getConfig().isEnabled()) {
+                try {
+                    return invokeKatalonSetText(testObject, text, timeoutSeconds);
+                } catch (Throwable t) {
+                    return false;
+                }
             }
-        }
-        try {
-            boolean success = invokeKatalonSetText(testObject, text, timeoutSeconds);
-            if (success) return true;
-        } catch (Throwable t) {
-            System.out.println("[Locara by Qureon] Intercepted setText failure on: " + hint + " (" + t.getMessage() + ")");
-        }
+            try {
+                boolean success = invokeKatalonSetText(testObject, text, timeoutSeconds);
+                if (success) return true;
+            } catch (Throwable t) {
+                System.out.println("[Locara by Qureon] Intercepted setText failure on: " + hint + " (" + t.getMessage() + ")");
+            }
 
-        return executeHealing(testObject, hint, "SET_TEXT", text, timeoutSeconds, null);
+            return executeHealing(testObject, hint, "SET_TEXT", text, timeoutSeconds, null);
+        }
     }
 
     /**
@@ -228,7 +279,9 @@ public class Locara {
 
     public static boolean healAndSetText(Object testObject, String text, int timeoutSeconds, String hint) {
         if (!ENGINE.getConfig().isEnabled()) return false;
-        return executeHealing(testObject, hint, "SET_TEXT", text, timeoutSeconds, null);
+        try (ManualScrollGuard.ActionWindow ignored = openActionWindow()) {
+            return executeHealing(testObject, hint, "SET_TEXT", text, timeoutSeconds, null);
+        }
     }
 
     /**
@@ -308,21 +361,25 @@ public class Locara {
     }
 
     public static boolean clearText(Object testObject, int timeoutSeconds, String hint) {
-        try {
-            Method clearMethod = getMobileKeywordMethod("clearText", getTestObjectClass(), int.class);
-            clearMethod.invoke(null, testObject, timeoutSeconds);
-            return true;
-        } catch (Throwable t) {
-            System.out.println("[Locara by Qureon] Intercepted clearText failure on: " + hint + " (" + t.getMessage() + ")");
-        }
+        try (ManualScrollGuard.ActionWindow ignored = openActionWindow()) {
+            try {
+                Method clearMethod = getMobileKeywordMethod("clearText", getTestObjectClass(), int.class);
+                clearMethod.invoke(null, testObject, timeoutSeconds);
+                return true;
+            } catch (Throwable t) {
+                System.out.println("[Locara by Qureon] Intercepted clearText failure on: " + hint + " (" + t.getMessage() + ")");
+            }
 
-        if (!ENGINE.getConfig().isEnabled()) return false;
-        return healAndClearText(testObject, timeoutSeconds, hint);
+            if (!ENGINE.getConfig().isEnabled()) return false;
+            return executeHealing(testObject, hint, "CLEAR_TEXT", "", timeoutSeconds, null);
+        }
     }
 
     public static boolean healAndClearText(Object testObject, int timeoutSeconds, String hint) {
         if (!ENGINE.getConfig().isEnabled()) return false;
-        return executeHealing(testObject, hint, "CLEAR_TEXT", "", timeoutSeconds, null);
+        try (ManualScrollGuard.ActionWindow ignored = openActionWindow()) {
+            return executeHealing(testObject, hint, "CLEAR_TEXT", "", timeoutSeconds, null);
+        }
     }
 
     /**
@@ -532,28 +589,12 @@ public class Locara {
         }
 
         // Auto-Scroll Fallback: If not found, attempt scroll recovery on scrollable containers
-        ScrollRecoveryEngine activeScrollEngine = getScrollEngine();
-        if (!result.isSuccess() && ENGINE.getConfig().isScrollRecoveryEnabled() && activeScrollEngine.getMaxScrollAttempts() > 0) {
-            try {
-                if (activeScrollEngine.isScrollEligible(effectiveHint, rsPath, action, nodes)) {
-                    for (int attempt = 1; attempt <= activeScrollEngine.getMaxScrollAttempts(); attempt++) {
-                        System.out.println("[Locara by Qureon] 📜 Target '" + hint + "' not found in active viewport. Attempting auto-scroll recovery #" + attempt + "...");
-                        boolean scrolled = activeScrollEngine.performScrollDown(driver);
-                        if (!scrolled) break;
-
-                        pageSource = KatalonDriverBridge.getPageSource(driver);
-                        if (pageSource != null && !pageSource.isEmpty()) {
-                            result = ENGINE.heal(safeParsePageSource(pageSource), pageSource, context);
-                            if (result.isSuccess()) {
-                                System.out.println("[Locara by Qureon] 🎯 Target '" + hint + "' successfully discovered after scroll recovery!");
-                                break;
-                            }
-                        }
-                    }
-                } else if (activeScrollEngine.isOverlayOrDialogTarget(effectiveHint, rsPath)) {
-                    System.out.println("[Locara by Qureon] 🛡️ Target '" + hint + "' identified as Transient Popup / Overlay / Permission Dialog. Auto-scroll strictly inhibited to preserve screen state.");
-                }
-            } catch (Exception ignored) {}
+        // (skipped automatically if script already scrolled manually or screen boundary was reached)
+        if (!result.isSuccess()) {
+            result = getScrollEngine().recoverWithScroll(
+                    ENGINE.getConfig(), ENGINE, context, nodes, pageSource, result,
+                    driver, () -> KatalonDriverBridge.getPageSource(driver), "[Locara by Qureon]"
+            );
         }
 
         if (!result.isSuccess() || result.getCandidate() == null) {
@@ -579,7 +620,11 @@ public class Locara {
         }
 
         // Execute action directly on driver using healed locator
-        return executeDirectDriverAction(driver, healedXPath, action, value, timeoutSeconds);
+        boolean executed = executeDirectDriverAction(driver, healedXPath, action, value, timeoutSeconds);
+        if (executed && ("TAP".equalsIgnoreCase(action) || "CLICK".equalsIgnoreCase(action))) {
+            ManualScrollGuard.markActionTapSucceeded();
+        }
+        return executed;
     }
 
     private static boolean executeDirectDriverAction(Object driver, String xpath, String action, String value, int timeoutSeconds) {

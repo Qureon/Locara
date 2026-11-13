@@ -5,6 +5,18 @@ This project adheres strictly to [Semantic Versioning (SemVer 2.0.0)](https://se
 
 ---
 
+## [v1.15.1] - 2026-11-13
+### Fixed
+- **Anti-Double-Scroll Guard & Manual Scroll Awareness (`ManualScrollGuard`, `ScrollRecoveryEngine`, `Locara`, `AppiumLocara`, `LocaraHook`)**:
+  - Added ThreadLocal `ManualScrollGuard` with pre-action `ActionWindow` snapshots so slow native locator timeouts (`5-30s`) do not prematurely expire the post-scroll window before entering healing.
+  - Updated `LocaraHook.groovy` to pass-through intercept Katalon manual scroll/swipe keywords (`swipe`, `swipeWithDuration`, `scrollToText`, `scrollToTextHorizontal`, `enhancedScrollToText`) and automatically notify `Locara.notifyManualScroll()` while ignoring Locara's own internal `ScrollRecoveryEngine` gestures (`beginInternalScroll`/`endInternalScroll`).
+  - Added public `notifyManualScroll()` / `clearManualScrollState()` helpers on `Locara` and `AppiumLocara` (plus automatic per-test ThreadLocal reset in `LocaraTestListener`), configurable via `locara.scroll.manual_guard.enabled` (`true`) and `locara.scroll.manual_cooldown_ms` (`15000`).
+  - Unified Katalon and Appium scroll fallback into `ScrollRecoveryEngine.recoverWithScroll` and added viewport-stagnation boundary detection (`seenPageSources`) so auto-scroll stops immediately once scroll bounds are reached.
+  - Fixed `LocaraHook.getConfiguredConfidenceThreshold` reflection lookup (`getMinConfidenceThreshold`).
+- **Tests**: Expanded regression suite to `115` JUnit tests (`ScrollRecoveryEngineTest`, `AppiumLocaraTest`, `RegressionHardeningTest`) + `8` Python dashboard tests.
+
+---
+
 ## [v1.15.0] - 2026-11-13
 ### Added
 - **Per-Thread Target Isolation API (`Locara` & `HealConfig`)**: Added `setThreadAppTarget(AppTarget)` and `clearThreadAppTarget()` (plus `LocaraHook.IN_FLIGHT.remove()` cleanup) so concurrent test runners never mutate or leak global profile state.

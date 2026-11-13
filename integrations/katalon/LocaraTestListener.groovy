@@ -1,4 +1,5 @@
 import com.kms.katalon.core.annotation.AfterTestCase
+import com.kms.katalon.core.annotation.BeforeTestCase
 import com.kms.katalon.core.context.TestCaseContext
 import com.kms.katalon.core.mobile.keyword.internal.MobileDriverFactory
 
@@ -18,8 +19,14 @@ class LocaraTestListener {
     private static Object engineInstance = null
     private static final Pattern OBJECT_ID_PATTERN = Pattern.compile("Object Repository/([^'\"\\r\\n)]+)")
 
+    @BeforeTestCase
+    def resetScrollGuardOnStart(TestCaseContext testCaseContext) {
+        clearManualScrollStateSafely()
+    }
+
     @AfterTestCase
     def onTestCaseFailure(TestCaseContext testCaseContext) {
+        clearManualScrollStateSafely()
         if (!core.LocaraHook.isLocaraPresent() || !core.LocaraHook.isHealingEnabled()) {
             return
         }
@@ -113,6 +120,13 @@ class LocaraTestListener {
         } catch (Throwable t) {
             println("[Locara by Qureon] Listener diagnostic encounter: " + t.getMessage())
         }
+    }
+
+    private static void clearManualScrollStateSafely() {
+        try {
+            Class<?> locaraClass = Class.forName("com.qureon.locara.katalon.Locara")
+            locaraClass.getMethod("clearManualScrollState").invoke(null)
+        } catch (Throwable ignored) {}
     }
 
     private static synchronized Object getSharedEngine() {

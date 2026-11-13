@@ -25,11 +25,15 @@ public class HealConfig {
     private String defaultRsFolder = "Object Repository";
     private String auditLogFolder = "Include/evidence";
 
+    public static final long DEFAULT_MANUAL_SCROLL_COOLDOWN_MS = 15_000L;
+
     private volatile AppTarget appTarget = AppTarget.AUTO;
     private final ThreadLocal<AppTarget> threadAppTarget = new ThreadLocal<>();
     private boolean enabled = true;
     private boolean scrollRecoveryEnabled = true;
     private int maxScrollAttempts = 2;
+    private boolean manualScrollGuardEnabled = true;
+    private long manualScrollCooldownMs = DEFAULT_MANUAL_SCROLL_COOLDOWN_MS;
 
     public HealConfig() {}
 
@@ -116,6 +120,16 @@ public class HealConfig {
                 props.getProperty("qureon.scroll.max_attempts",
                 props.getProperty("healing.scroll.max_attempts")));
         config.setMaxScrollAttempts(parseIntSafe(scrollMaxProp, config.maxScrollAttempts));
+        String manualGuardProp = props.getProperty("locara.scroll.manual_guard.enabled",
+                props.getProperty("qureon.scroll.manual_guard.enabled"));
+        if (manualGuardProp != null) {
+            config.manualScrollGuardEnabled = Boolean.parseBoolean(manualGuardProp);
+        }
+        String manualCooldownProp = props.getProperty("locara.scroll.manual_cooldown_ms",
+                props.getProperty("qureon.scroll.manual_cooldown_ms"));
+        if (manualCooldownProp != null) {
+            config.setManualScrollCooldownMs(parseLongSafe(manualCooldownProp, config.manualScrollCooldownMs));
+        }
 
         String auditFolderProp = props.getProperty("locara.audit.folder",
                 props.getProperty("qureon.audit.folder",
@@ -150,6 +164,14 @@ public class HealConfig {
         if (sysScrollMax != null) {
             config.setMaxScrollAttempts(parseIntSafe(sysScrollMax, config.maxScrollAttempts));
         }
+        String sysManualGuard = System.getProperty("locara.scroll.manual_guard.enabled");
+        if (sysManualGuard != null) {
+            config.manualScrollGuardEnabled = Boolean.parseBoolean(sysManualGuard);
+        }
+        String sysManualCooldown = System.getProperty("locara.scroll.manual_cooldown_ms");
+        if (sysManualCooldown != null) {
+            config.setManualScrollCooldownMs(parseLongSafe(sysManualCooldown, config.manualScrollCooldownMs));
+        }
         String sysAuditFolder = System.getProperty("locara.audit.folder",
                 System.getProperty("qureon.audit.folder",
                 System.getProperty("healing.audit.folder")));
@@ -169,6 +191,14 @@ public class HealConfig {
         if (envScroll == null) envScroll = System.getenv("HEALING_SCROLL_ENABLED");
         if (envScroll != null) {
             config.scrollRecoveryEnabled = Boolean.parseBoolean(envScroll);
+        }
+        String envManualGuard = System.getenv("LOCARA_MANUAL_SCROLL_GUARD");
+        if (envManualGuard != null) {
+            config.manualScrollGuardEnabled = Boolean.parseBoolean(envManualGuard);
+        }
+        String envManualCooldown = System.getenv("LOCARA_MANUAL_SCROLL_COOLDOWN_MS");
+        if (envManualCooldown != null) {
+            config.setManualScrollCooldownMs(parseLongSafe(envManualCooldown, config.manualScrollCooldownMs));
         }
 
         return config;
@@ -192,11 +222,26 @@ public class HealConfig {
         }
     }
 
+    private static long parseLongSafe(String val, long defaultVal) {
+        if (val == null || val.trim().isEmpty()) return defaultVal;
+        try {
+            return Long.parseLong(val.trim());
+        } catch (NumberFormatException e) {
+            return defaultVal;
+        }
+    }
+
     public boolean isScrollRecoveryEnabled() { return scrollRecoveryEnabled; }
     public void setScrollRecoveryEnabled(boolean val) { this.scrollRecoveryEnabled = val; }
 
     public int getMaxScrollAttempts() { return maxScrollAttempts; }
     public void setMaxScrollAttempts(int val) { this.maxScrollAttempts = Math.max(0, val); }
+
+    public boolean isManualScrollGuardEnabled() { return manualScrollGuardEnabled; }
+    public void setManualScrollGuardEnabled(boolean val) { this.manualScrollGuardEnabled = val; }
+
+    public long getManualScrollCooldownMs() { return manualScrollCooldownMs; }
+    public void setManualScrollCooldownMs(long val) { this.manualScrollCooldownMs = Math.max(0L, val); }
 
     public AppTarget getAppTarget() {
         AppTarget local = threadAppTarget.get();

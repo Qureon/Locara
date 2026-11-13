@@ -1,6 +1,6 @@
 /**
  * ==============================================================================
- * LOCARA MISSION CONTROL — SPATIAL & FORM INSPECTOR MODULE (v1.15.0)
+ * LOCARA MISSION CONTROL — SPATIAL & FORM INSPECTOR MODULE (v1.15.1)
  * Visualizes 2D bounding box Left-to-Right and Top-to-Bottom field alignment,
  * section boundary detection, and key-value receipt pairing.
  * ==============================================================================
@@ -141,7 +141,7 @@ function renderSpatialResults(pairs, emptyEl, wrapperEl) {
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
             <div style="display: flex; align-items: center; gap: 10px;">
                 <h4 style="font-size: 0.95rem; font-weight: 600; margin: 0;">Terdeteksi ${pairs.length} Pasang Field Spasial</h4>
-                <span class="badge badge-accent" style="font-size: 0.75rem;">Universal Spatial Engine v1.15.0</span>
+                <span class="badge badge-accent" style="font-size: 0.75rem;">Universal Spatial Engine v1.15.1</span>
             </div>
             <button class="btn btn-sm btn-secondary" id="btn-copy-all-json">
                 <span class="btn-icon-wrap" data-icon="download"></span> Export JSON
@@ -176,7 +176,7 @@ function renderSpatialResults(pairs, emptyEl, wrapperEl) {
         btn.addEventListener("click", () => {
             const key = escapeCodeString(btn.dataset.key || "");
             const val = escapeCodeString(btn.dataset.val || "");
-            const snippet = `// Locara v1.15.0 Spatial Field Assertion\nString actual = Locara.getFieldValue("${key}")\nassert actual == "${val}" : "Expected ${key} to be '${val}' but got '\${actual}'"`;
+            const snippet = `// Locara v1.15.1 Spatial Field Assertion\nString actual = Locara.getFieldValue("${key}")\nassert actual == "${val}" : "Expected ${key} to be '${val}' but got '\${actual}'"`;
             navigator.clipboard.writeText(snippet).then(() => {
                 const orig = btn.innerHTML;
                 btn.innerHTML = `<span style="color: var(--emerald);">✓ Copied</span>`;

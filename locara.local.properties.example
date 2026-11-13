@@ -16,9 +16,11 @@ locara.enabled=true
 # Threshold minimal similarity (0.50 - 0.95)
 locara.threshold=0.70
 
-# Auto-scroll viewport jika target locator form off-screen (pop-up/modal dilarang scroll)
+# Auto-scroll viewport jika target locator form off-screen (pop-up/modal & post-manual scroll otomatis dicegah)
 locara.scroll.enabled=true
 locara.scroll.max_attempts=2
+locara.scroll.manual_guard.enabled=true
+locara.scroll.manual_cooldown_ms=15000
 
 # Generator Object Repository .rs otomatis untuk UAT traceability
 locara.rs.generate=true

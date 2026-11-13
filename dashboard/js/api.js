@@ -22,7 +22,7 @@ export async function fetchEngineHealth() {
         if (!res.ok) throw new Error(`HTTP error ${res.status}`);
         return await res.json();
     } catch (err) {
-        return { status: "STANDALONE", engine: "Locara Core v1.15.0", target: "Qureon_Autonomous_QA" };
+        return { status: "STANDALONE", engine: "Locara Core v1.15.1", target: "Qureon_Autonomous_QA" };
     }
 }
 

@@ -109,13 +109,17 @@ public class RegressionHardeningTest {
     }
 
     @Test
-    @DisplayName("HealConfig loads locara.scroll.max_attempts and locara.target from properties")
+    @DisplayName("HealConfig loads locara.scroll.* and locara.target from properties")
     public void testHealConfigLoadFromProperties(@TempDir Path tempDir) throws IOException {
         Path propPath = tempDir.resolve("locara.properties");
-        Files.writeString(propPath, "locara.scroll.max_attempts=5\nlocara.target=KMP\n", StandardCharsets.UTF_8);
+        Files.writeString(propPath,
+                "locara.scroll.max_attempts=5\nlocara.scroll.manual_guard.enabled=false\nlocara.scroll.manual_cooldown_ms=4200\nlocara.target=KMP\n",
+                StandardCharsets.UTF_8);
 
         HealConfig config = HealConfig.loadFromProperties(propPath.toFile());
         assertEquals(5, config.getMaxScrollAttempts());
+        assertFalse(config.isManualScrollGuardEnabled());
+        assertEquals(4200L, config.getManualScrollCooldownMs());
         assertEquals(AppTarget.KMP, config.getAppTarget());
 
         config.setThreadAppTarget(AppTarget.REVAMP);

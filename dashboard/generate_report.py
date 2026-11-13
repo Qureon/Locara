@@ -16,7 +16,7 @@ import html as html_lib
 from pathlib import Path
 from datetime import datetime
 
-ENGINE_VERSION = "v1.15.0"
+ENGINE_VERSION = "v1.15.1"
 
 REPORT_TEMPLATE = """<!DOCTYPE html>
 <html lang="id">
@@ -193,7 +193,7 @@ REPORT_TEMPLATE = """<!DOCTYPE html>
             <div class="meta-right">
                 <p><strong>Target App:</strong> Mobile Application (Android/iOS) &amp; Web</p>
                 <p><strong>Generated:</strong> {generated_time}</p>
-                <p><strong>Engine:</strong> Locara Core v1.15.0 (Katalon 11.7.0+ Ready)</p>
+                <p><strong>Engine:</strong> Locara Core v1.15.1 (Katalon 11.7.0+ Ready)</p>
             </div>
         </header>
 

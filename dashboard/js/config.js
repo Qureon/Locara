@@ -7,8 +7,8 @@
 export const APP_CONFIG = {
     name: "Locara Mission Control",
     byline: "Powered by Qureon",
-    version: "1.15.0",
-    semver: "v1.15.0",
+    version: "1.15.1",
+    semver: "v1.15.1",
     organization: "Qureon Autonomous QA Platform",
     targetProject: "Mobile & Web Automation Suite",
     defaultPageSize: 6,

@@ -5,6 +5,7 @@ import com.qureon.locara.core.model.HealContext;
 import com.qureon.locara.core.model.HealResult;
 import com.qureon.locara.core.model.UIElementNode;
 import com.qureon.locara.katalon.KeyboardGuard;
+import com.qureon.locara.katalon.ManualScrollGuard;
 import com.qureon.locara.katalon.ScrollRecoveryEngine;
 
 import java.lang.reflect.Method;
@@ -18,9 +19,24 @@ import java.util.List;
 public class AppiumLocara {
     private static final LocaraEngine ENGINE = new LocaraEngine();
     private static final KeyboardGuard KEYBOARD_GUARD = new KeyboardGuard();
+    private static volatile ScrollRecoveryEngine scrollEngine = new ScrollRecoveryEngine(ENGINE.getConfig().getMaxScrollAttempts());
 
     public static LocaraEngine getEngine() {
         return ENGINE;
+    }
+
+    public static ScrollRecoveryEngine getScrollEngine() {
+        int configured = ENGINE.getConfig().getMaxScrollAttempts();
+        if (scrollEngine.getMaxScrollAttempts() != configured) {
+            scrollEngine = new ScrollRecoveryEngine(configured);
+        }
+        return scrollEngine;
+    }
+
+    static void setScrollEngineForTests(ScrollRecoveryEngine customScrollEngine) {
+        scrollEngine = customScrollEngine != null
+                ? customScrollEngine
+                : new ScrollRecoveryEngine(ENGINE.getConfig().getMaxScrollAttempts());
     }
 
     public static void setScrollRecoveryEnabled(boolean enable) {
@@ -30,6 +46,14 @@ public class AppiumLocara {
 
     public static boolean isScrollRecoveryEnabled() {
         return ENGINE.getConfig().isScrollRecoveryEnabled();
+    }
+
+    public static void notifyManualScroll() {
+        ManualScrollGuard.recordManualScroll();
+    }
+
+    public static void clearManualScrollState() {
+        ManualScrollGuard.clear();
     }
 
     /**
@@ -45,21 +69,28 @@ public class AppiumLocara {
             throw new IllegalArgumentException("[AppiumLocara] Driver instance cannot be null!");
         }
 
-        // 1. Attempt standard execution first
-        try {
-            Object element = findElementDirectly(driver, locatorOrXPath);
-            if (element != null) {
-                Method clickMethod = element.getClass().getMethod("click");
-                clickMethod.invoke(element);
-                return true;
+        try (ManualScrollGuard.ActionWindow ignored = ManualScrollGuard.openActionWindow(ENGINE.getConfig())) {
+            // 1. Attempt standard execution first
+            try {
+                Object element = findElementDirectly(driver, locatorOrXPath);
+                if (element != null) {
+                    Method clickMethod = element.getClass().getMethod("click");
+                    clickMethod.invoke(element);
+                    ManualScrollGuard.markActionTapSucceeded();
+                    return true;
+                }
+            } catch (Throwable t) {
+                System.out.println("[AppiumLocara] Standard locator failed: " + locatorOrXPath + " -> Initiating autonomous healing...");
             }
-        } catch (Throwable t) {
-            System.out.println("[AppiumLocara] Standard locator failed: " + locatorOrXPath + " -> Initiating autonomous healing...");
-        }
 
-        // 2. Self-Healing Execution
-        if (!ENGINE.getConfig().isEnabled()) return false;
-        return executeHealing(driver, locatorOrXPath, targetHint, "TAP", "");
+            // 2. Self-Healing Execution
+            if (!ENGINE.getConfig().isEnabled()) return false;
+            boolean healed = executeHealing(driver, locatorOrXPath, targetHint, "TAP", "");
+            if (healed) {
+                ManualScrollGuard.markActionTapSucceeded();
+            }
+            return healed;
+        }
     }
 
     /**
@@ -70,21 +101,23 @@ public class AppiumLocara {
             throw new IllegalArgumentException("[AppiumLocara] Driver instance cannot be null!");
         }
 
-        try {
-            Object element = findElementDirectly(driver, locatorOrXPath);
-            if (element != null) {
-                Method clearMethod = element.getClass().getMethod("clear");
-                clearMethod.invoke(element);
-                Method sendKeysMethod = element.getClass().getMethod("sendKeys", CharSequence[].class);
-                sendKeysMethod.invoke(element, (Object) new CharSequence[]{text});
-                return true;
+        try (ManualScrollGuard.ActionWindow ignored = ManualScrollGuard.openActionWindow(ENGINE.getConfig())) {
+            try {
+                Object element = findElementDirectly(driver, locatorOrXPath);
+                if (element != null) {
+                    Method clearMethod = element.getClass().getMethod("clear");
+                    clearMethod.invoke(element);
+                    Method sendKeysMethod = element.getClass().getMethod("sendKeys", CharSequence[].class);
+                    sendKeysMethod.invoke(element, (Object) new CharSequence[]{text});
+                    return true;
+                }
+            } catch (Throwable t) {
+                System.out.println("[AppiumLocara] Standard setText failed: " + locatorOrXPath + " -> Initiating autonomous healing...");
             }
-        } catch (Throwable t) {
-            System.out.println("[AppiumLocara] Standard setText failed: " + locatorOrXPath + " -> Initiating autonomous healing...");
-        }
 
-        if (!ENGINE.getConfig().isEnabled()) return false;
-        return executeHealing(driver, locatorOrXPath, targetHint, "SET_TEXT", text);
+            if (!ENGINE.getConfig().isEnabled()) return false;
+            return executeHealing(driver, locatorOrXPath, targetHint, "SET_TEXT", text);
+        }
     }
 
     /**
@@ -95,18 +128,20 @@ public class AppiumLocara {
             throw new IllegalArgumentException("[AppiumLocara] Driver instance cannot be null!");
         }
 
-        try {
-            Object el = findElementDirectly(driver, locatorOrXPath);
-            if (el != null) return el;
-        } catch (Throwable ignored) {}
+        try (ManualScrollGuard.ActionWindow ignored = ManualScrollGuard.openActionWindow(ENGINE.getConfig())) {
+            try {
+                Object el = findElementDirectly(driver, locatorOrXPath);
+                if (el != null) return el;
+            } catch (Throwable ignoredEx) {}
 
-        if (!ENGINE.getConfig().isEnabled()) {
-            throw new RuntimeException("[AppiumLocara] Element not found and self-healing is disabled: " + locatorOrXPath);
+            if (!ENGINE.getConfig().isEnabled()) {
+                throw new RuntimeException("[AppiumLocara] Element not found and self-healing is disabled: " + locatorOrXPath);
+            }
+
+            HealResult result = healWithScrollRecovery(driver, locatorOrXPath, targetHint, "FIND", "");
+            String healedXPath = result.getCandidate().getSuggestedXPath();
+            return findElementDirectly(driver, healedXPath);
         }
-
-        HealResult result = healWithScrollRecovery(driver, locatorOrXPath, targetHint, "FIND", "");
-        String healedXPath = result.getCandidate().getSuggestedXPath();
-        return findElementDirectly(driver, healedXPath);
     }
 
     private static boolean executeHealing(Object driver, String locatorOrXPath, String targetHint, String action, String value) {
@@ -147,26 +182,12 @@ public class AppiumLocara {
             throw new RuntimeException("[AppiumLocara Failed] Failed to parse page source: " + e.getMessage(), e);
         }
 
-        // Auto-Scroll recovery if not in current viewport (reusing already-parsed nodes for eligibility)
-        if (!result.isSuccess() && ENGINE.getConfig().isScrollRecoveryEnabled()) {
-            ScrollRecoveryEngine scrollEngine = new ScrollRecoveryEngine(ENGINE.getConfig().getMaxScrollAttempts());
-            if (scrollEngine.isScrollEligible(targetHint, locatorOrXPath, action, nodes)) {
-                for (int attempt = 1; attempt <= scrollEngine.getMaxScrollAttempts(); attempt++) {
-                    System.out.println("[AppiumLocara] Scrolling down to find '" + targetHint + "' (attempt #" + attempt + ")...");
-                    if (!scrollEngine.performScrollDown(driver)) {
-                        break;
-                    }
-                    String scrolledSource = extractPageSource(driver);
-                    if (scrolledSource != null && !scrolledSource.isEmpty()) {
-                        result = ENGINE.heal(scrolledSource, context);
-                        if (result.isSuccess()) {
-                            break;
-                        }
-                    }
-                }
-            } else if (scrollEngine.isOverlayOrDialogTarget(targetHint, locatorOrXPath)) {
-                System.out.println("[AppiumLocara] 🛡️ Target '" + targetHint + "' is an overlay/dialog. Auto-scroll strictly inhibited.");
-            }
+        // Auto-Scroll recovery if not in current viewport (respecting ManualScrollGuard and boundary stagnation)
+        if (!result.isSuccess()) {
+            result = getScrollEngine().recoverWithScroll(
+                    ENGINE.getConfig(), ENGINE, context, nodes, pageSource, result,
+                    driver, () -> extractPageSource(driver), "[AppiumLocara]"
+            );
         }
 
         if (!result.isSuccess() || result.getCandidate() == null) {

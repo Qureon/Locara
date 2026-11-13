@@ -5,9 +5,9 @@
 ### Adaptive Locator Intelligence & Universal Self-Healing Engine
 *An autonomous, offline-first self-healing engine for resilient mobile & hybrid test automation.*
 
-[![Version](https://img.shields.io/badge/version-1.15.0-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
+[![Version](https://img.shields.io/badge/version-1.15.1-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-110%2F110%20passing-10B981?style=flat-square)](build.gradle)
+[![Tests](https://img.shields.io/badge/tests-115%2F115%20passing-10B981?style=flat-square)](build.gradle)
 [![Java](https://img.shields.io/badge/java-17%20%7C%2021%20%7C%2024-orange?style=flat-square&logo=openjdk)](build.gradle)
 [![Katalon](https://img.shields.io/badge/katalon-8.x%20%7C%209.x%20%7C%2010.x%20%7C%2011.x%20(11.7.0%2B%20Ready)-00B0FF?style=flat-square)](https://katalon.com)
 [![Appium](https://img.shields.io/badge/appium-2.x%20%7C%201.x-662d91?style=flat-square&logo=appium)](https://appium.io)
@@ -48,6 +48,7 @@ Locara menerapkan prinsip **In-Flight Zero-Interruption**:
 16. **Dynamic Multi-Account Resolution & Centroid-Safe Card Tap (v1.13.0)**: Resolusi target kartu rekening secara deterministik berbasis `targetAccountNumber` pada carousel multi-rekening dan sintesis XPath aman (`_art` / `_title` / `ImageView`) yang menghindari tombol salin/mata (*copy button centroid trap*).
 17. **Code Naming Intelligence & Convention Auditor (v1.14.0)**: Deduplikasi & standarisasi penamaan `.rs` (`Btn*`, `Txt*`, `Inp*`, `Pnl*`, `Img*`, `Chk*`, `Rdo*`), hygiene guard variabel AVS terhadap nama generik (`data`, `temp`, `val`), preservasi akronim perbankan (`QRIS`, `RTGS`, `BI-FAST`, `MPIN`), serta subcommand CLI `locara audit-naming` (Mode A Read-Only).
 18. **Multi-Stack Security Hardening, ThreadLocal Isolation & Persistence (v1.15.0)**: Eliminasi false-green di seluruh wrapper (`Locara`, `CucumberLocara`, `PlaywrightLocara`, Katalon/TS), isolasi thread-safe `ThreadLocal<AppTarget>` (`setThreadAppTarget`/`clearThreadAppTarget`), guard XXE/ReDoS/CSRF/XSS (`PageSourceParser`, `HtmlDomParser`, `dashboard/server.py`, `dashboard/js/utils.js`), persistensi `locara.properties`, Gradle Wrapper (`./gradlew`), serta perluasan suite uji (`110` JUnit + `8` Python `unittest`).
+19. **Manual-Scroll Awareness & Anti-Double-Scroll Guard (v1.15.1)**: Mencegah *double scrolling* via `ManualScrollGuard` (`locara.scroll.manual_guard.enabled=true`, `locara.scroll.manual_cooldown_ms=15000`), intersepsi `Mobile.swipe`/`Mobile.scrollToText` pada `LocaraHook`, API eksplisit `notifyManualScroll()`/`clearManualScrollState()`, deteksi stagnasi viewport batas halaman di `ScrollRecoveryEngine.recoverWithScroll`, serta cakupan uji `115` JUnit + `8` Python `unittest`.
 
 ---
 
@@ -102,8 +103,8 @@ Tolong unduh engine test automation offline "Locara" versi rilis terbaru dari re
 https://github.com/Qureon/Locara/releases/latest
 
 Langkah yang perlu kamu lakukan:
-1. Cek tag rilis terbaru dari API GitHub (misal `v1.15.0`).
-2. Download asset file `.jar` biner (contoh: `locara-1.15.0.jar`) dari Releases tersebut.
+1. Cek tag rilis terbaru dari API GitHub (misal `v1.15.1`).
+2. Download asset file `.jar` biner (contoh: `locara-1.15.1.jar`) dari Releases tersebut.
 3. Simpan file .jar tersebut langsung ke dalam folder: Drivers/ di root workspace proyek Katalon ini.
 4. Hapus versi locara-*.jar lama jika sebelumnya ada di dalam folder Drivers/.
 5. Pastikan ukuran file terunduh sekitar ~200 KB dan tidak korup.
@@ -252,13 +253,13 @@ Jalankan evaluasi heuristik dan inspeksi langsung dari terminal:
 
 ```bash
 # 1. Evaluasi & generate file .rs dari berkas XML dump
-java -jar locara-1.15.0.jar --xml dump.xml --hint "Lanjut Transfer" --out "Object Repository/Transfer/btn_Lanjut.rs"
+java -jar locara-1.15.1.jar --xml dump.xml --hint "Lanjut Transfer" --out "Object Repository/Transfer/btn_Lanjut.rs"
 
 # 2. Inspeksi seluruh elemen interaktif dalam XML / HTML
-java -jar locara-1.15.0.jar --xml dump.xml --inspect
+java -jar locara-1.15.1.jar --xml dump.xml --inspect
 
 # 3. Audit konvensi penamaan .rs, .tc, dan script Groovy
-java -jar locara-1.15.0.jar audit-naming --dir .
+java -jar locara-1.15.1.jar audit-naming --dir .
 ```
 
 ---
@@ -296,9 +297,11 @@ locara.weight.desc=0.20
 locara.weight.class=0.10
 locara.weight.proximity=0.10
 
-# Auto-scroll jika elemen form off-screen (pop-up/modal otomatis dilarang scroll)
+# Auto-scroll jika elemen form off-screen (pop-up/modal & post-manual scroll otomatis dicegah)
 locara.scroll.enabled=true
 locara.scroll.max_attempts=2
+locara.scroll.manual_guard.enabled=true
+locara.scroll.manual_cooldown_ms=15000
 
 # Pengaturan Object Repository (.rs)
 locara.rs.generate=true
