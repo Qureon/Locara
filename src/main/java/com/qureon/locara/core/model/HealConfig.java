@@ -1,14 +1,14 @@
 package com.qureon.locara.core.model;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.util.Properties;
 
 /**
  * Global configuration parameters for the Locara by Qureon Engine.
  */
 public class HealConfig {
+
+    public static final long DEFAULT_MANUAL_SCROLL_COOLDOWN_MS = 15_000L;
+
     private double minConfidenceThreshold = 0.70;
     private double weightText = 0.35;
     private double weightId = 0.25;
@@ -25,8 +25,6 @@ public class HealConfig {
     private String defaultRsFolder = "Object Repository";
     private String auditLogFolder = "Include/evidence";
 
-    public static final long DEFAULT_MANUAL_SCROLL_COOLDOWN_MS = 15_000L;
-
     private volatile AppTarget appTarget = AppTarget.AUTO;
     private final ThreadLocal<AppTarget> threadAppTarget = new ThreadLocal<>();
     private boolean enabled = true;
@@ -38,197 +36,7 @@ public class HealConfig {
     public HealConfig() {}
 
     public static HealConfig loadFromProperties(File propFile) {
-        HealConfig config = new HealConfig();
-        Properties props = new Properties();
-
-        // 1. Load base properties
-        if (propFile != null && propFile.exists()) {
-            try (FileInputStream fis = new FileInputStream(propFile)) {
-                props.load(fis);
-            } catch (IOException ignored) {}
-        }
-
-        // 2. Load local properties override if exists (ignored by Git)
-        File[] localCandidates = new File[] {
-                new File(System.getProperty("user.dir"), "locara.local.properties"),
-                new File(System.getProperty("user.dir"), "qureon.local.properties")
-        };
-        for (File candidate : localCandidates) {
-            if (candidate.exists()) {
-                try (FileInputStream lfis = new FileInputStream(candidate)) {
-                    props.load(lfis);
-                    break;
-                } catch (IOException ignored) {}
-            }
-        }
-
-        String propEnabled = props.getProperty("locara.enabled",
-                props.getProperty("qureon.enabled",
-                props.getProperty("healing.enabled", "true")));
-        config.enabled = Boolean.parseBoolean(propEnabled);
-
-        config.minConfidenceThreshold = parseDoubleSafe(props.getProperty("locara.threshold",
-                props.getProperty("locara.similarity.threshold",
-                props.getProperty("qureon.threshold",
-                props.getProperty("healing.threshold")))), 0.70);
-        config.weightText = parseDoubleSafe(props.getProperty("locara.weight.text",
-                props.getProperty("qureon.weight.text",
-                props.getProperty("healing.weight.text"))), 0.35);
-        config.weightId = parseDoubleSafe(props.getProperty("locara.weight.id",
-                props.getProperty("qureon.weight.id",
-                props.getProperty("healing.weight.id"))), 0.25);
-        config.weightDesc = parseDoubleSafe(props.getProperty("locara.weight.desc",
-                props.getProperty("qureon.weight.desc",
-                props.getProperty("healing.weight.desc"))), 0.20);
-        config.weightClass = parseDoubleSafe(props.getProperty("locara.weight.class",
-                props.getProperty("qureon.weight.class",
-                props.getProperty("healing.weight.class"))), 0.10);
-        config.weightProximity = parseDoubleSafe(props.getProperty("locara.weight.proximity",
-                props.getProperty("qureon.weight.proximity",
-                props.getProperty("healing.weight.proximity"))), 0.10);
-
-        config.autoGenerateRs = Boolean.parseBoolean(props.getProperty("locara.rs.generate",
-                props.getProperty("qureon.rs.generate",
-                props.getProperty("healing.rs.generate", "false"))));
-        config.allowOverwriteExistingRs = Boolean.parseBoolean(props.getProperty("locara.rs.overwrite",
-                props.getProperty("qureon.rs.overwrite",
-                props.getProperty("healing.rs.overwrite", "false"))));
-        config.backupExistingRs = Boolean.parseBoolean(props.getProperty("locara.rs.backup",
-                props.getProperty("qureon.rs.backup",
-                props.getProperty("healing.rs.backup", "true"))));
-        config.auditLedgerEnabled = Boolean.parseBoolean(props.getProperty("locara.audit.enabled",
-                props.getProperty("locara.telemetry.enabled",
-                props.getProperty("qureon.audit.enabled",
-                props.getProperty("healing.audit.enabled", "true")))));
-        config.adaptiveFrameworkWeights = Boolean.parseBoolean(props.getProperty("locara.framework.adaptive",
-                props.getProperty("qureon.framework.adaptive",
-                props.getProperty("healing.framework.adaptive", "true"))));
-        String scrollProp = props.getProperty("locara.scroll.enabled",
-                props.getProperty("qureon.scroll.enabled",
-                props.getProperty("healing.scroll.enabled", "true")));
-        config.scrollRecoveryEnabled = Boolean.parseBoolean(scrollProp);
-        String targetProp = props.getProperty("locara.target",
-                props.getProperty("locara.target.profile",
-                props.getProperty("qureon.target",
-                props.getProperty("healing.target", "AUTO"))));
-        config.setAppTarget(AppTarget.fromString(targetProp));
-        config.katalonProjectPath = props.getProperty("locara.project.path",
-                props.getProperty("qureon.project.path",
-                props.getProperty("healing.project.path", config.katalonProjectPath)));
-
-        String scrollMaxProp = props.getProperty("locara.scroll.max_attempts",
-                props.getProperty("qureon.scroll.max_attempts",
-                props.getProperty("healing.scroll.max_attempts")));
-        config.setMaxScrollAttempts(parseIntSafe(scrollMaxProp, config.maxScrollAttempts));
-        String manualGuardProp = props.getProperty("locara.scroll.manual_guard.enabled",
-                props.getProperty("qureon.scroll.manual_guard.enabled"));
-        if (manualGuardProp != null) {
-            config.manualScrollGuardEnabled = Boolean.parseBoolean(manualGuardProp);
-        }
-        String manualCooldownProp = props.getProperty("locara.scroll.manual_cooldown_ms",
-                props.getProperty("qureon.scroll.manual_cooldown_ms"));
-        if (manualCooldownProp != null) {
-            config.setManualScrollCooldownMs(parseLongSafe(manualCooldownProp, config.manualScrollCooldownMs));
-        }
-
-        String auditFolderProp = props.getProperty("locara.audit.folder",
-                props.getProperty("qureon.audit.folder",
-                props.getProperty("healing.audit.folder", config.auditLogFolder)));
-        if (auditFolderProp != null && !auditFolderProp.trim().isEmpty()) {
-            config.setAuditLogFolder(auditFolderProp.trim());
-        }
-
-        // 3. System properties override (highest precedence)
-        String sysEnabled = System.getProperty("locara.enabled",
-                System.getProperty("qureon.enabled",
-                System.getProperty("healing.enabled")));
-        if (sysEnabled != null) {
-            config.enabled = Boolean.parseBoolean(sysEnabled);
-        }
-        String sysScroll = System.getProperty("locara.scroll.enabled",
-                System.getProperty("qureon.scroll.enabled",
-                System.getProperty("healing.scroll.enabled")));
-        if (sysScroll != null) {
-            config.scrollRecoveryEnabled = Boolean.parseBoolean(sysScroll);
-        }
-        String sysTarget = System.getProperty("locara.target",
-                System.getProperty("locara.target.profile",
-                System.getProperty("qureon.target",
-                System.getProperty("healing.target"))));
-        if (sysTarget != null) {
-            config.setAppTarget(AppTarget.fromString(sysTarget));
-        }
-        String sysScrollMax = System.getProperty("locara.scroll.max_attempts",
-                System.getProperty("qureon.scroll.max_attempts",
-                System.getProperty("healing.scroll.max_attempts")));
-        if (sysScrollMax != null) {
-            config.setMaxScrollAttempts(parseIntSafe(sysScrollMax, config.maxScrollAttempts));
-        }
-        String sysManualGuard = System.getProperty("locara.scroll.manual_guard.enabled");
-        if (sysManualGuard != null) {
-            config.manualScrollGuardEnabled = Boolean.parseBoolean(sysManualGuard);
-        }
-        String sysManualCooldown = System.getProperty("locara.scroll.manual_cooldown_ms");
-        if (sysManualCooldown != null) {
-            config.setManualScrollCooldownMs(parseLongSafe(sysManualCooldown, config.manualScrollCooldownMs));
-        }
-        String sysAuditFolder = System.getProperty("locara.audit.folder",
-                System.getProperty("qureon.audit.folder",
-                System.getProperty("healing.audit.folder")));
-        if (sysAuditFolder != null && !sysAuditFolder.trim().isEmpty()) {
-            config.setAuditLogFolder(sysAuditFolder.trim());
-        }
-
-        // 4. Environment variable override
-        String envEnabled = System.getenv("LOCARA_ENABLED");
-        if (envEnabled == null) envEnabled = System.getenv("QUREON_ENABLED");
-        if (envEnabled == null) envEnabled = System.getenv("HEALING_ENABLED");
-        if (envEnabled != null) {
-            config.enabled = Boolean.parseBoolean(envEnabled);
-        }
-        String envScroll = System.getenv("LOCARA_SCROLL_ENABLED");
-        if (envScroll == null) envScroll = System.getenv("QUREON_SCROLL_ENABLED");
-        if (envScroll == null) envScroll = System.getenv("HEALING_SCROLL_ENABLED");
-        if (envScroll != null) {
-            config.scrollRecoveryEnabled = Boolean.parseBoolean(envScroll);
-        }
-        String envManualGuard = System.getenv("LOCARA_MANUAL_SCROLL_GUARD");
-        if (envManualGuard != null) {
-            config.manualScrollGuardEnabled = Boolean.parseBoolean(envManualGuard);
-        }
-        String envManualCooldown = System.getenv("LOCARA_MANUAL_SCROLL_COOLDOWN_MS");
-        if (envManualCooldown != null) {
-            config.setManualScrollCooldownMs(parseLongSafe(envManualCooldown, config.manualScrollCooldownMs));
-        }
-
-        return config;
-    }
-
-    private static double parseDoubleSafe(String val, double defaultVal) {
-        if (val == null || val.trim().isEmpty()) return defaultVal;
-        try {
-            return Double.parseDouble(val.trim());
-        } catch (NumberFormatException e) {
-            return defaultVal;
-        }
-    }
-
-    private static int parseIntSafe(String val, int defaultVal) {
-        if (val == null || val.trim().isEmpty()) return defaultVal;
-        try {
-            return Integer.parseInt(val.trim());
-        } catch (NumberFormatException e) {
-            return defaultVal;
-        }
-    }
-
-    private static long parseLongSafe(String val, long defaultVal) {
-        if (val == null || val.trim().isEmpty()) return defaultVal;
-        try {
-            return Long.parseLong(val.trim());
-        } catch (NumberFormatException e) {
-            return defaultVal;
-        }
+        return HealConfigLoader.load(propFile);
     }
 
     public boolean isScrollRecoveryEnabled() { return scrollRecoveryEnabled; }
@@ -249,8 +57,7 @@ public class HealConfig {
     }
 
     public void setAppTarget(AppTarget target) {
-        AppTarget resolved = target != null ? target : AppTarget.AUTO;
-        this.appTarget = resolved;
+        this.appTarget = target != null ? target : AppTarget.AUTO;
         this.threadAppTarget.remove();
     }
 

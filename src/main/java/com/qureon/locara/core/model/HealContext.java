@@ -2,7 +2,6 @@ package com.qureon.locara.core.model;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * Encapsulates the execution context of a failed step or a target element to be resolved.

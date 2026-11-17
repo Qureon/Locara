@@ -5,135 +5,9 @@
  */
 
 import { APP_CONFIG } from "./config.js";
+import { INITIAL_MOCK_EVENTS } from "./mock-events.js";
 
-export const INITIAL_MOCK_EVENTS = [
-    {
-        id: "EVT-1001",
-        timestamp: "2026-10-28 14:48:12",
-        screen: "Transfer / Konfirmasi",
-        targetHint: "Lanjut",
-        action: "TAP",
-        confidence: 0.942,
-        status: "SUCCESS",
-        brokenLocator: "//android.widget.Button[@resource-id='com.example.app:id/btn_next']",
-        healedLocator: "//android.widget.Button[@resource-id='com.example.app:id/btn_next_transfer' and @text='Lanjut']",
-        generatedRs: "Object Repository/Transfer/btn_next_transfer.rs",
-        module: "Transfer",
-        latencyMs: 34,
-        vectors: { text: 0.98, id: 0.915, desc: 0.95, clazz: 1.0, proximity: 1.0 },
-        guards: { dangerLockout: "PASSED", keyboard: "CLEAR", viewport: "ON-SCREEN" },
-        elementText: "Lanjut",
-        bounds: "[540,1920][1040,2040]"
-    },
-    {
-        id: "EVT-1002",
-        timestamp: "2026-10-28 14:45:03",
-        screen: "Transfer / Verifikasi PIN",
-        targetHint: "Input Security PIN 6 Digit",
-        action: "SET_TEXT",
-        confidence: 0.912,
-        status: "SUCCESS",
-        brokenLocator: "//android.widget.EditText[@resource-id='com.example.app:id/et_mpin']",
-        healedLocator: "//android.widget.EditText[@resource-id='com.example.app:id/input_security_code']",
-        generatedRs: "Object Repository/Transfer/input_security_code.rs",
-        module: "Transfer",
-        latencyMs: 41,
-        vectors: { text: 0.85, id: 0.93, desc: 0.92, clazz: 1.0, proximity: 0.95 },
-        guards: { dangerLockout: "PASSED", keyboard: "CLEAR", viewport: "ON-SCREEN" },
-        elementText: "",
-        bounds: "[80,1400][1000,1540]"
-    },
-    {
-        id: "EVT-1003",
-        timestamp: "2026-10-28 14:39:51",
-        screen: "Payment / Tagihan Utilitas",
-        targetHint: "Bayar Tagihan",
-        action: "TAP",
-        confidence: 0.895,
-        status: "SCROLLED",
-        brokenLocator: "//android.widget.Button[@resource-id='com.example.app:id/btn_pay_bill']",
-        healedLocator: "//android.widget.Button[@resource-id='com.example.app:id/btn_submit_pln' and @text='Bayar Sekarang']",
-        generatedRs: "Object Repository/Payment/btn_submit_pln.rs",
-        module: "Payment",
-        latencyMs: 145,
-        vectors: { text: 0.88, id: 0.89, desc: 0.91, clazz: 1.0, proximity: 0.80 },
-        guards: { dangerLockout: "PASSED", keyboard: "CLEAR", viewport: "SCROLLED_TO_VIEW" },
-        elementText: "Bayar Sekarang",
-        bounds: "[60,2100][1020,2240]"
-    },
-    {
-        id: "EVT-1004",
-        timestamp: "2026-10-28 14:32:19",
-        screen: "Top Up / e-Wallet",
-        targetHint: "Top Up e-Wallet",
-        action: "TAP",
-        confidence: 0.965,
-        status: "SUCCESS",
-        brokenLocator: "//android.widget.TextView[@text='Wallet Customer']",
-        healedLocator: "//android.widget.TextView[@resource-id='com.example.app:id/tv_wallet_title' and @text='e-Wallet']",
-        generatedRs: "Object Repository/TopUp/tv_wallet_gopay.rs",
-        module: "Top-Up",
-        latencyMs: 28,
-        vectors: { text: 1.0, id: 0.94, desc: 0.96, clazz: 1.0, proximity: 1.0 },
-        guards: { dangerLockout: "PASSED", keyboard: "CLEAR", viewport: "ON-SCREEN" },
-        elementText: "e-Wallet",
-        bounds: "[120,680][480,760]"
-    },
-    {
-        id: "EVT-1005",
-        timestamp: "2026-10-28 14:26:44",
-        screen: "Pengaturan / Blokir Kartu",
-        targetHint: "Batal Blokir",
-        action: "TAP",
-        confidence: 0.450,
-        status: "LOCKOUT",
-        brokenLocator: "//android.widget.Button[@text='Batal']",
-        healedLocator: "[BLOCKED BY SAFETY GUARD] Matched destructive element: 'Blokir Permanen'",
-        generatedRs: "N/A (Safety Lockout)",
-        module: "Settings",
-        latencyMs: 12,
-        vectors: { text: 0.40, id: 0.35, desc: 0.20, clazz: 1.0, proximity: 0.50 },
-        guards: { dangerLockout: "TRIGGERED_LOCKOUT", keyboard: "CLEAR", viewport: "ON-SCREEN" },
-        elementText: "Blokir Permanen",
-        bounds: "[80,1800][1000,1940]"
-    },
-    {
-        id: "EVT-1006",
-        timestamp: "2026-10-28 14:18:22",
-        screen: "QRIS / Bayar Merchant",
-        targetHint: "Konfirmasi Bayar",
-        action: "TAP",
-        confidence: 0.958,
-        status: "SUCCESS",
-        brokenLocator: "//android.widget.Button[@resource-id='com.example.app:id/btn_pay_qris']",
-        healedLocator: "//android.widget.Button[@resource-id='com.example.app:id/btn_confirm_payment' and @text='Konfirmasi']",
-        generatedRs: "Object Repository/QRIS/btn_confirm_payment.rs",
-        module: "QRIS",
-        latencyMs: 31,
-        vectors: { text: 0.95, id: 0.94, desc: 0.98, clazz: 1.0, proximity: 1.0 },
-        guards: { dangerLockout: "PASSED", keyboard: "CLEAR", viewport: "ON-SCREEN" },
-        elementText: "Konfirmasi",
-        bounds: "[540,1920][1040,2040]"
-    },
-    {
-        id: "EVT-1007",
-        timestamp: "2026-10-28 14:10:05",
-        screen: "Login / Biometrik & PIN",
-        targetHint: "Masuk Akun",
-        action: "TAP",
-        confidence: 0.978,
-        status: "SUCCESS",
-        brokenLocator: "//android.widget.Button[@resource-id='com.example.app:id/btn_login']",
-        healedLocator: "//android.widget.Button[@resource-id='com.example.app:id/btn_signin' and @text='Masuk']",
-        generatedRs: "Object Repository/Login/btn_signin.rs",
-        module: "Account/KYC",
-        latencyMs: 25,
-        vectors: { text: 0.99, id: 0.96, desc: 0.98, clazz: 1.0, proximity: 1.0 },
-        guards: { dangerLockout: "PASSED", keyboard: "CLEAR", viewport: "ON-SCREEN" },
-        elementText: "Masuk",
-        bounds: "[80,1600][1000,1740]"
-    }
-];
+export { INITIAL_MOCK_EVENTS };
 
 class StateStore {
     constructor() {
@@ -196,7 +70,11 @@ class StateStore {
             module,
             latencyMs: e.latencyMs || 35,
             vectors: e.vectors || { text: 0.95, id: 0.90, desc: 0.90, clazz: 1.0, proximity: 1.0 },
-            guards: e.guards || { dangerLockout: status === "LOCKOUT" ? "TRIGGERED_LOCKOUT" : "PASSED", keyboard: "CLEAR", viewport: status === "SCROLLED" ? "SCROLLED_TO_VIEW" : "ON-SCREEN" },
+            guards: e.guards || {
+                dangerLockout: status === "LOCKOUT" ? "TRIGGERED_LOCKOUT" : "PASSED",
+                keyboard: "CLEAR",
+                viewport: status === "SCROLLED" ? "SCROLLED_TO_VIEW" : "ON-SCREEN"
+            },
             elementText: e.elementText || hint,
             bounds: e.bounds || "[0,0][0,0]"
         };
@@ -248,7 +126,7 @@ class StateStore {
     }
 
     getFilteredAndSortedEvents() {
-        let result = this.events.filter(e => {
+        const result = this.events.filter(e => {
             if (this.filter === "PROBE" || this.filter === "CONDITIONAL_PROBE") {
                 const isProbe = e.intentionTier === "CONDITIONAL_PROBE" || (e.action === "VERIFY_PRESENT" || (e.method && e.method.includes("INTENT")) || (e.strategy && e.strategy.includes("INTENT")));
                 if (!isProbe) return false;
@@ -272,11 +150,9 @@ class StateStore {
         });
 
         result.sort((a, b) => {
-            let valA = a[this.sortField];
-            let valB = b[this.sortField];
-            if (valA === undefined) return 0;
-            if (valB === undefined) return 0;
-
+            const valA = a[this.sortField];
+            const valB = b[this.sortField];
+            if (valA === undefined || valB === undefined) return 0;
             if (typeof valA === "string") {
                 return this.sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
             }

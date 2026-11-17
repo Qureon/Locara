@@ -1,7 +1,5 @@
 package com.qureon.locara.core.model;
 
-import java.util.Objects;
-
 /**
  * Encapsulates a candidate UIElementNode evaluated by the Heuristic Engine,
  * complete with individual vector scores and aggregate confidence.

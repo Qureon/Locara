@@ -1,6 +1,6 @@
 # 🚀 Getting Started with Locara
 
-This guide walks you through integrating **Locara v1.15.1** into your Katalon Studio project or standard Appium test suite in under 3 minutes.
+This guide walks you through integrating **Locara v1.16.0** into your Katalon Studio project or standard Appium test suite in under 3 minutes.
 
 ---
 
@@ -15,10 +15,10 @@ This guide walks you through integrating **Locara v1.15.1** into your Katalon St
 ## 2. Installation
 
 ### Option A: Katalon Studio (Drop-in JAR)
-1. Download the latest JAR: [`locara-1.15.1.jar`](https://github.com/Qureon/Locara/releases).
+1. Download the latest JAR: [`locara-1.16.0.jar`](https://github.com/Qureon/Locara/releases).
 2. Copy the file into your Katalon project's `Drivers/` directory:
    ```bash
-   cp locara-1.15.1.jar /path/to/YourProject/Drivers/
+   cp locara-1.16.0.jar /path/to/YourProject/Drivers/
    ```
 3. Restart or refresh Katalon Studio (**Project** → **Refresh Drivers**).
 
@@ -26,7 +26,7 @@ This guide walks you through integrating **Locara v1.15.1** into your Katalon St
 If you manage your automation framework with Gradle, add Locara as a local JAR dependency:
 ```groovy
 dependencies {
-    implementation files('Drivers/locara-1.15.1.jar')
+    implementation files('Drivers/locara-1.16.0.jar')
 }
 ```
 

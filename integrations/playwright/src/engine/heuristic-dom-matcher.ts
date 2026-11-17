@@ -4,6 +4,19 @@
  * Evaluates candidates based on Text, WAI-ARIA, Test-ID, Element ID, and Role.
  */
 
+export interface RawDomNode {
+  tag: string;
+  id?: string;
+  text?: string;
+  ariaLabel?: string;
+  role?: string;
+  testId?: string;
+  name?: string;
+  placeholder?: string;
+  xpath?: string;
+  cssSelector?: string;
+}
+
 export interface CandidateElement {
   tag: string;
   id: string;
@@ -62,18 +75,7 @@ export class HeuristicDomMatcher {
    * Evaluates and ranks candidate DOM elements against a target semantic hint and action.
    */
   public findBestMatch(
-    elements: Array<{
-      tag: string;
-      id?: string;
-      text?: string;
-      ariaLabel?: string;
-      role?: string;
-      testId?: string;
-      name?: string;
-      placeholder?: string;
-      xpath?: string;
-      cssSelector?: string;
-    }>,
+    elements: RawDomNode[],
     targetHint: string,
     action: 'CLICK' | 'FILL' | 'VISIBLE' | 'GET_TEXT' = 'CLICK'
   ): CandidateElement | null {
@@ -185,7 +187,7 @@ export class HeuristicDomMatcher {
   }
 
   private synthesizePlaywrightLocator(
-    el: any,
+    el: RawDomNode,
     text: string,
     ariaLabel: string,
     testId: string,

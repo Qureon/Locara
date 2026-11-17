@@ -1,5 +1,9 @@
 import { test as baseTest, expect, Locator, Page } from '@playwright/test';
-import { HeuristicDomMatcher } from '../engine/heuristic-dom-matcher.js';
+import { HeuristicDomMatcher, RawDomNode } from '../engine/heuristic-dom-matcher.js';
+
+const DEFAULT_MIN_ACTION_TIMEOUT_MS = 5000;
+const DEFAULT_PROBE_TIMEOUT_MS = 2500;
+const DEFAULT_CONFIDENCE_THRESHOLD = 0.70;
 
 export interface LocaraOptions {
   probeTimeoutMs?: number;
@@ -13,8 +17,8 @@ export class LocaraPageWrapper {
 
   constructor(page: Page, options: LocaraOptions = {}) {
     this.page = page;
-    this.matcher = new HeuristicDomMatcher(options.threshold ?? 0.70);
-    this.defaultProbeTimeout = options.probeTimeoutMs ?? 2500;
+    this.matcher = new HeuristicDomMatcher(options.threshold ?? DEFAULT_CONFIDENCE_THRESHOLD);
+    this.defaultProbeTimeout = options.probeTimeoutMs ?? DEFAULT_PROBE_TIMEOUT_MS;
   }
 
   /**
@@ -33,7 +37,7 @@ export class LocaraPageWrapper {
     try {
       await this.page.locator(selector).click({ timeout: probeTimeout });
       return true;
-    } catch (err: any) {
+    } catch (_err: unknown) {
       console.warn(`[Locara-Playwright] Standard click failed for '${selector}'. Initiating autonomous recovery...`);
     }
 
@@ -44,7 +48,7 @@ export class LocaraPageWrapper {
     }
 
     console.info(`[Locara-Playwright] Healed '${selector}' -> Click dispatched via healed locator.`);
-    await healedLocator.click({ timeout: Math.max(5000, probeTimeout) });
+    await healedLocator.click({ timeout: Math.max(DEFAULT_MIN_ACTION_TIMEOUT_MS, probeTimeout) });
     return true;
   }
 
@@ -63,7 +67,7 @@ export class LocaraPageWrapper {
     try {
       await this.page.locator(selector).fill(text, { timeout: probeTimeout });
       return true;
-    } catch (err: any) {
+    } catch (_err: unknown) {
       console.warn(`[Locara-Playwright] Standard fill failed for '${selector}'. Initiating autonomous recovery...`);
     }
 
@@ -73,7 +77,7 @@ export class LocaraPageWrapper {
     }
 
     console.info(`[Locara-Playwright] Healed '${selector}' -> Fill dispatched via healed locator.`);
-    await healedLocator.fill(text, { timeout: Math.max(5000, probeTimeout) });
+    await healedLocator.fill(text, { timeout: Math.max(DEFAULT_MIN_ACTION_TIMEOUT_MS, probeTimeout) });
     return true;
   }
 
@@ -102,8 +106,8 @@ export class LocaraPageWrapper {
     action: 'CLICK' | 'FILL'
   ): Promise<Locator | null> {
     // Harvest visible interactive DOM elements from page context
-    const rawElements = await this.page.evaluate(() => {
-      const candidates: any[] = [];
+    const rawElements = await this.page.evaluate((): RawDomNode[] => {
+      const candidates: RawDomNode[] = [];
       const nodes = Array.from(document.querySelectorAll('button, a, input, select, textarea, [role="button"], [role="link"], [data-testid]'));
 
       for (let i = 0; i < nodes.length; i++) {
@@ -135,7 +139,8 @@ export class LocaraPageWrapper {
       return this.page.getByTestId(match.testId);
     }
     if (match.role && (match.ariaLabel || match.text)) {
-      return this.page.getByRole(match.role as any, { name: match.ariaLabel || match.text });
+      type PlaywrightAriaRole = Parameters<Page['getByRole']>[0];
+      return this.page.getByRole(match.role as PlaywrightAriaRole, { name: match.ariaLabel || match.text });
     }
     if (match.ariaLabel) {
       return this.page.getByLabel(match.ariaLabel);

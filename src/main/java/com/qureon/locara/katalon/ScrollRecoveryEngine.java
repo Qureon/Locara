@@ -1,299 +1,160 @@
 package com.qureon.locara.katalon;
 
 import com.qureon.locara.core.LocaraEngine;
+import com.qureon.locara.core.logging.LocaraLogger;
 import com.qureon.locara.core.model.HealConfig;
 import com.qureon.locara.core.model.HealContext;
 import com.qureon.locara.core.model.HealResult;
 import com.qureon.locara.core.model.UIElementNode;
 
 import java.lang.reflect.Method;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 
 /**
- * Auto-Scroll Recovery Engine:
- * When a target element is off-screen (below the fold), this engine detects
- * scrollable containers and autonomously scrolls down to reveal and heal the element.
+ * Executes autonomous scroll and carousel swipe gestures during self-healing recovery
+ * while delegating eligibility policies to {@link ScrollEligibilityPolicy} and honoring {@link ManualScrollGuard}.
  */
 public class ScrollRecoveryEngine {
 
+    private static final int DEFAULT_SCREEN_WIDTH = 720;
+    private static final int DEFAULT_SCREEN_HEIGHT = 1280;
+    private static final int EDGE_MARGIN_PX = 50;
+    private static final int MIN_GESTURE_BOX_PX = 100;
+    private static final long VERTICAL_SETTLE_MS = 600L;
+    private static final long SHORT_SETTLE_MS = 400L;
+    private static final long HORIZONTAL_SETTLE_MS = 500L;
+    private static final double GESTURE_PERCENT = 0.75;
+
     private final int maxScrollAttempts;
 
-    public ScrollRecoveryEngine() {
-        this(2);
-    }
+    public ScrollRecoveryEngine() { this(2); }
 
     public ScrollRecoveryEngine(int maxScrollAttempts) {
         this.maxScrollAttempts = maxScrollAttempts;
     }
 
-    private static final java.util.Set<String> OVERLAY_AND_DIALOG_KEYWORDS = new java.util.HashSet<>(java.util.Arrays.asList(
-            "popup", "pop_up", "pop up", "pop-up", "pop",
-            "modal", "dialog", "alert", "prompt", "overlay", "airbag",
-            "izin", "perizinan", "permission", "permissions", "notifikasi", "notification", "notif",
-            "lokasi", "location", "alamat", "address", "gps",
-            "allow", "izinkan", "deny", "tolak", "block", "jangan izinkan",
-            "batal", "cancel", "tutup", "close", "dismiss", "later", "nanti",
-            "bottomsheet", "bottom_sheet", "snackbar", "toast", "banner", "promo",
-            "system_dialog", "runtime_permission", "grant_permissions"
-    ));
+    public int getMaxScrollAttempts() { return maxScrollAttempts; }
 
-    public int getMaxScrollAttempts() {
-        return maxScrollAttempts;
-    }
-
-    /**
-     * Identifies whether the target hint or Object Repository path represents a transient
-     * pop-up modal, permission request, notification dialog, or system overlay.
-     * Overlays reside on separate floating window layers and MUST NEVER trigger viewport scrolling.
-     */
     public boolean isOverlayOrDialogTarget(String hint, String targetRsPath) {
-        String combined = ((hint != null ? hint : "") + " " + (targetRsPath != null ? targetRsPath : "")).toLowerCase();
-        if (combined.contains("permissioncontroller") || combined.contains("permission_allow_button")
-                || combined.contains("com.android.permissioncontroller") || combined.contains("com.google.android.gms.location")
-                || combined.contains("pop up") || combined.contains("pop-up") || combined.contains("bottom sheet")) {
-            return true;
-        }
-
-        String[] tokens = combined.split("[\\s_\\-./]+");
-        for (String token : tokens) {
-            if (OVERLAY_AND_DIALOG_KEYWORDS.contains(token)) {
-                return true;
-            }
-        }
-        return false;
+        return ScrollEligibilityPolicy.isOverlayOrDialogTarget(hint, targetRsPath);
     }
 
-    /**
-     * Evaluates whether scroll recovery is safe and eligible for the given action and target.
-     * Prevents "ngide" scrolling when probing conditional elements, checking presence, or hunting for pop-ups.
-     */
     public boolean isScrollEligible(String hint, String targetRsPath, String action, List<UIElementNode> nodes) {
-        return isMutativeNonOverlayTarget(hint, targetRsPath, action) && hasScrollableContainer(nodes);
+        return ScrollEligibilityPolicy.isScrollEligible(hint, targetRsPath, action, nodes);
     }
 
-    private boolean isMutativeNonOverlayTarget(String hint, String targetRsPath, String action) {
-        if (action == null || action.trim().isEmpty()) {
-            return false;
-        }
-
-        String act = action.trim().toUpperCase();
-
-        // 1. Presence checks, probes, assertions, and checkpoints MUST NEVER scroll (strictly read-only)
-        if (act.contains("VERIFY") || act.contains("WAIT") || act.startsWith("IS_")
-                || act.contains("ASSERT") || act.contains("PRESENT") || act.contains("VISIBLE")
-                || act.contains("PROBE") || act.contains("CHECKPOINT") || act.contains("GET_TEXT")) {
-            return false;
-        }
-
-        // 2. Overlays, Modals, System Permission Dialogs MUST NEVER scroll
-        return !isOverlayOrDialogTarget(hint, targetRsPath);
-    }
-
-    /**
-     * Checks if the parsed node hierarchy has any active scrollable containers.
-     */
     public boolean hasScrollableContainer(List<UIElementNode> nodes) {
-        if (nodes == null || nodes.isEmpty()) return false;
-        for (UIElementNode node : nodes) {
-            if (node.isScrollable()) {
-                return true;
-            }
-            String tag = node.getTag().toLowerCase();
-            String className = node.getClassName().toLowerCase();
-            if (tag.contains("scrollview") || tag.contains("recyclerview") || tag.contains("listview")
-                    || className.contains("scrollview") || className.contains("recyclerview")
-                    || tag.contains("table") || tag.contains("collectionview")) {
-                return true;
-            }
-        }
-        return false;
+        return ScrollEligibilityPolicy.hasScrollableContainer(nodes);
     }
 
-    /**
-     * Checks if the parsed node hierarchy contains an active horizontal carousel or tab strip container.
-     */
     public boolean hasHorizontalCarousel(List<UIElementNode> nodes) {
-        if (nodes == null || nodes.isEmpty()) return false;
-        for (UIElementNode node : nodes) {
-            String tag = node.getTag().toLowerCase();
-            String className = node.getClassName().toLowerCase();
-            String resId = node.getResourceId().toLowerCase();
-            if (tag.contains("horizontalscrollview") || className.contains("horizontalscrollview")
-                    || tag.contains("viewpager") || className.contains("viewpager")
-                    || tag.contains("tablayout") || className.contains("tablayout")
-                    || resId.contains("carousel") || resId.contains("tabs") || resId.contains("slider")
-                    || (node.isScrollable() && (resId.contains("horizontal") || tag.contains("horizontal") || className.contains("horizontal")))) {
-                return true;
-            }
-        }
-        return false;
+        return ScrollEligibilityPolicy.hasHorizontalCarousel(nodes);
     }
 
-    /**
-     * Evaluates whether horizontal carousel swipe recovery is safe and eligible for the given action and target.
-     */
     public boolean isCarouselEligible(String hint, String targetRsPath, String action, List<UIElementNode> nodes) {
-        return isMutativeNonOverlayTarget(hint, targetRsPath, action) && hasHorizontalCarousel(nodes);
+        return ScrollEligibilityPolicy.isCarouselEligible(hint, targetRsPath, action, nodes);
     }
 
-    /**
-     * Shared autonomous scroll recovery loop for Katalon and Appium bridges.
-     * Respects ManualScrollGuard (prevents double-scrolling after explicit script scrolls)
-     * and stops immediately if the viewport/page source stops changing (bottom/boundary reached).
-     */
     public HealResult recoverWithScroll(
-            HealConfig config,
-            LocaraEngine engine,
-            HealContext context,
-            List<UIElementNode> initialNodes,
-            String initialPageSource,
-            HealResult initialResult,
-            Object driver,
-            Supplier<String> pageSourceSupplier,
-            String logPrefix) {
-        if (initialResult != null && initialResult.isSuccess()) {
-            return initialResult;
-        }
+            HealConfig config, LocaraEngine engine, HealContext context,
+            List<UIElementNode> initialNodes, String initialPageSource, HealResult initialResult,
+            Object driver, Supplier<String> pageSourceSupplier, String logPrefix) {
+        if (initialResult != null && initialResult.isSuccess()) return initialResult;
         if ((config != null && !config.isScrollRecoveryEnabled()) || maxScrollAttempts <= 0
                 || engine == null || context == null || pageSourceSupplier == null) {
             return initialResult;
         }
 
-        String hint = context.getTargetHint();
-        String rsPath = context.getTargetRsPath();
-        String action = context.getAction();
         String prefix = (logPrefix != null && !logPrefix.isEmpty()) ? logPrefix : "[Locara by Qureon]";
-
-        if (!isScrollEligible(hint, rsPath, action, initialNodes)) {
-            if (isOverlayOrDialogTarget(hint, rsPath)) {
-                System.out.println(prefix + " 🛡️ Target '" + hint + "' identified as Transient Popup / Overlay / Permission Dialog. Auto-scroll strictly inhibited to preserve screen state.");
+        String hint = context.getTargetHint();
+        if (!isScrollEligible(hint, context.getTargetRsPath(), context.getAction(), initialNodes)) {
+            if (isOverlayOrDialogTarget(hint, context.getTargetRsPath())) {
+                LocaraLogger.info(prefix, "🛡️ Target '" + hint + "' is an overlay/dialog. Auto-scroll inhibited.");
             }
             return initialResult;
         }
 
         if (ManualScrollGuard.isAutoScrollSuppressed(config)) {
-            System.out.println(prefix + " 🛑 Auto-scroll skipped for '" + hint + "': recent manual scroll/swipe already performed by test script.");
+            LocaraLogger.info(prefix, "🛑 Auto-scroll skipped for '" + hint + "': recent manual scroll/swipe already performed by test script.");
             return initialResult;
         }
 
-        Set<String> seenPageSources = new HashSet<>();
+        Set<String> seenSources = new HashSet<>();
         if (initialPageSource != null && !initialPageSource.isEmpty()) {
-            seenPageSources.add(initialPageSource);
+            seenSources.add(initialPageSource);
         }
 
-        HealResult latestResult = initialResult;
+        HealResult latest = initialResult;
         try {
             for (int attempt = 1; attempt <= maxScrollAttempts; attempt++) {
-                System.out.println(prefix + " 📜 Target '" + hint + "' not found in active viewport. Attempting auto-scroll recovery #" + attempt + "...");
-                if (!performScrollDown(driver)) {
-                    break;
-                }
+                LocaraLogger.info(prefix, "📜 Target '" + hint + "' not found in viewport. Auto-scroll attempt #" + attempt + "...");
+                if (!performScrollDown(driver)) break;
 
                 String scrolledSource = pageSourceSupplier.get();
-                if (scrolledSource == null || scrolledSource.isEmpty()) {
+                if (scrolledSource == null || scrolledSource.isEmpty()) break;
+                if (!seenSources.add(scrolledSource)) {
+                    LocaraLogger.info(prefix, "⏹️ Viewport unchanged after scroll #" + attempt + " (boundary reached). Stopping.");
                     break;
                 }
-                if (!seenPageSources.add(scrolledSource)) {
-                    System.out.println(prefix + " ⏹️ Screen viewport unchanged after scroll #" + attempt + " (boundary reached). Stopping further auto-scroll.");
-                    break;
-                }
-
-                latestResult = engine.heal(scrolledSource, context);
-                if (latestResult.isSuccess()) {
-                    System.out.println(prefix + " 🎯 Target '" + hint + "' successfully discovered after scroll recovery!");
-                    return latestResult;
+                latest = engine.heal(scrolledSource, context);
+                if (latest.isSuccess()) {
+                    LocaraLogger.info(prefix, "🎯 Target '" + hint + "' discovered after scroll recovery!");
+                    return latest;
                 }
             }
         } catch (Exception ignored) {}
-
-        return latestResult;
+        return latest;
     }
 
-    /**
-     * Performs an autonomous downward scroll (swipe from bottom to top).
-     */
     public boolean performScrollDown(Object driver) {
         if (driver == null) return false;
-
-        int[] dims = KatalonDriverBridge.getScreenDimensions(driver, 720, 1280);
-        int width = dims[0];
-        int height = dims[1];
-
-        int startX = width / 2;
-        int startY = Math.min(height - 50, (int) (height * 0.70));
-        int endX = width / 2;
-        int endY = Math.max(50, (int) (height * 0.25));
-
-        if (invokeKatalonSwipe(startX, startY, endX, endY, 600)) {
-            return true;
-        }
+        int[] dims = KatalonDriverBridge.getScreenDimensions(driver, DEFAULT_SCREEN_WIDTH, DEFAULT_SCREEN_HEIGHT);
+        int width = dims[0], height = dims[1];
+        int startY = Math.min(height - EDGE_MARGIN_PX, (int) (height * 0.70));
+        int endY = Math.max(EDGE_MARGIN_PX, (int) (height * 0.25));
+        if (invokeKatalonSwipe(width / 2, startY, width / 2, endY, VERTICAL_SETTLE_MS)) return true;
         return invokeAppiumGesture(driver, "mobile: scrollGesture", "down",
-                (int) (height * 0.20), Math.max(100, width - 100), Math.max(100, (int) (height * 0.60)), 0.75, 600);
+                (int) (height * 0.20), Math.max(MIN_GESTURE_BOX_PX, width - 2 * EDGE_MARGIN_PX),
+                Math.max(MIN_GESTURE_BOX_PX, (int) (height * 0.60)), GESTURE_PERCENT, VERTICAL_SETTLE_MS);
     }
 
-    /**
-     * Performs a short, controlled downward scroll to reveal elements without overshooting.
-     */
     public boolean performShortScroll(Object driver) {
         if (driver == null) return false;
-        int[] dims = KatalonDriverBridge.getScreenDimensions(driver, 720, 1280);
-        int width = dims[0];
-        int height = dims[1];
-
-        return invokeKatalonSwipe(width / 2, (int) (height * 0.55), width / 2, (int) (height * 0.40), 400);
+        int[] dims = KatalonDriverBridge.getScreenDimensions(driver, DEFAULT_SCREEN_WIDTH, DEFAULT_SCREEN_HEIGHT);
+        return invokeKatalonSwipe(dims[0] / 2, (int) (dims[1] * 0.55), dims[0] / 2, (int) (dims[1] * 0.40), SHORT_SETTLE_MS);
     }
 
-    /**
-     * Performs an upward scroll (swipe top to bottom) to recover overshot elements.
-     */
     public boolean performScrollUp(Object driver) {
         if (driver == null) return false;
-        int[] dims = KatalonDriverBridge.getScreenDimensions(driver, 720, 1280);
-        int width = dims[0];
-        int height = dims[1];
-
-        return invokeKatalonSwipe(width / 2, (int) (height * 0.30), width / 2, (int) (height * 0.70), 500);
+        int[] dims = KatalonDriverBridge.getScreenDimensions(driver, DEFAULT_SCREEN_WIDTH, DEFAULT_SCREEN_HEIGHT);
+        return invokeKatalonSwipe(dims[0] / 2, (int) (dims[1] * 0.30), dims[0] / 2, (int) (dims[1] * 0.70), HORIZONTAL_SETTLE_MS);
     }
 
-    /**
-     * Performs an autonomous leftward swipe (drag from right to left)
-     * to reveal next cards or tabs in a horizontal carousel.
-     */
     public boolean performSwipeLeft(Object driver) {
-        if (driver == null) return false;
-        int[] dims = KatalonDriverBridge.getScreenDimensions(driver, 720, 1280);
-        int width = dims[0];
-        int height = dims[1];
-
-        int startX = Math.min(width - 50, (int) (width * 0.85));
-        int endX = Math.max(50, (int) (width * 0.15));
-        if (invokeKatalonSwipe(startX, height / 2, endX, height / 2, 500)) {
-            return true;
-        }
-        return invokeAppiumGesture(driver, "mobile: swipeGesture", "left",
-                (int) (height * 0.30), Math.max(100, width - 100), Math.max(100, (int) (height * 0.40)), 0.75, 500);
+        return performHorizontalSwipe(driver, true);
     }
 
-    /**
-     * Performs an autonomous rightward swipe (drag from left to right)
-     * to reveal previous cards or tabs in a horizontal carousel.
-     */
     public boolean performSwipeRight(Object driver) {
-        if (driver == null) return false;
-        int[] dims = KatalonDriverBridge.getScreenDimensions(driver, 720, 1280);
-        int width = dims[0];
-        int height = dims[1];
+        return performHorizontalSwipe(driver, false);
+    }
 
-        int startX = Math.max(50, (int) (width * 0.15));
-        int endX = Math.min(width - 50, (int) (width * 0.85));
-        if (invokeKatalonSwipe(startX, height / 2, endX, height / 2, 500)) {
-            return true;
-        }
-        return invokeAppiumGesture(driver, "mobile: swipeGesture", "right",
-                (int) (height * 0.30), Math.max(100, width - 100), Math.max(100, (int) (height * 0.40)), 0.75, 500);
+    private boolean performHorizontalSwipe(Object driver, boolean toLeft) {
+        if (driver == null) return false;
+        int[] dims = KatalonDriverBridge.getScreenDimensions(driver, DEFAULT_SCREEN_WIDTH, DEFAULT_SCREEN_HEIGHT);
+        int width = dims[0], height = dims[1];
+        int rightX = Math.min(width - EDGE_MARGIN_PX, (int) (width * 0.85));
+        int leftX = Math.max(EDGE_MARGIN_PX, (int) (width * 0.15));
+        int startX = toLeft ? rightX : leftX;
+        int endX = toLeft ? leftX : rightX;
+        if (invokeKatalonSwipe(startX, height / 2, endX, height / 2, HORIZONTAL_SETTLE_MS)) return true;
+        return invokeAppiumGesture(driver, "mobile: swipeGesture", toLeft ? "left" : "right",
+                (int) (height * 0.30), Math.max(MIN_GESTURE_BOX_PX, width - 2 * EDGE_MARGIN_PX),
+                Math.max(MIN_GESTURE_BOX_PX, (int) (height * 0.40)), GESTURE_PERCENT, HORIZONTAL_SETTLE_MS);
     }
 
     private static boolean invokeKatalonSwipe(int startX, int startY, int endX, int endY, long settleMs) {
@@ -316,12 +177,10 @@ public class ScrollRecoveryEngine {
         ManualScrollGuard.beginInternalScroll();
         try {
             Class<?> jsExecutor = Class.forName("org.openqa.selenium.JavascriptExecutor");
-            if (!jsExecutor.isInstance(driver)) {
-                return false;
-            }
+            if (!jsExecutor.isInstance(driver)) return false;
             Method executeScript = jsExecutor.getMethod("executeScript", String.class, Object[].class);
-            java.util.Map<String, Object> args = new java.util.HashMap<>();
-            args.put("left", 50);
+            Map<String, Object> args = new HashMap<>();
+            args.put("left", EDGE_MARGIN_PX);
             args.put("top", top);
             args.put("width", areaWidth);
             args.put("height", areaHeight);

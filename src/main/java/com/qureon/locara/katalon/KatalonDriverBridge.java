@@ -1,5 +1,6 @@
 package com.qureon.locara.katalon;
 
+import com.qureon.locara.core.driver.AppiumDriverActionBridge;
 import com.qureon.locara.core.model.UIElementNode;
 import java.lang.reflect.Method;
 
@@ -34,14 +35,7 @@ public class KatalonDriverBridge {
     }
 
     public static String getPageSource(Object driver) {
-        if (driver == null) return null;
-        try {
-            Method getPageSourceMethod = driver.getClass().getMethod("getPageSource");
-            Object res = getPageSourceMethod.invoke(driver);
-            return res != null ? res.toString() : null;
-        } catch (Exception e) {
-            return null;
-        }
+        return AppiumDriverActionBridge.extractPageSource(driver);
     }
 
     public static boolean isKatalonRuntime() {

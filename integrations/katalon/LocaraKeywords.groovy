@@ -1,6 +1,7 @@
 package com.qureon.locara.katalon
 
 import com.kms.katalon.core.annotation.Keyword
+import com.kms.katalon.core.mobile.keyword.MobileBuiltInKeywords as Mobile
 import com.kms.katalon.core.testobject.TestObject
 import com.kms.katalon.core.util.KeywordUtil
 
@@ -10,10 +11,12 @@ import com.kms.katalon.core.util.KeywordUtil
  * Keywords/com/qureon/locara/katalon/LocaraKeywords.groovy
  *
  * Uses dynamic reflection so Katalon projects compile with ZERO errors even when
- * the optional locara-*.jar is not present in Drivers/.
+ * the optional locara-*.jar is not present in Drivers/, falling back seamlessly
+ * to built-in Katalon Mobile keywords.
  */
 class LocaraKeywords {
 
+    private static final int DEFAULT_WAIT_TIMEOUT_SECONDS = 5
     private static volatile Class<?> cachedLocaraClass = null
     private static volatile boolean checkedLocara = false
 
@@ -33,73 +36,92 @@ class LocaraKeywords {
         return cachedLocaraClass
     }
 
-    private static Object invokeLocara(String methodName, Class<?>[] paramTypes, Object[] args, Object fallback) {
+    private static Object invokeOrFallback(String methodName, Class<?>[] paramTypes, Object[] args, groovy.lang.Closure<?> ghostFallback) {
         Class<?> clz = getLocaraClass()
         if (clz == null) {
-            KeywordUtil.markWarning("[Locara by Qureon] locara JAR not found on Drivers classpath; Ghost Mode fallback for '${methodName}'.")
-            return fallback
+            KeywordUtil.logInfo("[Locara Ghost Mode] locara JAR not found on Drivers classpath; delegating '${methodName}' to native Mobile keyword.")
+            return ghostFallback.call()
         }
         return clz.getMethod(methodName, paramTypes).invoke(null, args)
     }
 
     @Keyword(keywordObject = 'Locara')
-    static boolean tap(TestObject testObject, String hint) {
-        return invokeLocara("tap", [TestObject.class, String.class] as Class[], [testObject, hint] as Object[], false) as boolean
+    static boolean tap(TestObject testObject, String hint = "") {
+        return tap(testObject, 10, hint)
     }
 
     @Keyword(keywordObject = 'Locara')
-    static boolean tap(TestObject testObject, int timeoutSeconds, String hint) {
-        return invokeLocara("tap", [TestObject.class, int.class, String.class] as Class[], [testObject, timeoutSeconds, hint] as Object[], false) as boolean
+    static boolean tap(TestObject testObject, int timeoutSeconds, String hint = "") {
+        return invokeOrFallback("tap", [TestObject.class, int.class, String.class] as Class[], [testObject, timeoutSeconds, hint] as Object[], {
+            Mobile.tap(testObject, timeoutSeconds)
+            return true
+        }) as boolean
     }
 
     @Keyword(keywordObject = 'Locara')
     static boolean tapByHint(String hint, String targetRsPath) {
-        return invokeLocara("tapByHint", [String.class, String.class] as Class[], [hint, targetRsPath] as Object[], false) as boolean
+        return tapByHint(hint, targetRsPath, 10)
     }
 
     @Keyword(keywordObject = 'Locara')
     static boolean tapByHint(String hint, String targetRsPath, int timeoutSeconds) {
-        return invokeLocara("tapByHint", [String.class, String.class, int.class] as Class[], [hint, targetRsPath, timeoutSeconds] as Object[], false) as boolean
+        return invokeOrFallback("tapByHint", [String.class, int.class, String.class] as Class[], [hint, timeoutSeconds, targetRsPath] as Object[], {
+            KeywordUtil.markWarning("[Locara Ghost Mode] tapByHint('${hint}') skipped because locara JAR is absent.")
+            return false
+        }) as boolean
     }
 
     @Keyword(keywordObject = 'Locara')
-    static boolean setText(TestObject testObject, String text, String hint) {
-        return invokeLocara("setText", [TestObject.class, String.class, String.class] as Class[], [testObject, text, hint] as Object[], false) as boolean
+    static boolean setText(TestObject testObject, String text, String hint = "") {
+        return setText(testObject, text, 10, hint)
     }
 
     @Keyword(keywordObject = 'Locara')
-    static boolean setText(TestObject testObject, String text, int timeoutSeconds, String hint) {
-        return invokeLocara("setText", [TestObject.class, String.class, int.class, String.class] as Class[], [testObject, text, timeoutSeconds, hint] as Object[], false) as boolean
+    static boolean setText(TestObject testObject, String text, int timeoutSeconds, String hint = "") {
+        return invokeOrFallback("setText", [TestObject.class, String.class, int.class, String.class] as Class[], [testObject, text, timeoutSeconds, hint] as Object[], {
+            Mobile.setText(testObject, text, timeoutSeconds)
+            return true
+        }) as boolean
     }
 
     @Keyword(keywordObject = 'Locara')
-    static String getText(TestObject testObject, String hint) {
-        return invokeLocara("getText", [TestObject.class, String.class] as Class[], [testObject, hint] as Object[], "") as String
+    static String getText(TestObject testObject, String hint = "") {
+        return getText(testObject, 10, hint)
     }
 
     @Keyword(keywordObject = 'Locara')
-    static String getText(TestObject testObject, int timeoutSeconds, String hint) {
-        return invokeLocara("getText", [TestObject.class, int.class, String.class] as Class[], [testObject, timeoutSeconds, hint] as Object[], "") as String
+    static String getText(TestObject testObject, int timeoutSeconds, String hint = "") {
+        return invokeOrFallback("getText", [TestObject.class, int.class, String.class] as Class[], [testObject, timeoutSeconds, hint] as Object[], {
+            return Mobile.getText(testObject, timeoutSeconds)
+        }) as String
     }
 
     @Keyword(keywordObject = 'Locara')
-    static boolean clearText(TestObject testObject, String hint) {
-        return invokeLocara("clearText", [TestObject.class, String.class] as Class[], [testObject, hint] as Object[], false) as boolean
+    static boolean clearText(TestObject testObject, String hint = "") {
+        return clearText(testObject, 10, hint)
     }
 
     @Keyword(keywordObject = 'Locara')
-    static boolean clearText(TestObject testObject, int timeoutSeconds, String hint) {
-        return invokeLocara("clearText", [TestObject.class, int.class, String.class] as Class[], [testObject, timeoutSeconds, hint] as Object[], false) as boolean
+    static boolean clearText(TestObject testObject, int timeoutSeconds, String hint = "") {
+        return invokeOrFallback("clearText", [TestObject.class, int.class, String.class] as Class[], [testObject, timeoutSeconds, hint] as Object[], {
+            Mobile.clearText(testObject, timeoutSeconds)
+            return true
+        }) as boolean
     }
 
     @Keyword(keywordObject = 'Locara')
-    static boolean isElementPresent(TestObject testObject, String hint) {
-        return invokeLocara("isElementPresent", [TestObject.class, String.class] as Class[], [testObject, hint] as Object[], false) as boolean
+    static boolean isElementPresent(TestObject testObject, String hint = "") {
+        return invokeOrFallback("isElementPresent", [TestObject.class, String.class] as Class[], [testObject, hint] as Object[], {
+            return Mobile.waitForElementPresent(testObject, DEFAULT_WAIT_TIMEOUT_SECONDS)
+        }) as boolean
     }
 
     @Keyword(keywordObject = 'Locara')
-    static boolean assertElementPresent(TestObject testObject, String hint) {
-        return invokeLocara("assertElementPresent", [TestObject.class, String.class] as Class[], [testObject, hint] as Object[], false) as boolean
+    static boolean assertElementPresent(TestObject testObject, String hint = "") {
+        return invokeOrFallback("assertElementPresent", [TestObject.class, String.class] as Class[], [testObject, hint] as Object[], {
+            Mobile.verifyElementExist(testObject, 10)
+            return true
+        }) as boolean
     }
 
     @Keyword(keywordObject = 'Locara')

@@ -1,6 +1,8 @@
 package com.qureon.locara.appium;
 
 import com.qureon.locara.core.LocaraEngine;
+import com.qureon.locara.core.driver.AppiumDriverActionBridge;
+import com.qureon.locara.core.logging.LocaraLogger;
 import com.qureon.locara.core.model.HealContext;
 import com.qureon.locara.core.model.HealResult;
 import com.qureon.locara.core.model.UIElementNode;
@@ -8,8 +10,8 @@ import com.qureon.locara.katalon.KeyboardGuard;
 import com.qureon.locara.katalon.ManualScrollGuard;
 import com.qureon.locara.katalon.ScrollRecoveryEngine;
 
-import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * First-Class Standalone Appium Self-Healing & Auto-Recovery API.
@@ -17,9 +19,12 @@ import java.util.List;
  * Java, Kotlin, TestNG, JUnit, and Cucumber test suites without requiring Katalon Studio.
  */
 public class AppiumLocara {
+
+    private static final String LOG_PREFIX = "[AppiumLocara]";
     private static final LocaraEngine ENGINE = new LocaraEngine();
     private static final KeyboardGuard KEYBOARD_GUARD = new KeyboardGuard();
-    private static volatile ScrollRecoveryEngine scrollEngine = new ScrollRecoveryEngine(ENGINE.getConfig().getMaxScrollAttempts());
+    private static volatile ScrollRecoveryEngine scrollEngine =
+            new ScrollRecoveryEngine(ENGINE.getConfig().getMaxScrollAttempts());
 
     public static LocaraEngine getEngine() {
         return ENGINE;
@@ -41,7 +46,7 @@ public class AppiumLocara {
 
     public static void setScrollRecoveryEnabled(boolean enable) {
         ENGINE.getConfig().setScrollRecoveryEnabled(enable);
-        System.out.println("[AppiumLocara] Auto-scroll recovery: " + (enable ? "ENABLED" : "DISABLED"));
+        LocaraLogger.info(LOG_PREFIX, "Auto-scroll recovery: " + (enable ? "ENABLED" : "DISABLED"));
     }
 
     public static boolean isScrollRecoveryEnabled() {
@@ -58,32 +63,21 @@ public class AppiumLocara {
 
     /**
      * Taps an element on raw Appium driver. If original locator fails, autonomously heals and clicks.
-     *
-     * @param driver         Raw AppiumDriver / AndroidDriver / IOSDriver instance
-     * @param locatorOrXPath Original locator (e.g., "//android.widget.Button[@id='old_btn']" or "btn_login")
-     * @param targetHint     Human-readable semantic hint (e.g., "Lanjut Transfer", "Masuk", "Konfirmasi")
-     * @return true if successfully tapped (original or healed)
      */
     public static boolean tap(Object driver, String locatorOrXPath, String targetHint) {
-        if (driver == null) {
-            throw new IllegalArgumentException("[AppiumLocara] Driver instance cannot be null!");
-        }
+        requireDriver(driver);
 
         try (ManualScrollGuard.ActionWindow ignored = ManualScrollGuard.openActionWindow(ENGINE.getConfig())) {
-            // 1. Attempt standard execution first
             try {
-                Object element = findElementDirectly(driver, locatorOrXPath);
-                if (element != null) {
-                    Method clickMethod = element.getClass().getMethod("click");
-                    clickMethod.invoke(element);
+                Object element = AppiumDriverActionBridge.findElementDirectly(driver, locatorOrXPath);
+                if (element != null && AppiumDriverActionBridge.executeElementAction(element, "TAP", "")) {
                     ManualScrollGuard.markActionTapSucceeded();
                     return true;
                 }
             } catch (Throwable t) {
-                System.out.println("[AppiumLocara] Standard locator failed: " + locatorOrXPath + " -> Initiating autonomous healing...");
+                LocaraLogger.info(LOG_PREFIX, "Standard locator failed: " + locatorOrXPath + " -> Initiating autonomous healing...");
             }
 
-            // 2. Self-Healing Execution
             if (!ENGINE.getConfig().isEnabled()) return false;
             boolean healed = executeHealing(driver, locatorOrXPath, targetHint, "TAP", "");
             if (healed) {
@@ -97,22 +91,16 @@ public class AppiumLocara {
      * Types text into an input field on raw Appium driver with autonomous self-healing.
      */
     public static boolean setText(Object driver, String locatorOrXPath, String text, String targetHint) {
-        if (driver == null) {
-            throw new IllegalArgumentException("[AppiumLocara] Driver instance cannot be null!");
-        }
+        requireDriver(driver);
 
         try (ManualScrollGuard.ActionWindow ignored = ManualScrollGuard.openActionWindow(ENGINE.getConfig())) {
             try {
-                Object element = findElementDirectly(driver, locatorOrXPath);
-                if (element != null) {
-                    Method clearMethod = element.getClass().getMethod("clear");
-                    clearMethod.invoke(element);
-                    Method sendKeysMethod = element.getClass().getMethod("sendKeys", CharSequence[].class);
-                    sendKeysMethod.invoke(element, (Object) new CharSequence[]{text});
+                Object element = AppiumDriverActionBridge.findElementDirectly(driver, locatorOrXPath);
+                if (element != null && AppiumDriverActionBridge.executeElementAction(element, "SET_TEXT", text)) {
                     return true;
                 }
             } catch (Throwable t) {
-                System.out.println("[AppiumLocara] Standard setText failed: " + locatorOrXPath + " -> Initiating autonomous healing...");
+                LocaraLogger.info(LOG_PREFIX, "Standard setText failed: " + locatorOrXPath + " -> Initiating autonomous healing...");
             }
 
             if (!ENGINE.getConfig().isEnabled()) return false;
@@ -124,23 +112,20 @@ public class AppiumLocara {
      * Finds a WebElement by healing it in real-time if the original locator is broken.
      */
     public static Object findElement(Object driver, String locatorOrXPath, String targetHint) {
-        if (driver == null) {
-            throw new IllegalArgumentException("[AppiumLocara] Driver instance cannot be null!");
-        }
+        requireDriver(driver);
 
         try (ManualScrollGuard.ActionWindow ignored = ManualScrollGuard.openActionWindow(ENGINE.getConfig())) {
-            try {
-                Object el = findElementDirectly(driver, locatorOrXPath);
-                if (el != null) return el;
-            } catch (Throwable ignoredEx) {}
+            Object direct = AppiumDriverActionBridge.findElementDirectly(driver, locatorOrXPath);
+            if (direct != null) {
+                return direct;
+            }
 
             if (!ENGINE.getConfig().isEnabled()) {
                 throw new RuntimeException("[AppiumLocara] Element not found and self-healing is disabled: " + locatorOrXPath);
             }
 
             HealResult result = healWithScrollRecovery(driver, locatorOrXPath, targetHint, "FIND", "");
-            String healedXPath = result.getCandidate().getSuggestedXPath();
-            return findElementDirectly(driver, healedXPath);
+            return AppiumDriverActionBridge.findElementDirectly(driver, result.getCandidate().getSuggestedXPath());
         }
     }
 
@@ -148,19 +133,25 @@ public class AppiumLocara {
         HealResult result = healWithScrollRecovery(driver, locatorOrXPath, targetHint, action, value);
 
         String healedXPath = result.getCandidate().getSuggestedXPath();
-        System.out.printf(java.util.Locale.US, "[AppiumLocara] SUCCESS! Healed '%s' -> %s (Confidence: %.1f%%)%n",
-                targetHint, healedXPath, result.getCandidate().getConfidenceScore() * 100.0);
+        LocaraLogger.info(LOG_PREFIX, String.format(Locale.US, "SUCCESS! Healed '%s' -> %s (Confidence: %.1f%%)",
+                targetHint, healedXPath, result.getCandidate().getConfidenceScore() * 100.0));
 
-        // Auto-dismiss keyboard if obscuring element
         KEYBOARD_GUARD.guardElement(driver, result.getCandidate().getNode());
 
-        // Execute action directly on driver
-        return performDriverAction(driver, healedXPath, action, value);
+        try {
+            Object element = AppiumDriverActionBridge.findElementDirectly(driver, healedXPath);
+            if (element == null) {
+                throw new RuntimeException("Element not found by driver for XPath: " + healedXPath);
+            }
+            return AppiumDriverActionBridge.executeElementAction(element, action, value);
+        } catch (Exception e) {
+            throw new RuntimeException("[AppiumLocara] Failed to execute action on healed element: " + e.getMessage(), e);
+        }
     }
 
     private static HealResult healWithScrollRecovery(Object driver, String locatorOrXPath, String targetHint,
                                                      String action, String value) {
-        String pageSource = extractPageSource(driver);
+        String pageSource = AppiumDriverActionBridge.extractPageSource(driver);
         if (pageSource == null || pageSource.isEmpty()) {
             throw new RuntimeException("[AppiumLocara] Unable to capture page source from Appium driver!");
         }
@@ -182,11 +173,10 @@ public class AppiumLocara {
             throw new RuntimeException("[AppiumLocara Failed] Failed to parse page source: " + e.getMessage(), e);
         }
 
-        // Auto-Scroll recovery if not in current viewport (respecting ManualScrollGuard and boundary stagnation)
         if (!result.isSuccess()) {
             result = getScrollEngine().recoverWithScroll(
                     ENGINE.getConfig(), ENGINE, context, nodes, pageSource, result,
-                    driver, () -> extractPageSource(driver), "[AppiumLocara]"
+                    driver, () -> AppiumDriverActionBridge.extractPageSource(driver), LOG_PREFIX
             );
         }
 
@@ -196,74 +186,9 @@ public class AppiumLocara {
         return result;
     }
 
-    private static Object findElementDirectly(Object driver, String locatorOrXPath) {
-        if (driver == null || locatorOrXPath == null || locatorOrXPath.trim().isEmpty()) {
-            return null;
-        }
-        try {
-            Class<?> byClass = Class.forName("org.openqa.selenium.By");
-            Object by;
-            if (locatorOrXPath.startsWith("//") || locatorOrXPath.startsWith("/") || locatorOrXPath.startsWith("xpath=") || locatorOrXPath.startsWith("(")) {
-                String cleanXpath = locatorOrXPath.startsWith("xpath=") ? locatorOrXPath.substring(6) : locatorOrXPath;
-                Method xpathMethod = byClass.getMethod("xpath", String.class);
-                by = xpathMethod.invoke(null, cleanXpath);
-            } else {
-                Method idMethod = byClass.getMethod("id", String.class);
-                by = idMethod.invoke(null, locatorOrXPath);
-            }
-
-            Method findElementMethod = driver.getClass().getMethod("findElement", byClass);
-            return findElementMethod.invoke(driver, by);
-        } catch (ClassNotFoundException e) {
-            // Fallback for mock or generic drivers without Selenium API on test classpath
-            try {
-                Method m = driver.getClass().getMethod("findElementByXPath", String.class);
-                return m.invoke(driver, locatorOrXPath);
-            } catch (Exception ignored) {
-                try {
-                    Method m = driver.getClass().getMethod("findElement", Object.class);
-                    return m.invoke(driver, locatorOrXPath);
-                } catch (Exception ignored2) {
-                    return null;
-                }
-            }
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private static boolean performDriverAction(Object driver, String xpath, String action, String value) {
-        try {
-            Object element = findElementDirectly(driver, xpath);
-            if (element == null) {
-                throw new RuntimeException("Element not found by driver for XPath: " + xpath);
-            }
-
-            if ("TAP".equalsIgnoreCase(action) || "CLICK".equalsIgnoreCase(action)) {
-                Method clickMethod = element.getClass().getMethod("click");
-                clickMethod.invoke(element);
-                return true;
-            } else if ("SET_TEXT".equalsIgnoreCase(action)) {
-                Method clearMethod = element.getClass().getMethod("clear");
-                clearMethod.invoke(element);
-                Method sendKeysMethod = element.getClass().getMethod("sendKeys", CharSequence[].class);
-                sendKeysMethod.invoke(element, (Object) new CharSequence[]{value});
-                return true;
-            }
-            return true;
-        } catch (Exception e) {
-            throw new RuntimeException("[AppiumLocara] Failed to execute action on healed element: " + e.getMessage(), e);
-        }
-    }
-
-    private static String extractPageSource(Object driver) {
-        if (driver == null) return null;
-        try {
-            Method getPageSourceMethod = driver.getClass().getMethod("getPageSource");
-            Object res = getPageSourceMethod.invoke(driver);
-            return res != null ? res.toString() : null;
-        } catch (Exception e) {
-            return null;
+    private static void requireDriver(Object driver) {
+        if (driver == null) {
+            throw new IllegalArgumentException("[AppiumLocara] Driver instance cannot be null!");
         }
     }
 }

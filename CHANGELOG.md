@@ -5,6 +5,23 @@ This project adheres strictly to [Semantic Versioning (SemVer 2.0.0)](https://se
 
 ---
 
+## [v1.16.0] - 2026-11-17
+### Added
+- **Clean Architecture & Sub-300-Line Modularization Across All Stacks**:
+  - Decomposed `Locara` (`1027 -> 257` lines) & `AppiumLocara` (`269 -> 194` lines) via `AppiumDriverActionBridge`, `KatalonObjectExtractor`, `KatalonHealingCoordinator`, and `KatalonProjectToolkit`.
+  - Extracted shared `LocaraLogger` facade, `ScrollEligibilityPolicy`, `HealConfigLoader`, `RsSemanticNamingService`, `RsXmlDocumentRenderer`, `XPathUniquenessEvaluator`, `RelationalXPathBuilder`, `PlaywrightReflectionBridge`, `TokenConflictAnalyzer`, `SpatialCandidateScorer`, `CliCommandHandlers`, and `CodeNamingRuleHelpers` so every production Java/Groovy/Python/JS/TS module stays strictly under `300` lines.
+  - Split Mission Control Dashboard modules into `config_store.py`, `http_utils.py`, `recon_service.py`, `report_template.py`, `mock-events.js`, and `playground-engine.js`.
+- **TypeScript Strictness & Expanded Automated Verification**:
+  - Removed all `: any` types in `integrations/cucumber/src/index.ts`, `heuristic-dom-matcher.ts`, and `locara-test.ts`.
+  - Added [LocaraCliTest.java](src/test/java/com/qureon/locara/cli/LocaraCliTest.java), [test_config_and_recon.py](dashboard/tests/test_config_and_recon.py), and [test_js_modules.mjs](dashboard/tests/test_js_modules.mjs) (`120` JUnit + `14` Python `unittest` + `6` Node tests).
+
+### Fixed
+- **True Ghost Mode & Property Discovery (`LocaraKeywords.groovy`, `LocaraHook.groovy`)**:
+  - Added full native Katalon `Mobile.*` fallback delegation (`tap`, `setText`, `getText`, `clearText`, `waitForElementPresent`, `verifyElementExist`) inside `LocaraKeywords.groovy` when `Locara` is disabled or absent from `Drivers/`.
+  - Added automatic `Include/config/locara.properties` discovery (plus `locara.local.properties` / `qureon.local.properties` personal opt-out precedence) in `LocaraHook.groovy`, fixed `countSuccessAsTap` explicit boolean on `LocaraKeywordProxy`, aligned `LocaraProbeProxy` 3-arg closure dispatch, and delegated `KatalonDriverBridge.getPageSource` to `AppiumDriverActionBridge.extractPageSource`.
+
+---
+
 ## [v1.15.1] - 2026-11-13
 ### Fixed
 - **Anti-Double-Scroll Guard & Manual Scroll Awareness (`ManualScrollGuard`, `ScrollRecoveryEngine`, `Locara`, `AppiumLocara`, `LocaraHook`)**:

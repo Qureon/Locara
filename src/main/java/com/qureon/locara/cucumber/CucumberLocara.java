@@ -3,7 +3,6 @@ package com.qureon.locara.cucumber;
 import com.qureon.locara.appium.AppiumLocara;
 import com.qureon.locara.playwright.PlaywrightLocara;
 
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
