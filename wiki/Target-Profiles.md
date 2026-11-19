@@ -52,3 +52,6 @@ Observed and empirically verified during live Android 14+ (HyperOS/MIUI) & Compo
    - After backend rejection alerts (e.g. `[REG14]`), KMP automatically clears text inputs (`register_account_number_input_input`, `register_account_pin_input_input`) while keeping the terms checkbox `checked=true`.
 6. **Live Build vs Catalog (`qa-pack`) Drift**:
    - Always verify live dumps alongside static testID catalogs: live builds expose `register_account_back_button`, `register_phone_back_button`, `register_account_confirm_back_button`, `register_account_email_back_button`, and render `register_email_sent_message` / `register_email_later_button` on the account-registration success modal.
+7. **Multi-Surface Login Entry (`lock_screen` vs `shell_modal_sheet` vs `home_login_button`)**:
+   - On cold launch, KMP renders full-screen `lock_screen` (`lock_panel` + `lock_password_input`).
+   - When dismissed to Guest Home (`home_screen` + `home_login_button`), tapping `home_login_button` or any auth-gated menu mounts Login inside a bottom sheet (`shell_modal_sheet` + `shell_modal_scrim`) **without** `lock_screen` or `lock_panel` in the hierarchy. Login flows must detect all three entry states (cold launch, guest/in-app, and already-opened login sheet) via `lock_password_input` / `shell_modal_sheet` / `home_login_button`.
