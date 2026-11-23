@@ -1,5 +1,5 @@
 /* ==============================================================================
-   ZERO-HEALING DASHBOARD — BASE & RESET STYLES
+   LOCARA DASHBOARD — BASE & RESET STYLES
    ============================================================================== */
 
 *, *::before, *::after {
@@ -128,3 +128,12 @@ code, pre {
 .text-violet { color: var(--violet); }
 .text-amber { color: var(--amber); }
 .text-danger { color: var(--danger); }
+
+@keyframes locara-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.spin svg {
+    animation: locara-spin 0.6s linear infinite;
+}

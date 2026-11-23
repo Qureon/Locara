@@ -490,28 +490,31 @@
                     <div class="compliance-meta-grid">
                         <div class="meta-item"><span class="m-lbl">Aplikasi Target:</span> <span class="m-val">Mobile App (Android / iOS)</span></div>
                         <div class="meta-item"><span class="m-lbl">Siklus Pengujian:</span> <span class="m-val">Sprint UAT Regression Cycle</span></div>
-                        <div class="meta-item"><span class="m-lbl">Engine Version:</span> <span class="m-val font-mono">Locara Core v1.16.0</span></div>
-                        <div class="meta-item"><span class="m-lbl">Integritas Hash:</span> <span class="m-val font-mono text-cyan">SHA-256: 7f8a3c...9b1e</span></div>
+                        <div class="meta-item"><span class="m-lbl">Engine Version:</span> <span class="m-val font-mono" id="comp-engine-version">Locara Core v1.16.0</span></div>
+                        <div class="meta-item"><span class="m-lbl">Integritas Hash:</span> <span class="m-val font-mono text-cyan" id="comp-integrity-hash">Computing...</span></div>
                     </div>
 
                     <div class="audit-summary-box">
                         <div class="audit-stat">
-                            <span class="s-val text-emerald">100%</span>
-                            <span class="s-lbl">Safety Polarity Compliance</span>
+                            <span class="s-val text-emerald" id="comp-safety-rate">0.0%</span>
+                            <span class="s-lbl">Safety &amp; Heal Compliance</span>
                         </div>
                         <div class="audit-stat">
-                            <span class="s-val text-cyan">1,419</span>
+                            <span class="s-val text-cyan" id="comp-healed-count">0</span>
                             <span class="s-lbl">Successful In-Flight Heals</span>
                         </div>
                         <div class="audit-stat">
-                            <span class="s-val text-violet">0</span>
-                            <span class="s-lbl">False-Positive Destructive Actions</span>
+                            <span class="s-val text-violet" id="comp-lockout-count">0</span>
+                            <span class="s-lbl">Destructive Actions Blocked</span>
                         </div>
                     </div>
 
                     <div class="sign-off-actions" style="display: flex; justify-content: center; gap: 12px;">
                         <button class="btn btn-primary" id="btn-print-certificate">
                             <span class="btn-icon-wrap" data-icon="fileText"></span> Cetak Dokumen Sign-Off PDF
+                        </button>
+                        <button class="btn btn-secondary" id="btn-export-html-report">
+                            <span class="btn-icon-wrap" data-icon="download"></span> Buka Laporan HTML Mandiri
                         </button>
                     </div>
                 </div>

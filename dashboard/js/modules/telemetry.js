@@ -204,7 +204,9 @@ function attachRowClickListeners() {
         });
     });
 
-    document.querySelectorAll(".audit-row").forEach(row => {
+    const tbody = document.getElementById("audit-table-body");
+    if (!tbody) return;
+    tbody.querySelectorAll(".audit-row").forEach(row => {
         row.addEventListener("click", (e) => {
             if (e.target.closest("button")) return;
             const id = row.dataset.id;
@@ -225,17 +227,35 @@ function updateKpiMetrics() {
         return s === "SUCCESS" || s === "HEALED" || s === "SCROLLED";
     }).length;
     const lockouts = appState.events.filter(e => String(e.status || "").toUpperCase() === "LOCKOUT").length;
-    const probes = appState.events.filter(e => e.action === "VERIFY_PRESENT" || (e.method && e.method.includes("INTENT")) || (e.strategy && e.strategy.includes("INTENT"))).length;
+    const probes = appState.events.filter(e =>
+        e.intentionTier === "CONDITIONAL_PROBE"
+        || e.action === "VERIFY_PRESENT"
+        || (e.method && e.method.includes("INTENT"))
+        || (e.strategy && e.strategy.includes("INTENT"))
+    ).length;
+    const uniqueRs = new Set(
+        appState.events
+            .map(e => (e.generatedRs || e.rsFile || "").trim())
+            .filter(p => p && p !== "-" && p !== "N/A")
+    ).size;
+    const latencies = appState.events
+        .map(e => Number(e.latencyMs))
+        .filter(n => Number.isFinite(n) && n >= 0);
+    const avgLatency = latencies.length > 0
+        ? Math.round(latencies.reduce((acc, n) => acc + n, 0) / latencies.length)
+        : null;
 
     const elTotal = document.getElementById("kpi-total-healed");
     const elSuccess = document.getElementById("kpi-success-rate");
+    const elLatency = document.getElementById("kpi-latency");
     const elLockouts = document.getElementById("kpi-lockouts");
     const elProbes = document.getElementById("kpi-negative-healed");
     const elSanitized = document.getElementById("kpi-sanitized-or");
 
     if (elTotal) elTotal.textContent = total.toLocaleString();
     if (elSuccess) elSuccess.textContent = total > 0 ? `${((success / total) * 100).toFixed(1)}%` : "0.0%";
+    if (elLatency) elLatency.textContent = avgLatency !== null ? `${avgLatency} ms` : "—";
     if (elLockouts) elLockouts.textContent = lockouts.toString();
-    if (elProbes) elProbes.textContent = probes > 0 ? probes.toString() : "142";
-    if (elSanitized) elSanitized.textContent = "4,087";
+    if (elProbes) elProbes.textContent = probes.toLocaleString();
+    if (elSanitized) elSanitized.textContent = uniqueRs.toLocaleString();
 }

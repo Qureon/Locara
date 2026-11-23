@@ -4,6 +4,8 @@
  * ==============================================================================
  */
 
+import { APP_CONFIG } from "./config.js";
+
 export async function fetchAuditEvents() {
     try {
         const res = await fetch("/api/audit");
@@ -22,7 +24,7 @@ export async function fetchEngineHealth() {
         if (!res.ok) throw new Error(`HTTP error ${res.status}`);
         return await res.json();
     } catch (err) {
-        return { status: "STANDALONE", engine: "Locara Core v1.16.0", target: "Qureon_Autonomous_QA" };
+        return { status: "STANDALONE", engine: `Locara Core ${APP_CONFIG.semver}`, target: "Qureon_Autonomous_QA" };
     }
 }
 

@@ -145,7 +145,7 @@ function renderReconResult(result) {
             </div>
 
             <!-- Katalon 11.6.0+ Object's XPaths Table Simulator -->
-            <div style="margin-top: 16px; background: var(--bg-card); border: 1px solid var(--card-border); border-radius: 8px; padding: 14px;">
+            <div style="margin-top: 16px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <span style="font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--cyan);">Katalon 11.6.0+ Object's XPaths Table</span>
                     <span style="font-size:0.72rem; color:var(--text-muted);">Editable Locator Tiers</span>

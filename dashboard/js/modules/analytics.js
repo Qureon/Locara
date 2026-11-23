@@ -5,53 +5,56 @@
  * ==============================================================================
  */
 
+import { appState } from "../state.js";
 import { escapeHtml } from "../utils.js";
 
-export const MODULE_ANALYTICS_DATA = [
-    { module: "Transfer (Overbooking & BI-FAST)", count: 542, pct: 38 },
-    { module: "Payment & Billers (PLN, PDAM, BPJS)", count: 320, pct: 22 },
-    { module: "Top-Up e-Wallet (Digital Wallet)", count: 264, pct: 19 },
-    { module: "QRIS Merchant & Payment", count: 182, pct: 13 },
-    { module: "Account, KYC & Biometric Login", count: 88, pct: 6 },
-    { module: "Settings & Card Management", count: 32, pct: 2 }
-];
-
-export const VOLATILE_LOCATORS_DATA = [
-    {
-        id: "com.example.app:id/btn_next_transfer",
-        screen: "Transfer / Konfirmasi",
-        changes: 48,
-        cause: "ID renamed in Sprint 24 (btn_next -> btn_next_transfer)",
-        action: "TAP",
-        orTarget: "Object Repository/Transfer/btn_next_transfer.rs"
-    },
-    {
-        id: "com.example.app:id/input_security_code",
-        screen: "Otorisasi / Security PIN",
-        changes: 36,
-        cause: "Migration to Jetpack Compose SecureTextField",
-        action: "SET_TEXT",
-        orTarget: "Object Repository/Transfer/input_security_code.rs"
-    },
-    {
-        id: "com.example.app:id/btn_submit_pln",
-        screen: "Payment / PLN",
-        changes: 29,
-        cause: "Dynamic view injection causing index displacement",
-        action: "TAP",
-        orTarget: "Object Repository/Payment/btn_submit_pln.rs"
-    },
-    {
-        id: "com.example.app:id/tv_wallet_title",
-        screen: "Top Up / e-Wallet",
-        changes: 19,
-        cause: "Nested inside Compose Box with dynamic tags",
-        action: "TAP",
-        orTarget: "Object Repository/TopUp/tv_wallet_title.rs"
+export function computeModuleAnalytics(events) {
+    if (!Array.isArray(events) || events.length === 0) return [];
+    const counts = new Map();
+    for (const evt of events) {
+        const key = (evt.module || evt.screen || "DefaultScreen").trim() || "DefaultScreen";
+        counts.set(key, (counts.get(key) || 0) + 1);
     }
-];
+    const total = events.length;
+    return Array.from(counts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([module, count]) => ({
+            module,
+            count,
+            pct: Math.round((count / total) * 100)
+        }));
+}
+
+export function computeVolatileLocators(events) {
+    if (!Array.isArray(events) || events.length === 0) return [];
+    const grouped = new Map();
+    for (const evt of events) {
+        const key = (evt.brokenLocator || evt.targetHint || "Unnamed Locator").trim();
+        const existing = grouped.get(key);
+        if (existing) {
+            existing.changes += 1;
+        } else {
+            grouped.set(key, {
+                id: key,
+                screen: evt.screen || "DefaultScreen",
+                changes: 1,
+                cause: `${evt.action || "TAP"} (${evt.status || "UNKNOWN"}) on ${evt.screen || "DefaultScreen"}`,
+                action: evt.action || "TAP",
+                orTarget: evt.generatedRs || "In-Memory Patch"
+            });
+        }
+    }
+    return Array.from(grouped.values())
+        .sort((a, b) => b.changes - a.changes)
+        .slice(0, 6);
+}
 
 export function initAnalyticsModule() {
+    appState.subscribe(() => {
+        renderModuleBars();
+        renderVolatileLocators();
+    });
     renderModuleBars();
     renderVolatileLocators();
 }
@@ -60,13 +63,19 @@ function renderModuleBars() {
     const container = document.getElementById("module-bars-container");
     if (!container) return;
 
-    container.innerHTML = MODULE_ANALYTICS_DATA.map(item => {
+    const data = computeModuleAnalytics(appState.events);
+    if (data.length === 0) {
+        container.innerHTML = `<p class="text-muted text-sm">Belum ada event audit untuk dianalisis.</p>`;
+        return;
+    }
+
+    container.innerHTML = data.map(item => {
         const safePct = Math.max(0, Math.min(100, Number(item.pct) || 0));
         return `
         <div class="module-bar-item">
             <div class="module-meta">
                 <span class="module-name"><strong>${escapeHtml(item.module)}</strong></span>
-                <span class="module-count">${escapeHtml(String(item.count))} perbaikan (${safePct}%)</span>
+                <span class="module-count">${escapeHtml(String(item.count))} event (${safePct}%)</span>
             </div>
             <div class="progress-track">
                 <div class="progress-fill cyan" style="width: ${safePct}%;"></div>
@@ -80,14 +89,20 @@ function renderVolatileLocators() {
     const container = document.getElementById("volatile-list-container");
     if (!container) return;
 
-    container.innerHTML = VOLATILE_LOCATORS_DATA.map(v => `
+    const items = computeVolatileLocators(appState.events);
+    if (items.length === 0) {
+        container.innerHTML = `<p class="text-muted text-sm">Belum ada locator volatil yang tercatat.</p>`;
+        return;
+    }
+
+    container.innerHTML = items.map(v => `
         <div class="volatile-card">
             <div class="v-header">
                 <span class="v-id font-mono text-cyan">${escapeHtml(v.id)}</span>
-                <span class="v-badge">${escapeHtml(String(v.changes))}x Flaky/Changed</span>
+                <span class="v-badge">${escapeHtml(String(v.changes))}x Terdeteksi</span>
             </div>
             <div class="v-body">
-                <p class="v-cause"><strong>Root Cause:</strong> ${escapeHtml(v.cause)}</p>
+                <p class="v-cause"><strong>Konteks:</strong> ${escapeHtml(v.cause)}</p>
                 <p class="v-or font-mono text-sm" style="color: var(--text-muted); margin-top: 4px;">
                     <strong>Target OR:</strong> ${escapeHtml(v.orTarget)}
                 </p>
