@@ -1,9 +1,15 @@
-import { test as baseTest, expect, Locator, Page } from '@playwright/test';
-import { HeuristicDomMatcher, RawDomNode } from '../engine/heuristic-dom-matcher.js';
+import { test as baseTest, expect, type Locator, type Page } from '@playwright/test';
+import { HeuristicDomMatcher, type RawDomNode } from '../engine/heuristic-dom-matcher.js';
 
 const DEFAULT_MIN_ACTION_TIMEOUT_MS = 5000;
 const DEFAULT_PROBE_TIMEOUT_MS = 2500;
 const DEFAULT_CONFIDENCE_THRESHOLD = 0.70;
+const INTERACTIVE_SELECTOR =
+  'button, a, input, select, textarea, [role="button"], [role="link"], [role="textbox"], [role="checkbox"], [role="radio"], [role="tab"], [data-testid], [data-test]';
+const CONTENT_SELECTOR =
+  '[role="status"], [role="alert"], [aria-label], h1, h2, h3, h4, h5, h6, label, p, span, td, th, li';
+
+export type LocaraAction = 'CLICK' | 'FILL' | 'VISIBLE' | 'GET_TEXT';
 
 export interface LocaraOptions {
   probeTimeoutMs?: number;
@@ -18,7 +24,11 @@ export class LocaraPageWrapper {
   constructor(page: Page, options: LocaraOptions = {}) {
     this.page = page;
     this.matcher = new HeuristicDomMatcher(options.threshold ?? DEFAULT_CONFIDENCE_THRESHOLD);
-    this.defaultProbeTimeout = options.probeTimeoutMs ?? DEFAULT_PROBE_TIMEOUT_MS;
+    const probeMs = options.probeTimeoutMs;
+    this.defaultProbeTimeout =
+      typeof probeMs === 'number' && Number.isFinite(probeMs) && probeMs > 0
+        ? probeMs
+        : DEFAULT_PROBE_TIMEOUT_MS;
   }
 
   /**
@@ -42,7 +52,7 @@ export class LocaraPageWrapper {
     }
 
     // 2. Perform Autonomous DOM Healing
-    const healedLocator = await this.healLocator(selector, hint, 'CLICK');
+    const healedLocator = await this.healLocator(hint, 'CLICK');
     if (!healedLocator) {
       throw new Error(`[Locara-Playwright] Recovery failed: No element matched '${hint}' above threshold.`);
     }
@@ -71,7 +81,7 @@ export class LocaraPageWrapper {
       console.warn(`[Locara-Playwright] Standard fill failed for '${selector}'. Initiating autonomous recovery...`);
     }
 
-    const healedLocator = await this.healLocator(selector, hint, 'FILL');
+    const healedLocator = await this.healLocator(hint, 'FILL');
     if (!healedLocator) {
       throw new Error(`[Locara-Playwright] Recovery failed: No input field matched '${hint}' above threshold.`);
     }
@@ -83,8 +93,13 @@ export class LocaraPageWrapper {
 
   /**
    * Returns a self-healing Locator.
+   * Defaults to 'VISIBLE' so both interactive controls and non-interactive status/text nodes are eligible.
    */
-  public async locator(selector: string, targetHint?: string): Promise<Locator> {
+  public async locator(
+    selector: string,
+    targetHint?: string,
+    action: LocaraAction = 'VISIBLE'
+  ): Promise<Locator> {
     const hint = targetHint || selector;
     try {
       const count = await this.page.locator(selector).count();
@@ -93,7 +108,7 @@ export class LocaraPageWrapper {
       }
     } catch {}
 
-    const healed = await this.healLocator(selector, hint, 'CLICK');
+    const healed = await this.healLocator(hint, action);
     return healed || this.page.locator(selector);
   }
 
@@ -101,40 +116,57 @@ export class LocaraPageWrapper {
    * Scans active DOM nodes and computes the winning candidate using Locara multi-vector heuristics.
    */
   private async healLocator(
-    originalSelector: string,
     targetHint: string,
-    action: 'CLICK' | 'FILL'
+    action: LocaraAction
   ): Promise<Locator | null> {
-    // Harvest visible interactive DOM elements from page context
-    const rawElements = await this.page.evaluate((): RawDomNode[] => {
+    const query = (action === 'VISIBLE' || action === 'GET_TEXT')
+      ? `${INTERACTIVE_SELECTOR}, ${CONTENT_SELECTOR}`
+      : INTERACTIVE_SELECTOR;
+
+    const rawElements = await this.page.evaluate((selectorQuery: string): RawDomNode[] => {
       const candidates: RawDomNode[] = [];
-      const nodes = Array.from(document.querySelectorAll('button, a, input, select, textarea, [role="button"], [role="link"], [data-testid]'));
+      const seen = new Set<Element>();
+      const containerTags = new Set(['p', 'span', 'li', 'td', 'th']);
+      const nodes = Array.from(document.querySelectorAll(selectorQuery));
 
       for (let i = 0; i < nodes.length; i++) {
         const el = nodes[i] as HTMLElement;
+        if (seen.has(el)) continue;
+        seen.add(el);
+
         const style = window.getComputedStyle(el);
         if (style.display === 'none' || style.visibility === 'hidden' || el.hasAttribute('hidden')) continue;
 
+        const tag = el.tagName.toLowerCase();
+        const text = (el.innerText || (el as HTMLInputElement).value || '').trim();
+        const ariaLabel = el.getAttribute('aria-label') || '';
+        const testId = el.getAttribute('data-testid') || el.getAttribute('data-test') || '';
+        const id = el.id || '';
+        if (containerTags.has(tag) && el.children.length > 0 && !ariaLabel && !testId && !id) continue;
+        if (!text && !ariaLabel && !testId && !id && !el.getAttribute('name') && !el.getAttribute('placeholder')) {
+          continue;
+        }
+
         candidates.push({
-          tag: el.tagName.toLowerCase(),
-          id: el.id || '',
-          text: (el.innerText || (el as HTMLInputElement).value || '').trim(),
-          ariaLabel: el.getAttribute('aria-label') || '',
+          tag,
+          id,
+          text,
+          ariaLabel,
           role: el.getAttribute('role') || '',
-          testId: el.getAttribute('data-testid') || el.getAttribute('data-test') || '',
+          inputType: tag === 'input' ? ((el as HTMLInputElement).type || '').toLowerCase() : '',
+          testId,
           name: el.getAttribute('name') || '',
           placeholder: el.getAttribute('placeholder') || ''
         });
       }
       return candidates;
-    });
+    }, query);
 
     const match = this.matcher.findBestMatch(rawElements, targetHint, action);
     if (!match) {
       return null;
     }
 
-    // Resolve optimal locator for Playwright
     if (match.testId) {
       return this.page.getByTestId(match.testId);
     }
@@ -145,11 +177,17 @@ export class LocaraPageWrapper {
     if (match.ariaLabel) {
       return this.page.getByLabel(match.ariaLabel);
     }
-    if (match.text && match.text.length < 40) {
-      return this.page.getByText(match.text);
+    if (match.placeholder) {
+      return this.page.getByPlaceholder(match.placeholder);
     }
     if (match.id) {
       return this.page.locator(`[id=${JSON.stringify(match.id)}]`);
+    }
+    if (match.name) {
+      return this.page.locator(`${match.tag}[name=${JSON.stringify(match.name)}]`);
+    }
+    if (match.text) {
+      return this.page.getByText(match.text, { exact: match.text.length < 40 });
     }
 
     return null;

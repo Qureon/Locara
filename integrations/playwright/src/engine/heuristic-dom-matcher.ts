@@ -12,6 +12,7 @@ export interface RawDomNode {
   text?: string;
   ariaLabel?: string;
   role?: string;
+  inputType?: string;
   testId?: string;
   name?: string;
   placeholder?: string;
@@ -35,10 +36,14 @@ export interface CandidateElement {
 }
 
 export class HeuristicDomMatcher {
+  private static readonly CLICKABLE_INPUT_TYPES = new Set(['submit', 'button', 'checkbox', 'radio', 'reset']);
+  private static readonly DEFAULT_THRESHOLD = 0.70;
   private minConfidenceThreshold: number;
 
-  constructor(threshold = 0.70) {
-    this.minConfidenceThreshold = threshold;
+  constructor(threshold = HeuristicDomMatcher.DEFAULT_THRESHOLD) {
+    this.minConfidenceThreshold = Number.isFinite(threshold)
+      ? Math.min(1.0, Math.max(0.0, threshold))
+      : HeuristicDomMatcher.DEFAULT_THRESHOLD;
   }
 
   /**
@@ -54,6 +59,9 @@ export class HeuristicDomMatcher {
     }
 
     const cleanHint = this.sanitizeHint(targetHint);
+    if (!cleanHint) {
+      return null;
+    }
     const rankedCandidates: CandidateElement[] = [];
 
     for (const el of elements) {
@@ -62,6 +70,7 @@ export class HeuristicDomMatcher {
       const text = (el.text || '').trim();
       const ariaLabel = el.ariaLabel || '';
       const role = el.role || '';
+      const inputType = (el.inputType || '').toLowerCase();
       const testId = el.testId || '';
       const name = el.name || '';
       const placeholder = el.placeholder || '';
@@ -89,7 +98,7 @@ export class HeuristicDomMatcher {
       );
 
       // Vector 5: Action & Role Compatibility
-      const actionScore = this.calculateActionCompatibility(tag, role, action);
+      const actionScore = this.calculateActionCompatibility(tag, role, action, inputType);
 
       // Dominant Semantic Anchor Scoring
       const maxSemantic = Math.max(textScore, ariaScore, testIdScore, idScore);
@@ -182,14 +191,22 @@ export class HeuristicDomMatcher {
     return el.xpath ? `locator('xpath=${this.quoteJsString(el.xpath)}')` : `locator('${this.quoteJsString(el.tag)}')`;
   }
 
-  private calculateActionCompatibility(tag: string, role: string, action: string): number {
+  private calculateActionCompatibility(tag: string, role: string, action: string, inputType = ''): number {
+    const normalizedRole = role.toLowerCase();
+    const isClickableInput = tag === 'input'
+      && (HeuristicDomMatcher.CLICKABLE_INPUT_TYPES.has(inputType)
+        || HeuristicDomMatcher.CLICKABLE_INPUT_TYPES.has(normalizedRole));
+
     if (action === 'CLICK') {
-      if (tag === 'button' || role === 'button' || tag === 'a' || role === 'link') return 1.0;
-      if (tag === 'input' && ['submit', 'button', 'checkbox', 'radio'].includes(role)) return 1.0;
+      if (tag === 'button' || normalizedRole === 'button' || tag === 'a' || normalizedRole === 'link') return 1.0;
+      if (isClickableInput || normalizedRole === 'checkbox' || normalizedRole === 'radio'
+        || normalizedRole === 'tab' || normalizedRole === 'menuitem') return 1.0;
       return 0.70;
     }
     if (action === 'FILL') {
-      if (tag === 'input' || tag === 'textarea' || role === 'textbox') return 1.0;
+      if (isClickableInput) return 0.50;
+      if (tag === 'input' || tag === 'textarea' || tag === 'select'
+        || normalizedRole === 'textbox' || normalizedRole === 'combobox' || normalizedRole === 'searchbox') return 1.0;
       return 0.50;
     }
     return 0.85;
