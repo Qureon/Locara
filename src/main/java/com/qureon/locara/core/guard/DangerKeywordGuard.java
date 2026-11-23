@@ -6,13 +6,17 @@ import com.qureon.locara.core.model.UIElementNode;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Enterprise safety guard preventing accidental clicks on dangerous or contradictory buttons
  * (e.g., clicking 'Batal' or 'Hapus' when looking for 'Lanjut').
  */
 public final class DangerKeywordGuard {
+
+    private static final Pattern NON_ALNUM_PATTERN = Pattern.compile("[^a-z0-9]+");
 
     private static final Set<String> DANGER_KEYWORDS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
             "hapus", "hapuskan", "penghapusan", "menghapus", "delete", "remove",
@@ -23,15 +27,23 @@ public final class DangerKeywordGuard {
             "tolak", "penolakan", "menolak", "reject", "decline", "reset"
     )));
 
+    private static final Set<String> DANGER_PHRASES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            "tutup akun", "close account", "sign out", "hapus akun", "delete account"
+    )));
+
     private static final Set<String> FINANCIAL_KEYWORDS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
             "bayar", "bayarkan", "pembayaran", "membayar", "pay", "payment", "checkout",
-            "transfer", "kirimuang", "kirim uang",
+            "transfer", "kirimuang",
             "beli", "belikan", "pembelian", "membeli", "buy", "purchase",
-            "topup", "top up", "debet", "pendebetan", "debit",
+            "topup", "debet", "pendebetan", "debit",
             "tarik", "penarikan", "withdraw", "tagihan",
-            "subscribe", "subscription", "langganan", "penambahan unit",
-            "redeem", "redemption", "cairkan", "pencairan", "jual unit",
+            "subscribe", "subscription", "langganan",
+            "redeem", "redemption", "cairkan", "pencairan",
             "switching", "pengalihan"
+    )));
+
+    private static final Set<String> FINANCIAL_PHRASES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            "kirim uang", "top up", "penambahan unit", "jual unit", "tarik tunai", "beli unit"
     )));
 
     private static final Set<String> POSITIVE_KEYWORDS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
@@ -64,19 +76,23 @@ public final class DangerKeywordGuard {
         Set<String> targetTokens = StringSimilarity.tokenize(targetHint);
         if (targetTokens.isEmpty()) return false;
 
-        boolean targetIsFinancial = containsAny(targetTokens, FINANCIAL_KEYWORDS);
+        boolean targetIsFinancial = containsAny(targetTokens, FINANCIAL_KEYWORDS)
+                || containsPhrase(targetHint, FINANCIAL_PHRASES);
         boolean targetIsPositive = containsAny(targetTokens, POSITIVE_KEYWORDS) || targetIsFinancial;
-        boolean targetIsDanger = containsAny(targetTokens, DANGER_KEYWORDS);
+        boolean targetIsDanger = containsAny(targetTokens, DANGER_KEYWORDS)
+                || containsPhrase(targetHint, DANGER_PHRASES);
 
         Set<String> nodeTokens = extractNodeTokens(candidateNode);
         if (nodeTokens.isEmpty()) return false;
 
-        boolean nodeHasFinancial = containsAny(nodeTokens, FINANCIAL_KEYWORDS);
-        boolean nodeHasDanger = containsAny(nodeTokens, DANGER_KEYWORDS);
+        boolean nodeHasFinancial = containsAny(nodeTokens, FINANCIAL_KEYWORDS)
+                || nodeContainsPhrase(candidateNode, FINANCIAL_PHRASES);
+        boolean nodeHasDanger = containsAny(nodeTokens, DANGER_KEYWORDS)
+                || nodeContainsPhrase(candidateNode, DANGER_PHRASES);
         boolean nodeHasPositive = containsAny(nodeTokens, POSITIVE_KEYWORDS) || nodeHasFinancial;
 
-        // Rule 0 (Strict Bank Mega Financial Isolation Invariant):
-        // A financial transaction action (e.g. 'Bayar', 'Transfer', 'Checkout', 'Beli')
+        // Rule 0 (Strict Financial Isolation Invariant):
+        // A financial transaction action (e.g. 'Bayar', 'Transfer', 'Jual Unit', 'Penambahan Unit')
         // MUST NEVER be clicked if the target hint did not explicitly request a financial action
         // (e.g. looking for 'OK', 'Lanjut', 'Tutup', 'Simpan', 'Informasi').
         if (nodeHasFinancial && !targetIsFinancial) {
@@ -91,7 +107,7 @@ public final class DangerKeywordGuard {
             return true;
         }
 
-        // Rule 1 (Bank Mega Zero-Loss Destructive Lockout):
+        // Rule 1 (Zero-Loss Destructive Lockout):
         // If target does NOT explicitly request a destructive/danger action,
         // NEVER allow matching any candidate that contains a danger keyword—even if the candidate
         // also contains a positive word (e.g. 'Ya, Hapus', 'Konfirmasi Batal').
@@ -129,6 +145,26 @@ public final class DangerKeywordGuard {
         set.addAll(StringSimilarity.tokenize(node.getStrippedResourceId()));
         set.addAll(StringSimilarity.tokenize(node.getContentDesc()));
         return set;
+    }
+
+    private static boolean nodeContainsPhrase(UIElementNode node, Set<String> phrases) {
+        return containsPhrase(node.getText(), phrases)
+                || containsPhrase(node.getAggregatedDescendantText(2), phrases)
+                || containsPhrase(node.getStrippedResourceId(), phrases)
+                || containsPhrase(node.getContentDesc(), phrases);
+    }
+
+    private static boolean containsPhrase(String raw, Set<String> phrases) {
+        if (raw == null || raw.isBlank()) return false;
+        String normalized = NON_ALNUM_PATTERN.matcher(raw.toLowerCase(Locale.ROOT)).replaceAll(" ").trim();
+        if (normalized.isEmpty()) return false;
+        String padded = " " + normalized + " ";
+        for (String phrase : phrases) {
+            if (padded.contains(" " + phrase + " ")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean containsAny(Set<String> sourceTokens, Set<String> dictionary) {
@@ -173,13 +209,15 @@ public final class DangerKeywordGuard {
 
     private static boolean isCorporateIssuerNode(UIElementNode node) {
         if (node == null) return false;
-        return isCorporateText(node.getText()) || isCorporateText(node.getContentDesc());
+        return isCorporateText(node.getText())
+                || isCorporateText(node.getContentDesc())
+                || isCorporateText(node.getAggregatedDescendantText(2));
     }
 
     private static boolean isCorporateText(String raw) {
         if (raw == null || raw.isBlank()) return false;
-        String normalized = raw.toLowerCase().trim();
-        boolean hasPtPrefix = normalized.startsWith("pt ") || normalized.startsWith("pt.") 
+        String normalized = raw.toLowerCase(Locale.ROOT).trim();
+        boolean hasPtPrefix = normalized.startsWith("pt ") || normalized.startsWith("pt.")
                 || normalized.contains(" pt ") || normalized.contains(" perseroan ");
         if (!hasPtPrefix) return false;
 

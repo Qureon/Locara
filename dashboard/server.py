@@ -35,6 +35,7 @@ from http_utils import (
     drain_small_body,
     is_allowed_host_header,
     is_allowed_loopback_origin,
+    is_allowed_static_path,
     load_audit_events,
     read_json_body,
 )
@@ -127,22 +128,34 @@ class LocaraHandler(http.server.SimpleHTTPRequestHandler):
         self.send_response(204)
         self.end_headers()
 
+    def list_directory(self, path):
+        self._send_json(403, {"error": "Directory listing forbidden"})
+        return None
+
     def do_HEAD(self):
-        if urlparse(self.path).path in ("/api/health", "/api/audit", "/api/config", "/api/report"):
+        path = urlparse(self.path).path
+        if path in ("/api/health", "/api/audit", "/api/config", "/api/report"):
             self.do_GET()
+        elif not is_allowed_static_path(path):
+            self.send_response(403)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.end_headers()
         else:
             super().do_HEAD()
 
     def do_GET(self):
+        path = urlparse(self.path).path
         routes = {
             "/api/health": self.handle_health,
             "/api/audit": self.handle_audit,
             "/api/config": self.handle_get_config,
             "/api/report": self.handle_get_report,
         }
-        handler = routes.get(urlparse(self.path).path)
+        handler = routes.get(path)
         if handler:
             handler()
+        elif not is_allowed_static_path(path):
+            self._send_json(403, {"error": "Forbidden static resource"})
         else:
             super().do_GET()
 

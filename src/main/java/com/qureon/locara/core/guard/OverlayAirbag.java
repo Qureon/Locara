@@ -17,6 +17,7 @@ public class OverlayAirbag {
 
     private static final List<String> PERMISSION_PACKAGES = Arrays.asList(
             "com.android.permissioncontroller",
+            "com.google.android.permissioncontroller",
             "com.google.android.packageinstaller"
     );
 
@@ -39,7 +40,7 @@ public class OverlayAirbag {
             "never"
     );
 
-    private static final List<String> DISMISS_MODAL_TERMS = Arrays.asList(
+    private static final List<String> UNAMBIGUOUS_DISMISS_TERMS = Arrays.asList(
             "nanti saja",
             "tutup",
             "close",
@@ -48,10 +49,29 @@ public class OverlayAirbag {
             "skip",
             "saya mengerti",
             "mengerti",
-            "paham",
+            "paham"
+    );
+
+    private static final List<String> CONTEXTUAL_ACK_TERMS = Arrays.asList(
             "ok",
             "oke",
             "setuju"
+    );
+
+    private static final List<String> MODAL_CONTEXT_SIGNALS = Arrays.asList(
+            "dialog",
+            "modal",
+            "alert",
+            "popup",
+            "pop_up",
+            "promo",
+            "notice",
+            "pemberitahuan",
+            "advisory",
+            "overlay",
+            "problem",
+            "banner",
+            "sheet"
     );
 
     /**
@@ -105,15 +125,20 @@ public class OverlayAirbag {
     public UIElementNode findPermissionAllowButton(List<UIElementNode> nodes) {
         if (nodes == null) return null;
         for (UIElementNode node : nodes) {
-            String resId = node.getResourceId().toLowerCase();
-            String text = node.getText().toLowerCase().trim();
+            String resId = normalizeText(node.getResourceId());
+            String text = normalizeText(node.getText());
 
-            // Explicit deny guard: NEVER click deny/reject buttons
-            if (resId.contains("permission_deny_button") || resId.contains("deny") || REJECT_BUTTON_TERMS.contains(text)) {
+            // Explicit deny guard: NEVER click deny/reject buttons (including Android 14+ variants)
+            if (resId.contains("permission_deny_button")
+                    || resId.contains("permission_deny_and_dont_ask_again_button")
+                    || resId.contains("deny")
+                    || REJECT_BUTTON_TERMS.contains(text)) {
                 continue;
             }
 
-            if (resId.contains("permission_allow_button") || resId.contains("permission_allow_foreground_only_button") || resId.contains("permission_allow_one_time_button")) {
+            if (resId.contains("permission_allow_button")
+                    || resId.contains("permission_allow_foreground_only_button")
+                    || resId.contains("permission_allow_one_time_button")) {
                 return node;
             }
 
@@ -132,14 +157,19 @@ public class OverlayAirbag {
 
     public UIElementNode findModalDismissButton(List<UIElementNode> nodes) {
         if (nodes == null) return null;
+        boolean modalContext = hasModalOrDialogContext(nodes);
         for (UIElementNode node : nodes) {
             if (!node.isClickable()) continue;
 
-            String text = node.getText().toLowerCase().trim();
-            String desc = node.getContentDesc().toLowerCase().trim();
-            String resId = node.getResourceId().toLowerCase();
+            String text = normalizeText(node.getText());
+            String desc = normalizeText(node.getContentDesc());
+            String resId = normalizeText(node.getResourceId());
 
-            if (DISMISS_MODAL_TERMS.contains(text) || DISMISS_MODAL_TERMS.contains(desc)) {
+            if (UNAMBIGUOUS_DISMISS_TERMS.contains(text) || UNAMBIGUOUS_DISMISS_TERMS.contains(desc)) {
+                return node;
+            }
+
+            if (modalContext && (CONTEXTUAL_ACK_TERMS.contains(text) || CONTEXTUAL_ACK_TERMS.contains(desc))) {
                 return node;
             }
 
@@ -148,6 +178,30 @@ public class OverlayAirbag {
             }
         }
         return null;
+    }
+
+    private static boolean hasModalOrDialogContext(List<UIElementNode> nodes) {
+        boolean hasSignal = false;
+        for (UIElementNode n : nodes) {
+            if (n.isInputWidget()) {
+                return false;
+            }
+            String combined = normalizeText(n.getTag()) + " " + normalizeText(n.getClassName())
+                    + " " + normalizeText(n.getResourceId()) + " " + normalizeText(n.getText())
+                    + " " + normalizeText(n.getContentDesc());
+            for (String sig : MODAL_CONTEXT_SIGNALS) {
+                if (combined.contains(sig)) {
+                    hasSignal = true;
+                    break;
+                }
+            }
+        }
+        return hasSignal;
+    }
+
+    private static String normalizeText(String raw) {
+        if (raw == null) return "";
+        return raw.replace('\u2018', '\'').replace('\u2019', '\'').toLowerCase(Locale.ROOT).trim();
     }
 
     private boolean clickNode(Object driver, UIElementNode node) {
