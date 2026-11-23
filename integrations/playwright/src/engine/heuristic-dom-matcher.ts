@@ -4,6 +4,8 @@
  * Evaluates candidates based on Text, WAI-ARIA, Test-ID, Element ID, and Role.
  */
 
+import { isPolarityViolation } from './polarity-guard.js';
+
 export interface RawDomNode {
   tag: string;
   id?: string;
@@ -35,40 +37,8 @@ export interface CandidateElement {
 export class HeuristicDomMatcher {
   private minConfidenceThreshold: number;
 
-  private static readonly DANGER_KEYWORDS = [
-    'batal', 'batalkan', 'cancel', 'hapus', 'delete', 'remove', 'blokir', 'block',
-    'tolak', 'reject', 'decline', 'tutup akun', 'close account', 'logout', 'keluar', 'sign out'
-  ];
-
-  private static readonly FINANCIAL_KEYWORDS = [
-    'bayar', 'pembayaran', 'pay', 'payment', 'transfer', 'kirim uang', 'checkout',
-    'topup', 'top up', 'isi ulang', 'beli', 'pembelian', 'tarik tunai', 'withdraw', 'debet', 'autodebit'
-  ];
-
   constructor(threshold = 0.70) {
     this.minConfidenceThreshold = threshold;
-  }
-
-  private hasKeyword(input: string, keywords: string[]): boolean {
-    if (!input) return false;
-    const norm = input.toLowerCase();
-    const tokens = new Set(norm.split(/[\s_\-./]+/).filter(Boolean));
-    return keywords.some(kw => kw.includes(' ') ? norm.includes(kw) : tokens.has(kw));
-  }
-
-  private isPolarityViolation(targetHint: string, text: string, ariaLabel: string, testId: string, id: string, name: string): boolean {
-    const combined = `${text} ${ariaLabel} ${testId} ${id} ${name}`;
-    const targetDanger = this.hasKeyword(targetHint, HeuristicDomMatcher.DANGER_KEYWORDS);
-    const nodeDanger = this.hasKeyword(combined, HeuristicDomMatcher.DANGER_KEYWORDS);
-    if (targetDanger !== nodeDanger) {
-      return true;
-    }
-    const targetFinancial = this.hasKeyword(targetHint, HeuristicDomMatcher.FINANCIAL_KEYWORDS);
-    const nodeFinancial = this.hasKeyword(combined, HeuristicDomMatcher.FINANCIAL_KEYWORDS);
-    if (!targetFinancial && nodeFinancial) {
-      return true;
-    }
-    return false;
   }
 
   /**
@@ -96,7 +66,7 @@ export class HeuristicDomMatcher {
       const name = el.name || '';
       const placeholder = el.placeholder || '';
 
-      if (this.isPolarityViolation(cleanHint, text, ariaLabel, testId, id, name)) {
+      if (isPolarityViolation(cleanHint, text, ariaLabel, testId, id, name)) {
         continue;
       }
 

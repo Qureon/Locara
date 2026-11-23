@@ -6,6 +6,8 @@
  * during autonomous LLM agent execution in Claude Desktop, Claude Code, and Antigravity IDE.
  */
 
+import { isPolarityViolation } from '../engine/polarity-guard.js';
+
 export interface McpAriaNode {
   role: string;
   name: string;
@@ -88,7 +90,7 @@ export class PlaywrightMcpAdapter {
       }
 
       const nodeName = (node.name || '').toLowerCase().trim();
-      if (!nodeName) {
+      if (!nodeName || isPolarityViolation(cleanHint, nodeName)) {
         continue;
       }
       let score = 0.0;

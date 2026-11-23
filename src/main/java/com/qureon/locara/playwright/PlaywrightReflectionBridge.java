@@ -1,8 +1,9 @@
 package com.qureon.locara.playwright;
 
+import com.qureon.locara.core.driver.ReflectiveAccessUtil;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 
 /**
  * Reflection bridge isolating Microsoft Playwright Page and Locator dynamic lookups
@@ -125,52 +126,7 @@ final class PlaywrightReflectionBridge {
         }
     }
 
-    /**
-     * Resolves a public method from an accessible public superclass or interface so
-     * Java 17+ strong encapsulation does not fail on package-private runtime impls
-     * such as Playwright's PageImpl / LocatorImpl.
-     */
     static Method findAccessibleMethod(Class<?> clazz, String name, Class<?>... paramTypes) throws NoSuchMethodException {
-        if (clazz == null) {
-            throw new NoSuchMethodException(name);
-        }
-        if (Modifier.isPublic(clazz.getModifiers())) {
-            try {
-                return clazz.getMethod(name, paramTypes);
-            } catch (NoSuchMethodException ignored) {}
-        }
-        Method ifaceMethod = findMethodOnPublicInterfaces(clazz, name, paramTypes);
-        if (ifaceMethod != null) {
-            return ifaceMethod;
-        }
-        Class<?> current = clazz.getSuperclass();
-        while (current != null) {
-            if (Modifier.isPublic(current.getModifiers())) {
-                try {
-                    return current.getMethod(name, paramTypes);
-                } catch (NoSuchMethodException ignored) {}
-            }
-            Method superIface = findMethodOnPublicInterfaces(current, name, paramTypes);
-            if (superIface != null) {
-                return superIface;
-            }
-            current = current.getSuperclass();
-        }
-        return clazz.getMethod(name, paramTypes);
-    }
-
-    private static Method findMethodOnPublicInterfaces(Class<?> clazz, String name, Class<?>... paramTypes) {
-        for (Class<?> iface : clazz.getInterfaces()) {
-            if (Modifier.isPublic(iface.getModifiers())) {
-                try {
-                    return iface.getMethod(name, paramTypes);
-                } catch (NoSuchMethodException ignored) {}
-            }
-            Method nested = findMethodOnPublicInterfaces(iface, name, paramTypes);
-            if (nested != null) {
-                return nested;
-            }
-        }
-        return null;
+        return ReflectiveAccessUtil.findAccessibleMethod(clazz, name, paramTypes);
     }
 }
