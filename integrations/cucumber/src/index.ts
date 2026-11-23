@@ -63,7 +63,10 @@ export function toXPathLiteral(value: string): string {
  */
 When(/(?:User clicks on|Pengguna menekan tombol|User taps on|Pengguna memilih)\s+"([^"]+)"/, async function (this: LocaraCucumberWorld, targetHint: string) {
   if (this.locara && this.page) {
-    await this.locara.click(targetHint, targetHint);
+    const clicked = await this.locara.click(targetHint, targetHint);
+    if (!clicked) {
+      throw new Error(`[Locara Cucumber] Failed to click element matching "${targetHint}".`);
+    }
   } else if (this.page) {
     // Direct Playwright healing lookup
     const btn = this.page.getByRole('button', { name: targetHint }).or(this.page.getByText(targetHint));
@@ -73,6 +76,8 @@ When(/(?:User clicks on|Pengguna menekan tombol|User taps on|Pengguna memilih)\s
     const lit = toXPathLiteral(targetHint);
     const el = await this.driver.$(`//*[@text=${lit} or @content-desc=${lit}]`);
     await el.click();
+  } else {
+    throw new Error(`[Locara Cucumber] No active Playwright page or Mobile driver attached to World for click step "${targetHint}".`);
   }
 });
 
@@ -80,11 +85,14 @@ When(/(?:User clicks on|Pengguna menekan tombol|User taps on|Pengguna memilih)\s
  * Universal Input / Fill Step Definition with Autonomous Healing.
  * Matches:
  *   When User fills "123456" into "M-PIN"
- *   And Pengguna memasukkan "mega_user_01" pada field "Username"
+ *   And Pengguna memasukkan "demo_user_01" pada field "Username"
  */
 When(/(?:User fills|Pengguna memasukkan|User types|Pengguna mengisi)\s+"([^"]+)"\s+(?:into|pada field|into field|pada kolom)\s+"([^"]+)"/, async function (this: LocaraCucumberWorld, value: string, targetHint: string) {
   if (this.locara && this.page) {
-    await this.locara.fill(targetHint, value, targetHint);
+    const filled = await this.locara.fill(targetHint, value, targetHint);
+    if (!filled) {
+      throw new Error(`[Locara Cucumber] Failed to fill field matching "${targetHint}".`);
+    }
   } else if (this.page) {
     const input = this.page.getByLabel(targetHint).or(this.page.getByPlaceholder(targetHint)).or(this.page.getByTestId(targetHint));
     await input.fill(value, { timeout: DEFAULT_ACTION_TIMEOUT_MS });
@@ -92,6 +100,8 @@ When(/(?:User fills|Pengguna memasukkan|User types|Pengguna mengisi)\s+"([^"]+)"
     const lit = toXPathLiteral(targetHint);
     const el = await this.driver.$(`//*[@hint=${lit} or @text=${lit} or contains(@resource-id, ${lit})]`);
     await el.setValue(value);
+  } else {
+    throw new Error(`[Locara Cucumber] No active Playwright page or Mobile driver attached to World for fill step "${targetHint}".`);
   }
 });
 
@@ -112,5 +122,7 @@ Then(/(?:User verifies|Pengguna melihat status|User should see|Pengguna memastik
     const lit = toXPathLiteral(targetHint);
     const el = await this.driver.$(`//*[@text=${lit}]`);
     await el.waitForDisplayed({ timeout: DEFAULT_ACTION_TIMEOUT_MS });
+  } else {
+    throw new Error(`[Locara Cucumber] No active Playwright page or Mobile driver attached to World for verify step "${targetHint}".`);
   }
 });

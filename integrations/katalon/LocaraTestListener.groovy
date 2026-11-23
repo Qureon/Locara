@@ -18,6 +18,7 @@ class LocaraTestListener {
 
     private static Object engineInstance = null
     private static final Pattern OBJECT_ID_PATTERN = Pattern.compile("Object Repository/([^'\"\\r\\n)]+)")
+    private static final Pattern OBJECT_NOT_FOUND_PATTERN = Pattern.compile("(?i)Object\\s+['\"][^'\"]+['\"]\\s+not\\s+found")
 
     @BeforeTestCase
     def resetScrollGuardOnStart(TestCaseContext testCaseContext) {
@@ -42,9 +43,10 @@ class LocaraTestListener {
 
         // Check if failure is due to missing element / locator mismatch
         boolean isElementFailure = errorMsg.contains("NoSuchElementException") ||
-                errorMsg.contains("Unable to find the object") ||
+                errorMsg.contains("Unable to find") ||
                 errorMsg.contains("Cannot find element") ||
-                errorMsg.contains("Object not found")
+                errorMsg.contains("Object not found") ||
+                OBJECT_NOT_FOUND_PATTERN.matcher(errorMsg).find()
 
         if (!isElementFailure) {
             return

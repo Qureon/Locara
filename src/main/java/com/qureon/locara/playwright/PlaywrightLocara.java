@@ -3,9 +3,11 @@ package com.qureon.locara.playwright;
 import com.qureon.locara.core.LocaraEngine;
 import com.qureon.locara.core.logging.LocaraLogger;
 import com.qureon.locara.core.model.AppTarget;
+import com.qureon.locara.core.model.HealConfig;
 import com.qureon.locara.core.model.HealContext;
 import com.qureon.locara.core.model.HealResult;
 
+import java.io.File;
 import java.util.Locale;
 
 /**
@@ -16,12 +18,27 @@ public class PlaywrightLocara {
     private static final String LOG_PREFIX = "[PlaywrightLocara]";
     private static final int MIN_PROBE_TIMEOUT_MS = 500;
     private static final int MIN_ACTION_TIMEOUT_MS = 5000;
+    private static final String[] CONFIG_CANDIDATES = {
+            "locara.properties", "qureon.properties",
+            "Include/config/locara.properties", "Include/config/qureon.properties"
+    };
 
-    private static final LocaraEngine ENGINE = new LocaraEngine();
+    private static final LocaraEngine ENGINE = createDefaultEngine();
     private static volatile int defaultProbeTimeoutMs = 2500;
 
-    static {
-        ENGINE.getConfig().setAppTarget(AppTarget.WEB);
+    private static LocaraEngine createDefaultEngine() {
+        String userDir = System.getProperty("user.dir");
+        File propFile = null;
+        for (String candidate : CONFIG_CANDIDATES) {
+            File f = new File(userDir, candidate);
+            if (f.exists()) {
+                propFile = f;
+                break;
+            }
+        }
+        HealConfig config = HealConfig.loadFromProperties(propFile);
+        config.setAppTarget(AppTarget.WEB);
+        return new LocaraEngine(config);
     }
 
     public static LocaraEngine getEngine() { return ENGINE; }

@@ -19,9 +19,9 @@ import java.util.regex.Pattern;
  */
 public class CucumberLocara {
 
-    private static final Pattern QUOTED_PATTERN = Pattern.compile("[\"']([^\"']+)[\"']");
+    private static final Pattern QUOTED_PATTERN = Pattern.compile("([\"'])((?:(?!\\1).)+)\\1");
     private static final Pattern GHERKIN_PREFIX_PATTERN = Pattern.compile("^(?i)(Given|When|Then|And|But|\\*)\\s+");
-    private static final Pattern QUOTED_TOKEN_REMOVE_PATTERN = Pattern.compile("[\"'][^\"']+[\"']");
+    private static final Pattern QUOTED_TOKEN_REMOVE_PATTERN = QUOTED_PATTERN;
     private static final Pattern SET_TEXT_NOISE_PATTERN = Pattern.compile("(?i)\\b(fill|type|into|field|kolom|input|masukkan|pada)\\b");
     private static final Pattern CLICK_NOISE_PATTERN = Pattern.compile("(?i)\\b(button|tombol|klik|click|tap|tekan|pilih|verify|assert|harus|tampil)\\b");
 
@@ -81,20 +81,25 @@ public class CucumberLocara {
         // 1. Strip Gherkin step keywords
         String cleaned = GHERKIN_PREFIX_PATTERN.matcher(rawStep.trim()).replaceFirst("");
 
-        // 2. Extract quoted arguments
+        // 2. Extract quoted arguments using matched opening/closing quotes
         List<String> quotedArgs = new ArrayList<>();
+        int firstQuoteStart = -1;
         Matcher matcher = QUOTED_PATTERN.matcher(cleaned);
         while (matcher.find()) {
-            quotedArgs.add(matcher.group(1));
+            if (firstQuoteStart == -1) {
+                firstQuoteStart = matcher.start();
+            }
+            quotedArgs.add(matcher.group(2));
         }
 
-        // 3. Classify Action Type
+        // 3. Classify Action Type on the unquoted sentence clause so button/label words inside quotes never misclassify
+        String actionClause = QUOTED_TOKEN_REMOVE_PATTERN.matcher(cleaned).replaceAll(" ");
         GherkinStepIntent.ActionType actionType = GherkinStepIntent.ActionType.UNKNOWN;
-        if (INPUT_PATTERN.matcher(cleaned).find()) {
+        if (INPUT_PATTERN.matcher(actionClause).find()) {
             actionType = GherkinStepIntent.ActionType.SET_TEXT;
-        } else if (CLICK_PATTERN.matcher(cleaned).find()) {
+        } else if (CLICK_PATTERN.matcher(actionClause).find()) {
             actionType = GherkinStepIntent.ActionType.CLICK;
-        } else if (VERIFY_PATTERN.matcher(cleaned).find()) {
+        } else if (VERIFY_PATTERN.matcher(actionClause).find()) {
             actionType = GherkinStepIntent.ActionType.VERIFY;
         }
 
@@ -107,10 +112,9 @@ public class CucumberLocara {
                 // Heuristic: Determine which argument is value vs field label
                 // e.g., "fills '123456' into 'PIN'" -> val='123456', hint='PIN'
                 // e.g., "pada field 'PIN' masukkan '123456'" -> hint='PIN', val='123456'
-                int firstIdx = cleaned.indexOf("'" + quotedArgs.get(0) + "'");
-                if (firstIdx == -1) firstIdx = cleaned.indexOf("\"" + quotedArgs.get(0) + "\"");
-
-                String beforeFirst = firstIdx > 0 ? cleaned.substring(0, firstIdx).toLowerCase(java.util.Locale.ROOT) : "";
+                String beforeFirst = firstQuoteStart > 0
+                        ? cleaned.substring(0, firstQuoteStart).toLowerCase(java.util.Locale.ROOT)
+                        : "";
                 if (beforeFirst.contains("field") || beforeFirst.contains("kolom") || beforeFirst.contains("pada")) {
                     targetHint = quotedArgs.get(0);
                     value = quotedArgs.get(1);
@@ -120,15 +124,14 @@ public class CucumberLocara {
                 }
             } else if (quotedArgs.size() == 1) {
                 value = quotedArgs.get(0);
-                String unquoted = QUOTED_TOKEN_REMOVE_PATTERN.matcher(cleaned).replaceAll("");
-                targetHint = SET_TEXT_NOISE_PATTERN.matcher(unquoted).replaceAll("").trim();
+                targetHint = SET_TEXT_NOISE_PATTERN.matcher(actionClause).replaceAll("").trim();
             }
         } else {
             // CLICK or VERIFY
             if (!quotedArgs.isEmpty()) {
                 targetHint = quotedArgs.get(0);
             } else {
-                targetHint = CLICK_NOISE_PATTERN.matcher(cleaned).replaceAll("").trim();
+                targetHint = CLICK_NOISE_PATTERN.matcher(actionClause).replaceAll("").trim();
             }
         }
 
