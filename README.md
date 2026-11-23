@@ -253,8 +253,9 @@ Feature: Pembayaran Tagihan Mobile Banking
 Jalankan evaluasi heuristik dan inspeksi langsung dari terminal:
 
 ```bash
-# 1. Evaluasi & generate file .rs dari berkas XML dump
-java -jar locara-1.16.0.jar --xml dump.xml --hint "Lanjut Transfer" --out "Object Repository/Transfer/btn_Lanjut.rs"
+# 1. Evaluasi & generate file .rs dari berkas XML dump (dengan isolasi direktori proyek / tanpa ledger)
+java -jar locara-1.16.0.jar --xml dump.xml --hint "Lanjut Transfer" --out "Object Repository/Transfer/btn_Lanjut.rs" --project-dir /path/to/project
+java -jar locara-1.16.0.jar --xml dump.xml --hint "Lanjut Transfer" --no-audit
 
 # 2. Inspeksi seluruh elemen interaktif dalam XML / HTML
 java -jar locara-1.16.0.jar --xml dump.xml --inspect
@@ -330,11 +331,14 @@ Jika ada anggota tim yang ingin menonaktifkan self-healing secara lokal di kompu
 
 ## Mission Control Dashboard & UAT Reports
 
-Locara dilengkapi dengan **Mission Control Web Dashboard** berarsitektur modular:
+Locara dilengkapi dengan **Mission Control Web Dashboard** berarsitektur modular dan **100% offline-first** (tanpa CDN eksternal, bound ketat ke `127.0.0.1` dengan static-asset allowlist):
 
 ```bash
 # Jalankan Telemetry Server Lokal
 python3 dashboard/server.py 8088
+
+# Generate laporan HTML UAT standalone (Include/evidence/locara_report.html)
+python3 dashboard/generate_report.py
 
 # Akses via browser: http://localhost:8088
 ```
@@ -345,6 +349,23 @@ Fitur dashboard:
 * **Regression Health**: Analisis visual locator paling volatil (*flaky*).
 * **XML & DOM Recon Lab**: Sandbox interaktif untuk menguji pencocokan heuristik dari raw XML maupun HTML DOM.
 * **UAT Sign-Off Certificate**: Dokumen sertifikat kepatuhan audit otomatis yang siap dicetak ke PDF.
+
+---
+
+## Menjalankan Suite Pengujian
+
+Seluruh suite pengujian berjalan secara offline dan terisolasi (tanpa menulis artefak ke direktori root proyek):
+
+```bash
+# 1. Core Java, Katalon, Appium, Playwright Java, Cucumber JVM & CLI (JUnit 5)
+./gradlew test
+
+# 2. Dashboard Python Backend, Security Allowlist & Report Generator (unittest)
+python3 -m unittest discover -s dashboard/tests -v
+
+# 3. Dashboard JS Modules, Playwright TS & Cucumber TS Adapters (Node built-in test runner)
+node --test dashboard/tests/test_js_modules.mjs integrations/playwright/tests/playwright_locara.test.mjs integrations/cucumber/tests/cucumber_locara.test.mjs
+```
 
 ---
 
@@ -364,26 +385,31 @@ Locara/
 │   └── v1.6_HYBRID_AND_UNIVERSAL_ENTERPRISE_PLAN.md # v1.6.0 Verification & Release Plan
 ├── wiki/                                     # Synchronized GitHub Wiki Pages
 ├── tools/                                    # Maintenance & Wiki Sync Scripts
-├── dashboard/                                # Mission Control Dashboard & Telemetry Platform
+├── dashboard/                                # Mission Control Dashboard & Telemetry Platform (Offline-First)
 │   ├── assets/                               # Vector SVG Logo & Favicon
 │   ├── css/                                  # Modular Stylesheets
-│   ├── js/                                   # Modular ES Architecture (incl. utils.js)
+│   ├── js/                                   # Modular ES Architecture (incl. utils.js & state.js)
+│   ├── tests/                                # Python unittest & Node JS module regression suites
 │   ├── index.html                            # Master Telemetry & Recon Web UI
-│   ├── server.py                             # Python HTTP & live API telemetry server
+│   ├── server.py                             # Threaded HTTP telemetry server (RFC 9110 HEAD + allowlist)
+│   ├── config_store.py                       # Atomic locara.properties persistence & port/schema validation
+│   ├── http_utils.py                         # Loopback origin/host guards, static allowlist & audit loader
+│   ├── recon_service.py                      # XXE-hardened XML spatial recon & XPath synthesizer
 │   └── generate_report.py                    # Standalone HTML UAT sign-off report generator
 ├── integrations/
 │   ├── katalon/
 │   │   ├── LocaraHook.groovy                 # Transparent In-Flight Dynamic Reflection Interceptor
-│   │   ├── LocaraKeywords.groovy             # Native Katalon Custom Keyword wrapper
+│   │   ├── LocaraKeywords.groovy             # Native Katalon Custom Keyword wrapper (True Ghost Mode)
 │   │   └── LocaraTestListener.groovy         # Test Listener lifecycle integration
-│   ├── playwright/                           # @qureon/playwright-locara (TS/JS + MCP Adapter)
+│   ├── playwright/                           # @qureon/playwright-locara (TS/JS + MCP Adapter + Polarity Guard)
 │   └── cucumber/                             # @qureon/cucumber-locara (BDD Step Helpers)
 └── src/
     ├── main/java/
     │   └── com/qureon/locara/                # Core Locara by Qureon Engine
-    │       ├── cli/                          # LocaraCli & CodeNamingAuditor
+    │       ├── cli/                          # LocaraCli, CliCommandHandlers & CodeNamingAuditor
     │       ├── core/LocaraEngine.java        # Core facade & orchestrator
     │       ├── core/context/                 # ContextualEntityResolver & ResolvedAccount
+    │       ├── core/driver/                  # AppiumDriverActionBridge & ReflectiveAccessUtil
     │       ├── core/framework/               # AppFramework, FrameworkDetector, WebViewContextDetector
     │       ├── core/generator/               # Dynamic XPath & .rs XML Synthesizer
     │       ├── core/guard/                   # Danger polarity lockout & OverlayAirbag
@@ -397,7 +423,7 @@ Locara/
     │       ├── appium/                       # Standalone Appium driver wrappers
     │       ├── cucumber/                     # Standalone Cucumber JVM helpers
     │       └── playwright/                   # Standalone Playwright Java wrappers
-    └── test/                                 # Unit & E2E Simulation Suite
+    └── test/                                 # Unit, Regression & E2E Simulation Suite
 ```
 
 ---

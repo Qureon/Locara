@@ -134,14 +134,14 @@ npx playwright test --config=azure-playwright.config.ts --workers=50
 
 ## 🤖 Playwright MCP & Claude Plugin Integration
 
-Official `@playwright/mcp` outputs accessibility tree snapshots:
+Official `@playwright/mcp` outputs accessibility tree snapshots (including multi-bracket metadata):
 ```yaml
-- heading "Ringkasan Pembayaran" [level=2]
-- textbox "Nomor Rekening" [ref=e1]
-- button "Bayar Sekarang" [ref=e2]
+- heading "Ringkasan Pembayaran" [level=2] [ref=e1]
+- textbox "Nomor Rekening" [ref=e2]
+- button "Bayar Sekarang" [disabled] [ref=e3]
 ```
 
-When an LLM agent's cached `[ref=e2]` becomes stale due to DOM re-renders, the `PlaywrightMcpAdapter` automatically recovers the active reference:
+When an LLM agent's cached `[ref=e3]` becomes stale due to DOM re-renders, the `PlaywrightMcpAdapter` parses all bracketed attributes, skips ref-less structural headings, enforces shared Danger & Financial Polarity Isolation (`polarity-guard.ts`), and recovers the active reference:
 
 ```typescript
 import { PlaywrightMcpAdapter } from '@qureon/playwright-locara';
@@ -149,21 +149,31 @@ import { PlaywrightMcpAdapter } from '@qureon/playwright-locara';
 const adapter = new PlaywrightMcpAdapter();
 const healedNode = adapter.recoverElementRef(snapshotText, 'Bayar Sekarang', 'button');
 
-console.log(healedNode?.ref); // Output: e2 (or newly reassigned active ref)
+console.log(healedNode?.ref); // Output: e3 (or newly reassigned active ref)
 ```
 
 ---
 
 ## ⚖️ Multi-Vector Scoring Profile for Modern Web
 
-Locara applies an adaptive scoring profile tuned specifically for modern HTML5, SPAs, and WAI-ARIA:
+Locara applies an adaptive scoring profile tuned specifically for modern HTML5, SPAs, and WAI-ARIA (`HeuristicDomMatcher`):
 
 | Scoring Vector | Web Weight | Target Semantics |
 | :--- | :---: | :--- |
-| **Visible Text** | `30%` | Button label, link text, placeholder, input value |
-| **WAI-ARIA & Semantics** | `30%` | `aria-label`, `role`, `title`, accessibility description |
-| **Test IDs & Identifiers** | `25%` | `data-testid`, `data-test`, `data-cy`, `id`, `name` |
-| **HTML Tag / Role Fit** | `10%` | Role-action pairing (`<button>` for click, `<input>` for fill) |
-| **Spatial / Proximity** | `5%` | Viewport visibility, element enabled state |
+| **Visible Text & Placeholder** | `30%` | Button label, link text, placeholder, input value |
+| **WAI-ARIA & Accessibility** | `25%` | `aria-label`, accessibility label semantics |
+| **Test IDs** | `20%` | `data-testid`, `data-test` |
+| **Element ID & Name** | `15%` | `id`, `name` attributes |
+| **Action, Input Type & Role Fit** | `10%` | Role/tag/inputType pairing (`<button>` & `<input type="submit">` for click, text `<input>`/`<textarea>` for fill) |
 
-**Dominant Semantic Anchor**: When an exact 100% visible text match or exact `aria-label` is present, Locara prevents unmatching technical slugs from penalizing the candidate, guaranteeing instant, confident recovery.
+**Dominant Semantic Anchor**: When a dominant semantic signal reaches `>= 0.80` (e.g., exact visible text or exact `aria-label`), Locara blends `85%` dominant + `15%` secondary semantics (`80%` total) with `20%` action compatibility, guaranteeing confident recovery while enforcing shared Danger & Financial Polarity Lockout.
+
+## 🧪 Verification & Type Checking
+
+```bash
+# Static TypeScript type-check (requires devDependencies installed)
+npm run typecheck
+
+# Standalone Node built-in unit & regression tests (Node 22+)
+node --test tests/playwright_locara.test.mjs
+```

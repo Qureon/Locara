@@ -15,7 +15,7 @@ However, modern BDD suites suffer from a fatal maintenance bottleneck: **Step De
 * Non-technical stakeholders see broken builds (*Red Suites*) and assume functional business logic failed, when in reality only a brittle XPath snapped.
 
 **Locara for Cucumber** eliminates this problem entirely by injecting an **autonomous multi-vector healing layer** into Cucumber Step Definitions:
-1. **Zero-Boilerplate Gherkin Execution**: `CucumberLocara.executeGherkinStep(driver, "When Pengguna menekan tombol 'Lanjut Transfer'")` directly resolves human-readable semantics into actions without fragile locator glue code.
+1. **Zero-Boilerplate Gherkin Execution**: `CucumberLocara.executeGherkinStep(driver, "When Pengguna menekan tombol \"Lanjut Transfer\"", null)` directly resolves human-readable semantics into actions without fragile locator glue code, returning `false` (never false-green) when intent cannot be resolved or verified.
 2. **First-Class Java & TypeScript Parity**: Universal step definitions available for Cucumber-JVM (Java) and `@cucumber/cucumber` (Node.js).
 3. **Cross-Engine Support**: Seamlessly dispatches actions across **Appium Mobile** (Android/iOS), **Selenium WebDriver**, and **Playwright Page**.
 4. **Generative AI Accelerator**: Provides the missing ground-truth execution engine for AI-generated Gherkin scenarios (Kobiton AI, TestMu KaneAI, LLM prompt-to-test pipelines).
@@ -104,3 +104,12 @@ Modern LLMs (Claude 3.5 Sonnet, GPT-4o) excel at generating human-readable Gherk
 1. **LLM generates Gherkin feature files** based on product requirements.
 2. **Locara inspects active UI hierarchies** in real time via multi-vector semantic scoring (Text, ARIA, Test-ID, Spatial Proximity).
 3. **Execution succeeds autonomously** without needing humans to manually spy and map every button.
+
+---
+
+## 🧪 Unit & Regression Verification
+
+```bash
+# Standalone Node built-in unit tests for TypeScript step definitions (Node 22+)
+node --test tests/cucumber_locara.test.mjs
+```
