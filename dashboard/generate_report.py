@@ -55,8 +55,9 @@ def generate_report(output_path=None, audit_path=None):
             'No audit telemetry events recorded. Run Locara tests with audit ledger enabled first.'
             '</td></tr>'
         ]
+    generated_ts = datetime.now().astimezone().strftime("%d %B %Y, %H:%M:%S %Z").strip()
     html = REPORT_TEMPLATE.format(
-        generated_time=datetime.now().strftime("%d %B %Y, %H:%M:%S WIB"),
+        generated_time=generated_ts,
         engine_version=ENGINE_VERSION,
         total_heals=total,
         success_rate=rate,
@@ -72,6 +73,7 @@ def generate_report(output_path=None, audit_path=None):
         (out_dir / "healing_report.html").write_text(html, encoding="utf-8")
     else:
         output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
 
     output_path.write_text(html, encoding="utf-8")
     print(f"✅ Locara Audit Report successfully written to: {output_path}")

@@ -180,6 +180,8 @@ function renderSpatialResults(pairs, emptyEl, wrapperEl) {
                 const orig = btn.innerHTML;
                 btn.innerHTML = `<span style="color: var(--emerald);">✓ Copied</span>`;
                 setTimeout(() => btn.innerHTML = orig, 1500);
+            }).catch(() => {
+                alert("Clipboard tidak tersedia di konteks browser ini.");
             });
         });
     });
@@ -191,6 +193,8 @@ function renderSpatialResults(pairs, emptyEl, wrapperEl) {
             const jsonStr = JSON.stringify(pairs, null, 2);
             navigator.clipboard.writeText(jsonStr).then(() => {
                 alert("Seluruh pasangan field berhasil disalin ke clipboard dalam format JSON!");
+            }).catch(() => {
+                alert("Clipboard tidak tersedia di konteks browser ini.");
             });
         });
     }
@@ -221,13 +225,14 @@ function parseXmlSpatialClient(xmlText) {
                     x1, y1, x2, y2,
                     w: x2 - x1,
                     h: y2 - y1,
-                    clickable: el.getAttribute("clickable") === "true"
+                    clickable: el.getAttribute("clickable") === "true",
+                    displayed: (el.getAttribute("displayed") || "true").toLowerCase() !== "false"
                 });
             }
         });
 
         const pairs = [];
-        const nonButtons = nodes.filter(n => !n.tag.includes("button") && n.w > 0);
+        const nonButtons = nodes.filter(n => !n.tag.includes("button") && n.w > 0 && n.h > 0 && n.displayed);
         const labels = nonButtons.filter(n => n.text);
         const claimed = new Set();
 

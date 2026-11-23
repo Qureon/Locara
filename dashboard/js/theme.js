@@ -16,11 +16,23 @@ function normalizeTheme(candidate, prefersDark) {
     return prefersDark ? "dark" : "light";
 }
 
+function safeStorageGet(key) {
+    try { return localStorage.getItem(key); } catch (_) { return null; }
+}
+
+function safeStorageSet(key, value) {
+    try { localStorage.setItem(key, value); } catch (_) {}
+}
+
+function safeStorageRemove(key) {
+    try { localStorage.removeItem(key); } catch (_) {}
+}
+
 export function initTheme() {
-    const legacySaved = localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
-    const saved = localStorage.getItem(THEME_STORAGE_KEY) || legacySaved;
+    const legacySaved = safeStorageGet(LEGACY_THEME_STORAGE_KEY);
+    const saved = safeStorageGet(THEME_STORAGE_KEY) || legacySaved;
     if (legacySaved !== null) {
-        localStorage.removeItem(LEGACY_THEME_STORAGE_KEY);
+        safeStorageRemove(LEGACY_THEME_STORAGE_KEY);
     }
     const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
     const initialTheme = normalizeTheme(saved, prefersDark);
@@ -40,7 +52,7 @@ export function initTheme() {
 export function applyTheme(theme) {
     const normalized = theme === "light" ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", normalized);
-    localStorage.setItem(THEME_STORAGE_KEY, normalized);
+    safeStorageSet(THEME_STORAGE_KEY, normalized);
 
     const labelWrap = document.getElementById("theme-label");
     const iconWrap = document.getElementById("theme-icon");

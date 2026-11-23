@@ -31,7 +31,7 @@ export function renderInspectorDetails(evt) {
     if (newLoc) newLoc.textContent = evt.healedLocator || "-";
 
     // 2. Vector Breakdown Progress Bars
-    const v = evt.vectors || { text: 0.9, id: 0.9, desc: 0.9, clazz: 1.0, proximity: 1.0 };
+    const v = evt.vectors || { text: 0, id: 0, desc: 0, clazz: 0, proximity: 0 };
     updateVectorRow("vec-text", v.text);
     updateVectorRow("vec-id", v.id);
     updateVectorRow("vec-desc", v.desc);

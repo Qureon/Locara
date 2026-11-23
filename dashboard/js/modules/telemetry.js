@@ -151,7 +151,7 @@ export function renderTelemetryTable() {
         }
 
         const rsPath = evt.generatedRs || evt.rsFile || "";
-        const rsShortName = rsPath ? rsPath.split("/").pop() : "-";
+        const rsShortName = rsPath ? rsPath.split(/[/\\]/).pop() : "-";
         const targetHintStr = evt.targetHint || evt.hint || "-";
         const timeDisplay = evt.timestamp ? ((evt.timestamp.includes(" ") ? evt.timestamp.split(" ")[1] : evt.timestamp.replace("T", " "))) : "-";
 
@@ -239,6 +239,7 @@ function updateKpiMetrics() {
             .filter(p => p && p !== "-" && p !== "N/A")
     ).size;
     const latencies = appState.events
+        .filter(e => e.latencyMs !== null && e.latencyMs !== undefined)
         .map(e => Number(e.latencyMs))
         .filter(n => Number.isFinite(n) && n >= 0);
     const avgLatency = latencies.length > 0

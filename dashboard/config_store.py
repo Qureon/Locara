@@ -3,6 +3,7 @@
 
 import math
 import os
+import tempfile
 from pathlib import Path
 
 ENGINE_VERSION = "v1.16.0"
@@ -40,24 +41,27 @@ class PayloadTooLargeError(ValueError):
     """Raised when an incoming HTTP payload exceeds MAX_REQUEST_BYTES."""
 
 
+def _parse_valid_port(raw_value):
+    try:
+        port = int(raw_value)
+    except (TypeError, ValueError):
+        return None
+    return port if 1 <= port <= 65535 else None
+
+
 def parse_port(argv):
-    """Parse HTTP port from --port, -p, or positional argument; fallback to DEFAULT_PORT."""
+    """Parse HTTP port (1..65535) from --port, -p, or positional argument; fallback to DEFAULT_PORT."""
     for i, arg in enumerate(argv[1:], start=1):
         if arg in ("--port", "-p") and i + 1 < len(argv):
-            try:
-                return int(argv[i + 1])
-            except ValueError:
-                return DEFAULT_PORT
+            port = _parse_valid_port(argv[i + 1])
+            return port if port is not None else DEFAULT_PORT
         if arg.startswith("--port="):
-            try:
-                return int(arg.split("=", 1)[1])
-            except ValueError:
-                return DEFAULT_PORT
+            port = _parse_valid_port(arg.split("=", 1)[1])
+            return port if port is not None else DEFAULT_PORT
         if not arg.startswith("-"):
-            try:
-                return int(arg)
-            except ValueError:
-                pass
+            port = _parse_valid_port(arg)
+            if port is not None:
+                return port
     return DEFAULT_PORT
 
 
@@ -162,9 +166,12 @@ def load_persisted_config(target_config, config_path):
                     pass
             elif cfg_key == "auditLedgerEnabled" and val_str.lower() in ("true", "false"):
                 patch[cfg_key] = val_str.lower() == "true"
-        if patch:
-            target_config.update(validate_config_patch(patch))
-    except Exception:
+        for cfg_key, raw_val in patch.items():
+            try:
+                target_config.update(validate_config_patch({cfg_key: raw_val}))
+            except BadRequestError:
+                pass
+    except OSError:
         pass
     return dict(target_config)
 
@@ -202,4 +209,20 @@ def save_persisted_config(config_data, config_path):
             new_lines.append(f"{prop_key}={prop_val}")
 
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+    payload = "\n".join(new_lines) + "\n"
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=str(target.parent), prefix=".locara_cfg_", delete=False
+        ) as tmp_file:
+            tmp_path = Path(tmp_file.name)
+            tmp_file.write(payload)
+            tmp_file.flush()
+        os.replace(str(tmp_path), str(target))
+    except Exception:
+        if tmp_path is not None and tmp_path.exists():
+            try:
+                tmp_path.unlink()
+            except OSError:
+                pass
+        raise

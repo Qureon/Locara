@@ -36,7 +36,7 @@ window.viewEventForensics = function(eventId) {
     const newLoc = evt.healedLocator || evt.healedXPath || "-";
 
     const dangerGuardStr = evt.guards && evt.guards.dangerLockout ? String(evt.guards.dangerLockout) : "PASSED";
-    title.textContent = `Forensic Trace: ${evt.id}`;
+    if (title) title.textContent = `Forensic Trace: ${evt.id}`;
     body.innerHTML = `
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
             <div class="m-card" style="background: var(--bg-surface); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
@@ -45,13 +45,13 @@ window.viewEventForensics = function(eventId) {
                 <p class="text-sm"><strong>Screen:</strong> ${escapeHtml(evt.screen || "DefaultScreen")}</p>
                 <p class="text-sm"><strong>Aksi:</strong> <span class="action-tag ${escapeHtml(actionStr.toLowerCase())}">${escapeHtml(actionStr)}</span></p>
                 <p class="text-sm"><strong>Target Hint:</strong> "${escapeHtml(targetHintStr)}"</p>
-                <p class="text-sm"><strong>Latency:</strong> ${escapeHtml(String(evt.latencyMs || 0))} ms</p>
+                <p class="text-sm"><strong>Latency:</strong> ${evt.latencyMs !== null && evt.latencyMs !== undefined ? `${escapeHtml(String(evt.latencyMs))} ms` : "N/A"}</p>
             </div>
 
             <div class="m-card" style="background: var(--bg-surface); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
                 <h4 style="font-size: 0.88rem; margin-bottom: 8px;">Hasil Self-Healing</h4>
                 <p class="text-sm"><strong>Confidence:</strong> ${((evt.confidence || 0) * 100).toFixed(1)}%</p>
-                <p class="text-sm"><strong>Status:</strong> ${escapeHtml(evt.status || "SUCCESS")}</p>
+                <p class="text-sm"><strong>Status:</strong> ${escapeHtml(evt.status || "UNKNOWN")}</p>
                 <p class="text-sm"><strong>Danger Guard:</strong> ${escapeHtml(dangerGuardStr)}</p>
                 <p class="text-sm"><strong>Object Repository:</strong></p>
                 <code class="text-xs font-mono" style="color: var(--cyan); word-break: break-all;">${escapeHtml(rsPath)}</code>
@@ -225,7 +225,9 @@ async function connectLiveEngine() {
             }
         }
 
-        if (liveEvents && liveEvents.length > 0) {
+        if (health.status === "ONLINE" && Array.isArray(liveEvents)) {
+            appState.setEvents(liveEvents);
+        } else if (Array.isArray(liveEvents) && liveEvents.length > 0) {
             appState.setEvents(liveEvents);
         }
     }

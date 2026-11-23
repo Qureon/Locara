@@ -47,18 +47,21 @@ function buildXPathSet(w) {
     else if (w.text) xpathAttributes += `[@text=${toXPathLiteral(w.text)}]`;
 
     const xpathRelative = w.resId
-        ? `//*[@resource-id=${toXPathLiteral(w.resId)}]//${safeTag}`
+        ? `//*[@resource-id=${toXPathLiteral(w.resId)} or @id=${toXPathLiteral(w.resId)}]`
         : `//android.widget.LinearLayout/${safeTag}`;
     const xpathCustom = w.text ? `//${safeTag}[text()=${toXPathLiteral(w.text)} or .=${toXPathLiteral(w.text)}]` : "";
     const xpathPosition = `//${safeTag}[1]`;
     return { xpathAttributes, xpathRelative, xpathCustom, xpathPosition };
 }
 
-function buildKatalonRsXml(w, confPct, xpaths) {
+function buildKatalonRsXml(w, confPct, xpaths, frameworkTag) {
     const rawRsBase = (w.resId ? w.resId.split("/").pop() : "element_healed").replace(/[^A-Za-z0-9_.-]/g, "_");
     const rsName = `${rawRsBase || "element_healed"}.rs`;
+    const isWeb = frameworkTag === "WebView" || /^(a|button|div|span|input|select|textarea|form|label)$/i.test(w.clazz || "");
+    const rootTag = isWeb ? "WebElementEntity" : "MobileElementEntity";
+    const collectionTag = isWeb ? "selectorCollection" : "locatorCollection";
     return `<?xml version="1.0" encoding="UTF-8"?>
-<WebElementEntity>
+<${rootTag}>
    <description>Autonomous In-Flight Healed by Locara Engine · Qureon (Confidence: ${escapeXml(confPct)}%)</description>
    <name>${escapeXml(rsName.replace(/\.rs$/, ""))}</name>
    <tag></tag>
@@ -89,13 +92,13 @@ function buildKatalonRsXml(w, confPct, xpaths) {
       <value>${escapeXml(xpaths.xpathPosition)}</value>
       <webElementGuid>${generateGuid()}</webElementGuid>
    </webElementProperties>
-   <selectorCollection>
+   <${collectionTag}>
       <entry>
          <key>XPATH</key>
          <value>${escapeXml(xpaths.xpathAttributes)}</value>
       </entry>
-   </selectorCollection>
-</WebElementEntity>`;
+   </${collectionTag}>
+</${rootTag}>`;
 }
 
 function renderReconResult(result) {
@@ -106,8 +109,13 @@ function renderReconResult(result) {
     if (emptyBox) emptyBox.classList.add("hidden");
     contentBox.classList.remove("hidden");
 
+    if (result.parseError) {
+        contentBox.innerHTML = `<p class="text-danger">${escapeHtml(result.parseError)}</p>`;
+        return;
+    }
+
     const w = result.winner;
-    const fw = result.framework || { name: "Detecting...", conf: 90 };
+    const fw = result.framework || { name: "Detecting...", tag: "Android XML", conf: 90 };
 
     if (!w) {
         contentBox.innerHTML = `<p class="text-danger">Tidak ada elemen yang dapat dicocokkan dari potongan XML ini.</p>`;
@@ -117,7 +125,7 @@ function renderReconResult(result) {
     const confPct = (w.score * 100).toFixed(1);
     const isSuccess = w.score >= APP_CONFIG.defaultThresholds.minSimilarity && !w.lockout;
     const xpaths = buildXPathSet(w);
-    const rsXml = buildKatalonRsXml(w, confPct, xpaths);
+    const rsXml = buildKatalonRsXml(w, confPct, xpaths, fw.tag);
 
     contentBox.innerHTML = `
         <div class="recon-summary-card">
@@ -195,6 +203,8 @@ function renderReconResult(result) {
                 setTimeout(() => {
                     copyBtn.innerHTML = `<span class="btn-icon-wrap">${renderIcon("copy")}</span> Salin XML .rs`;
                 }, 2000);
+            }).catch(() => {
+                copyBtn.textContent = "Gagal menyalin";
             });
         });
     }
