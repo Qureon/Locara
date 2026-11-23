@@ -1,6 +1,7 @@
 package com.qureon.locara.katalon;
 
 import com.qureon.locara.core.driver.AppiumDriverActionBridge;
+import com.qureon.locara.core.driver.ReflectiveAccessUtil;
 import com.qureon.locara.core.model.UIElementNode;
 import java.lang.reflect.Method;
 
@@ -68,8 +69,9 @@ public class KatalonDriverBridge {
                     locatorValue = node.getResourceId();
                 } else if (node.hasText()) {
                     strategyName = "ATTRIBUTES";
+                    String classLit = com.qureon.locara.core.generator.DynamicXPathGenerator.toXPathLiteral(node.getClassName());
                     String textLit = com.qureon.locara.core.generator.DynamicXPathGenerator.toXPathLiteral(node.getText());
-                    locatorValue = "//*[@class = '" + node.getClassName() + "' and (@text = " + textLit + " or . = " + textLit + ")]";
+                    locatorValue = "//*[@class = " + classLit + " and (@text = " + textLit + " or . = " + textLit + ")]";
                 }
             }
 
@@ -144,14 +146,14 @@ public class KatalonDriverBridge {
     static int[] getScreenDimensions(Object driver, int defaultWidth, int defaultHeight) {
         if (driver != null) {
             try {
-                Method manageMethod = driver.getClass().getMethod("manage");
+                Method manageMethod = ReflectiveAccessUtil.findAccessibleMethod(driver.getClass(), "manage");
                 Object windowOptions = manageMethod.invoke(driver);
-                Method windowMethod = windowOptions.getClass().getMethod("window");
+                Method windowMethod = ReflectiveAccessUtil.findAccessibleMethod(windowOptions.getClass(), "window");
                 Object window = windowMethod.invoke(windowOptions);
-                Method getSizeMethod = window.getClass().getMethod("getSize");
+                Method getSizeMethod = ReflectiveAccessUtil.findAccessibleMethod(window.getClass(), "getSize");
                 Object size = getSizeMethod.invoke(window);
-                Method getWidthMethod = size.getClass().getMethod("getWidth");
-                Method getHeightMethod = size.getClass().getMethod("getHeight");
+                Method getWidthMethod = ReflectiveAccessUtil.findAccessibleMethod(size.getClass(), "getWidth");
+                Method getHeightMethod = ReflectiveAccessUtil.findAccessibleMethod(size.getClass(), "getHeight");
                 int w = (int) getWidthMethod.invoke(size);
                 int h = (int) getHeightMethod.invoke(size);
                 if (w > 0 && h > 0) {

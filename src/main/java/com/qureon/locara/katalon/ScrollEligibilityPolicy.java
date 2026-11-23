@@ -61,8 +61,8 @@ final class ScrollEligibilityPolicy {
         if (nodes == null || nodes.isEmpty()) return false;
         for (UIElementNode node : nodes) {
             if (node.isScrollable()) return true;
-            String tag = node.getTag().toLowerCase();
-            String className = node.getClassName().toLowerCase();
+            String tag = node.getTag().toLowerCase(Locale.ROOT);
+            String className = node.getClassName().toLowerCase(Locale.ROOT);
             if (tag.contains("scrollview") || tag.contains("recyclerview") || tag.contains("listview")
                     || className.contains("scrollview") || className.contains("recyclerview")
                     || tag.contains("table") || tag.contains("collectionview")) {
@@ -75,9 +75,9 @@ final class ScrollEligibilityPolicy {
     static boolean hasHorizontalCarousel(List<UIElementNode> nodes) {
         if (nodes == null || nodes.isEmpty()) return false;
         for (UIElementNode node : nodes) {
-            String tag = node.getTag().toLowerCase();
-            String className = node.getClassName().toLowerCase();
-            String resId = node.getResourceId().toLowerCase();
+            String tag = node.getTag().toLowerCase(Locale.ROOT);
+            String className = node.getClassName().toLowerCase(Locale.ROOT);
+            String resId = node.getResourceId().toLowerCase(Locale.ROOT);
             if (tag.contains("horizontalscrollview") || className.contains("horizontalscrollview")
                     || tag.contains("viewpager") || className.contains("viewpager")
                     || tag.contains("tablayout") || className.contains("tablayout")
@@ -93,7 +93,7 @@ final class ScrollEligibilityPolicy {
         if (action == null || action.trim().isEmpty()) {
             return false;
         }
-        String act = action.trim().toUpperCase();
+        String act = action.trim().toUpperCase(Locale.ROOT);
         if (act.contains("VERIFY") || act.contains("WAIT") || act.startsWith("IS_")
                 || act.contains("ASSERT") || act.contains("PRESENT") || act.contains("VISIBLE")
                 || act.contains("PROBE") || act.contains("CHECKPOINT") || act.contains("GET_TEXT")) {

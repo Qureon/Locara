@@ -253,8 +253,8 @@ public class HtmlDomParser {
             }
 
             // Clickable heuristics
-            String role = attributes.getOrDefault("role", "").toLowerCase();
-            String type = attributes.getOrDefault("type", "").toLowerCase();
+            String role = attributes.getOrDefault("role", "").toLowerCase(Locale.ROOT);
+            String type = attributes.getOrDefault("type", "").toLowerCase(Locale.ROOT);
             boolean isClickable = CLICKABLE_TAGS.contains(tagName)
                     || "button".equals(role)
                     || "link".equals(role)
@@ -262,7 +262,7 @@ public class HtmlDomParser {
                     || ("input".equals(tagName) && Arrays.asList("button", "submit", "reset", "checkbox", "radio").contains(type));
 
             // Displayed heuristics
-            String style = attributes.getOrDefault("style", "").toLowerCase();
+            String style = attributes.getOrDefault("style", "").toLowerCase(Locale.ROOT);
             boolean isDisplayed = !style.contains("display:none")
                     && !style.contains("display: none")
                     && !style.contains("visibility:hidden")

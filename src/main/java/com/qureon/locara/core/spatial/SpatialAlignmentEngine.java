@@ -85,7 +85,7 @@ public class SpatialAlignmentEngine {
     public Optional<UIElementNode> findAlignedNode(UIElementNode ref, List<UIElementNode> allNodes, AlignmentMode mode,
                                                    String action, String expectedTag, String labelHint) {
         if (ref == null || ref.getBounds() == null || allNodes == null) return Optional.empty();
-        String expLower = expectedTag != null ? expectedTag.toLowerCase() : "";
+        String expLower = expectedTag != null ? expectedTag.toLowerCase(Locale.ROOT) : "";
         boolean isInputIntent = ("SET_TEXT".equalsIgnoreCase(action) || "INPUT".equalsIgnoreCase(action)
                 || "CLEAR_TEXT".equalsIgnoreCase(action) || "FILL".equalsIgnoreCase(action))
                 || expLower.contains("edittext") || expLower.contains("textfield") || expLower.contains("input");
@@ -98,7 +98,7 @@ public class SpatialAlignmentEngine {
 
     public static boolean isCheckboxSemanticHint(String hint) {
         if (hint == null || hint.isEmpty()) return false;
-        String h = hint.toLowerCase();
+        String h = hint.toLowerCase(Locale.ROOT);
         return h.contains("setuju") || h.contains("syarat") || h.contains("ketentuan")
                 || h.contains("snk") || h.contains("s&k") || h.contains("centang")
                 || h.contains("checkbox") || h.contains("check box") || h.contains("agree")

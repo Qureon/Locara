@@ -11,7 +11,6 @@ import com.qureon.locara.katalon.KeyboardGuard;
 import com.qureon.locara.katalon.ManualScrollGuard;
 import com.qureon.locara.katalon.ScrollRecoveryEngine;
 
-import java.io.File;
 import java.util.List;
 import java.util.Locale;
 
@@ -23,27 +22,10 @@ import java.util.Locale;
 public class AppiumLocara {
 
     private static final String LOG_PREFIX = "[AppiumLocara]";
-    private static final String[] CONFIG_CANDIDATES = {
-            "locara.properties", "qureon.properties",
-            "Include/config/locara.properties", "Include/config/qureon.properties"
-    };
-    private static final LocaraEngine ENGINE = createDefaultEngine();
+    private static final LocaraEngine ENGINE = new LocaraEngine(HealConfig.loadDefault());
     private static final KeyboardGuard KEYBOARD_GUARD = new KeyboardGuard();
     private static volatile ScrollRecoveryEngine scrollEngine =
             new ScrollRecoveryEngine(ENGINE.getConfig().getMaxScrollAttempts());
-
-    private static LocaraEngine createDefaultEngine() {
-        String userDir = System.getProperty("user.dir");
-        File propFile = null;
-        for (String candidate : CONFIG_CANDIDATES) {
-            File f = new File(userDir, candidate);
-            if (f.exists()) {
-                propFile = f;
-                break;
-            }
-        }
-        return new LocaraEngine(HealConfig.loadFromProperties(propFile));
-    }
 
     public static LocaraEngine getEngine() {
         return ENGINE;

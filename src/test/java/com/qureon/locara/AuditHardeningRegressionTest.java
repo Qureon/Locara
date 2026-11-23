@@ -247,4 +247,19 @@ class AuditHardeningRegressionTest {
                 + "<hierarchy><android.widget.TextView text=\"&xxe;\"/></hierarchy>";
         assertThrows(Exception.class, () -> new PageSourceParser().parse(xxe));
     }
+
+    @Test
+    @DisplayName("HealConfig.loadDefault honors root locara.local.properties even when base config is under Include/config")
+    void healConfigLoadDefaultHonorsRootLocalOverride(@TempDir Path tempDir) throws Exception {
+        Path cfgDir = tempDir.resolve("Include/config");
+        Files.createDirectories(cfgDir);
+        Files.writeString(cfgDir.resolve("locara.properties"),
+                "locara.enabled=true\nlocara.threshold=0.82\n", StandardCharsets.UTF_8);
+        Files.writeString(tempDir.resolve("locara.local.properties"),
+                "locara.enabled=false\n", StandardCharsets.UTF_8);
+
+        HealConfig cfg = HealConfig.loadDefault(tempDir.toFile());
+        assertFalse(cfg.isEnabled(), "Root locara.local.properties must override Include/config/locara.properties");
+        assertEquals(0.82, cfg.getMinConfidenceThreshold(), 0.0001);
+    }
 }

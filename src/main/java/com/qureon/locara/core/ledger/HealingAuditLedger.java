@@ -1,5 +1,6 @@
 package com.qureon.locara.core.ledger;
 
+import com.qureon.locara.core.logging.LocaraLogger;
 import com.qureon.locara.core.model.HealCandidate;
 import com.qureon.locara.core.model.HealConfig;
 import com.qureon.locara.core.model.HealContext;
@@ -54,7 +55,7 @@ public class HealingAuditLedger {
             File projectDir = new File(config.getKatalonProjectPath());
             File evidenceDir = new File(projectDir, config.getAuditLogFolder());
             if (!evidenceDir.exists() && !evidenceDir.mkdirs()) {
-                System.err.println("[Locara by Qureon] Warning: failed to create audit evidence directory: " + evidenceDir.getAbsolutePath());
+                LocaraLogger.error("[Locara by Qureon]", "Warning: failed to create audit evidence directory: " + evidenceDir.getAbsolutePath());
                 return;
             }
 
@@ -109,7 +110,7 @@ public class HealingAuditLedger {
                         StandardOpenOption.APPEND
                 );
             } catch (IOException e) {
-                System.err.println("[Locara by Qureon] Failed to write JSON audit ledger: " + e.getMessage());
+                LocaraLogger.error("[Locara by Qureon]", "Failed to write JSON audit ledger: " + e.getMessage());
             }
 
             boolean isNewMd = !mdLogFile.exists();
@@ -141,7 +142,7 @@ public class HealingAuditLedger {
                         StandardOpenOption.APPEND
                 );
             } catch (IOException e) {
-                System.err.println("[Locara by Qureon] Failed to write Markdown audit ledger: " + e.getMessage());
+                LocaraLogger.error("[Locara by Qureon]", "Failed to write Markdown audit ledger: " + e.getMessage());
             }
         }
     }

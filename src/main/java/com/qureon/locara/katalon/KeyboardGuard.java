@@ -1,5 +1,6 @@
 package com.qureon.locara.katalon;
 
+import com.qureon.locara.core.logging.LocaraLogger;
 import com.qureon.locara.core.model.UIElementNode;
 
 import java.lang.reflect.Method;
@@ -92,7 +93,7 @@ public class KeyboardGuard {
         if (isPotentiallyObscured(node, screenHeight)) {
             // Only dismiss if the keyboard is actually confirmed open, or if an input field is active
             if (isKeyboardShown(driver)) {
-                System.out.println("[Locara by Qureon] ⌨️ Active soft keyboard detected obscuring '" + node.getStrippedResourceId() + "'. Dismissing keyboard...");
+                LocaraLogger.info("[Locara by Qureon]", "⌨️ Active soft keyboard detected obscuring '" + node.getStrippedResourceId() + "'. Dismissing keyboard...");
                 dismissKeyboard(driver);
             }
         }

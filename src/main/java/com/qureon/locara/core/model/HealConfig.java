@@ -39,6 +39,14 @@ public class HealConfig {
         return HealConfigLoader.load(propFile);
     }
 
+    public static HealConfig loadDefault() {
+        return HealConfigLoader.loadDefault(new File(System.getProperty("user.dir")));
+    }
+
+    public static HealConfig loadDefault(File projectDir) {
+        return HealConfigLoader.loadDefault(projectDir);
+    }
+
     public boolean isScrollRecoveryEnabled() { return scrollRecoveryEnabled; }
     public void setScrollRecoveryEnabled(boolean val) { this.scrollRecoveryEnabled = val; }
 

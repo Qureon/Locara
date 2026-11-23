@@ -1,5 +1,7 @@
 package com.qureon.locara.core.guard;
 
+import com.qureon.locara.core.driver.ReflectiveAccessUtil;
+import com.qureon.locara.core.logging.LocaraLogger;
 import com.qureon.locara.core.model.UIElementNode;
 import com.qureon.locara.core.parser.PageSourceParser;
 
@@ -88,7 +90,7 @@ public class OverlayAirbag {
             List<UIElementNode> nodes = parser.parse(xmlPageSource);
             return dismissBlockingOverlay(driver, nodes);
         } catch (Throwable t) {
-            System.out.println("[Locara by Qureon] OverlayAirbag scan bypassed: " + t.getMessage());
+            LocaraLogger.info("[Locara by Qureon]", "OverlayAirbag scan bypassed: " + t.getMessage());
             return false;
         }
     }
@@ -105,18 +107,18 @@ public class OverlayAirbag {
             // 1. Check for OS System Permission Dialog
             UIElementNode permButton = findPermissionAllowButton(nodes);
             if (permButton != null) {
-                System.out.println("[Locara by Qureon] 🛡️ OverlayAirbag detected OS runtime permission dialog. Auto-allowing via: '" + permButton.getText() + "'");
+                LocaraLogger.info("[Locara by Qureon]", "🛡️ OverlayAirbag detected OS runtime permission dialog. Auto-allowing via: '" + permButton.getText() + "'");
                 return clickNode(driver, permButton);
             }
 
             // 2. Check for Promotional Modal Overlay with Close Button
             UIElementNode dismissButton = findModalDismissButton(nodes);
             if (dismissButton != null) {
-                System.out.println("[Locara by Qureon] 🛡️ OverlayAirbag detected blocking modal overlay. Auto-dismissing via: '" + dismissButton.getText() + "'");
+                LocaraLogger.info("[Locara by Qureon]", "🛡️ OverlayAirbag detected blocking modal overlay. Auto-dismissing via: '" + dismissButton.getText() + "'");
                 return clickNode(driver, dismissButton);
             }
         } catch (Throwable t) {
-            System.out.println("[Locara by Qureon] OverlayAirbag scan bypassed: " + t.getMessage());
+            LocaraLogger.info("[Locara by Qureon]", "OverlayAirbag scan bypassed: " + t.getMessage());
         }
 
         return false;
@@ -218,13 +220,13 @@ public class OverlayAirbag {
                 return false;
             }
 
-            Method xpathMethod = byClass.getMethod("xpath", String.class);
+            Method xpathMethod = ReflectiveAccessUtil.findAccessibleMethod(byClass, "xpath", String.class);
             Object by = xpathMethod.invoke(null, xpath);
 
-            Method findElementMethod = driver.getClass().getMethod("findElement", byClass);
+            Method findElementMethod = ReflectiveAccessUtil.findAccessibleMethod(driver.getClass(), "findElement", byClass);
             Object element = findElementMethod.invoke(driver, by);
 
-            Method clickMethod = element.getClass().getMethod("click");
+            Method clickMethod = ReflectiveAccessUtil.findAccessibleMethod(element.getClass(), "click");
             clickMethod.invoke(element);
             Thread.sleep(600);
             return true;

@@ -1,6 +1,7 @@
 package com.qureon.locara.cucumber;
 
 import com.qureon.locara.appium.AppiumLocara;
+import com.qureon.locara.core.logging.LocaraLogger;
 import com.qureon.locara.playwright.PlaywrightLocara;
 
 import java.util.ArrayList;
@@ -151,7 +152,7 @@ public class CucumberLocara {
         GherkinStepIntent intent = parseStep(gherkinStep);
         String locator = fallbackLocator != null ? fallbackLocator : "";
 
-        System.out.println(String.format("[CucumberLocara] Executing Step: '%s' -> Action: %s, Target: '%s'",
+        LocaraLogger.info("[CucumberLocara]", String.format("Executing Step: '%s' -> Action: %s, Target: '%s'",
                 gherkinStep, intent.getActionType(), intent.getTargetHint()));
 
         switch (intent.getActionType()) {
@@ -169,7 +170,7 @@ public class CucumberLocara {
                 if (!intent.getTargetHint().isEmpty()) {
                     return tap(driver, locator, intent.getTargetHint());
                 }
-                System.err.println("[CucumberLocara] Unable to determine actionable intent from Gherkin step: " + gherkinStep);
+                LocaraLogger.error("[CucumberLocara]", "Unable to determine actionable intent from Gherkin step: " + gherkinStep);
                 return false;
         }
     }
