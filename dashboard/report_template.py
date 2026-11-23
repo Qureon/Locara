@@ -242,13 +242,15 @@ TIER_STYLE_MAP = {
 DEFAULT_TIER_STYLE = "background:rgba(139,92,246,0.15); color:var(--violet);"
 STATUS_BADGE_MAP = {
     "SUCCESS": "badge-success",
+    "HEALED": "badge-success",
     "SCROLLED": "badge-scrolled",
+    "LOCKOUT": "badge-lockout",
 }
 
 
 def render_table_row(event, confidence_pct_fn):
     """Render one HTML table row from a Locara audit event dictionary with HTML escaping."""
-    status = str(event.get("status", "SUCCESS"))
+    status = str(event.get("status", "UNKNOWN")).upper()
     badge_cls = STATUS_BADGE_MAP.get(status, "badge-lockout")
     tier = str(event.get("intentionTier", "INTERACTION"))
     tier_style = TIER_STYLE_MAP.get(tier, DEFAULT_TIER_STYLE)

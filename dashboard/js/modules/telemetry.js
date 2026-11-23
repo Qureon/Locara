@@ -127,12 +127,16 @@ export function renderTelemetryTable() {
         if (evt.confidence < 0.70) confLevel = "low";
         else if (evt.confidence < 0.90) confLevel = "medium";
 
-        let statusClass = "success";
-        let statusLabel = "SUCCESS";
-        if (evt.status === "SCROLLED") {
+        const rawStatus = String(evt.status || "UNKNOWN").toUpperCase();
+        let statusClass = "lockout";
+        let statusLabel = rawStatus;
+        if (rawStatus === "SUCCESS" || rawStatus === "HEALED") {
+            statusClass = "success";
+            statusLabel = rawStatus;
+        } else if (rawStatus === "SCROLLED") {
             statusClass = "scrolled";
             statusLabel = "AUTO-SCROLLED";
-        } else if (evt.status === "LOCKOUT") {
+        } else if (rawStatus === "LOCKOUT") {
             statusClass = "lockout";
             statusLabel = "LOCKOUT";
         }
@@ -160,7 +164,7 @@ export function renderTelemetryTable() {
                 <td><span class="target-hint-tag font-mono text-sm">${escapeHtml(targetHintStr)}</span></td>
                 <td><div style="display:flex; align-items:center;">${tierPill}<span class="action-tag ${escapeHtml(actionStr.toLowerCase())}">${escapeHtml(actionStr)}</span></div></td>
                 <td><span class="conf-pill ${confLevel}">${confPct}%</span></td>
-                <td><span class="status-pill ${statusClass}">${statusLabel}</span></td>
+                <td><span class="status-pill ${statusClass}">${escapeHtml(statusLabel)}</span></td>
                 <td class="font-mono text-sm text-cyan" title="${escapeHtml(rsPath)}">${escapeHtml(rsShortName)}</td>
                 <td>
                     <button type="button" class="btn btn-secondary btn-sm btn-inspect-forensics" data-id="${safeId}" style="padding: 4px 10px; font-size: 0.76rem;">
@@ -216,8 +220,11 @@ function attachRowClickListeners() {
 
 function updateKpiMetrics() {
     const total = appState.events.length;
-    const success = appState.events.filter(e => e.status === "SUCCESS" || e.status === "SCROLLED").length;
-    const lockouts = appState.events.filter(e => e.status === "LOCKOUT").length;
+    const success = appState.events.filter(e => {
+        const s = String(e.status || "").toUpperCase();
+        return s === "SUCCESS" || s === "HEALED" || s === "SCROLLED";
+    }).length;
+    const lockouts = appState.events.filter(e => String(e.status || "").toUpperCase() === "LOCKOUT").length;
     const probes = appState.events.filter(e => e.action === "VERIFY_PRESENT" || (e.method && e.method.includes("INTENT")) || (e.strategy && e.strategy.includes("INTENT"))).length;
 
     const elTotal = document.getElementById("kpi-total-healed");
@@ -227,7 +234,7 @@ function updateKpiMetrics() {
     const elSanitized = document.getElementById("kpi-sanitized-or");
 
     if (elTotal) elTotal.textContent = total.toLocaleString();
-    if (elSuccess) elSuccess.textContent = total > 0 ? `${((success / total) * 100).toFixed(1)}%` : "100%";
+    if (elSuccess) elSuccess.textContent = total > 0 ? `${((success / total) * 100).toFixed(1)}%` : "0.0%";
     if (elLockouts) elLockouts.textContent = lockouts.toString();
     if (elProbes) elProbes.textContent = probes > 0 ? probes.toString() : "142";
     if (elSanitized) elSanitized.textContent = "4,087";

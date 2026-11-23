@@ -49,60 +49,34 @@ def _resolve_audit_candidates(base_dir):
     return candidates
 
 
-def _default_baseline_events():
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    return [
-        {
-            "timestamp": now_str,
-            "screen": "Transfer / Konfirmasi",
-            "targetHint": "Lanjut",
-            "status": "SUCCESS",
-            "confidence": 0.942,
-            "healedLocator": "//android.widget.Button[@resource-id='com.example.app:id/btn_next_transfer' and @text='Lanjut']",
-            "generatedRs": "Object Repository/Transfer/btn_next_transfer.rs",
-        },
-        {
-            "timestamp": now_str,
-            "screen": "Transfer / Verifikasi PIN",
-            "targetHint": "Input Security PIN 6 Digit",
-            "status": "SUCCESS",
-            "confidence": 0.912,
-            "healedLocator": "//android.widget.EditText[@resource-id='com.example.app:id/input_security_code']",
-            "generatedRs": "Object Repository/Transfer/input_security_code.rs",
-        },
-        {
-            "timestamp": now_str,
-            "screen": "Payment / Tagihan Utilitas",
-            "targetHint": "Bayar Tagihan",
-            "status": "SCROLLED",
-            "confidence": 0.895,
-            "healedLocator": "//android.widget.Button[@resource-id='com.example.app:id/btn_submit_bill']",
-            "generatedRs": "Object Repository/Payment/btn_submit_bill.rs",
-        },
-        {
-            "timestamp": now_str,
-            "screen": "Pengaturan / Blokir Kartu",
-            "targetHint": "Batal Blokir",
-            "status": "LOCKOUT",
-            "confidence": 0.450,
-            "healedLocator": "[BLOCKED BY SAFETY POLARITY GUARD]",
-            "generatedRs": "N/A",
-        },
-    ]
+SUCCESS_STATUSES = frozenset({"SUCCESS", "HEALED", "SCROLLED"})
 
 
 def _load_audit_events(target_file):
-    events = []
-    if target_file and target_file.exists():
-        try:
-            content = target_file.read_text(encoding="utf-8").strip()
-            if content.startswith("["):
-                events = json.loads(content)
-            else:
-                events = [json.loads(line) for line in content.splitlines() if line.strip()]
-        except Exception as exc:
-            print(f"Error parsing audit file: {exc}")
-    return events or _default_baseline_events()
+    if not target_file or not target_file.exists():
+        return []
+    try:
+        content = target_file.read_text(encoding="utf-8").strip()
+        if not content:
+            return []
+        if content.startswith("["):
+            parsed = json.loads(content)
+            return parsed if isinstance(parsed, list) else []
+        events = []
+        for idx, line in enumerate(content.splitlines(), start=1):
+            stripped = line.strip()
+            if not stripped:
+                continue
+            try:
+                item = json.loads(stripped)
+                if isinstance(item, dict):
+                    events.append(item)
+            except json.JSONDecodeError as exc:
+                print(f"Warning: skipping malformed JSONL line {idx} in {target_file}: {exc}")
+        return events
+    except Exception as exc:
+        print(f"Error reading audit file {target_file}: {exc}")
+        return []
 
 
 def generate_report(output_path=None, audit_path=None):
@@ -112,12 +86,19 @@ def generate_report(output_path=None, audit_path=None):
     events = _load_audit_events(target_file)
 
     total = len(events)
-    success = sum(1 for e in events if e.get("status") in ("SUCCESS", "SCROLLED"))
-    scrolled = sum(1 for e in events if e.get("status") == "SCROLLED")
-    lockouts = sum(1 for e in events if e.get("status") == "LOCKOUT")
-    rate = f"{(success / total * 100):.1f}" if total > 0 else "100.0"
+    success = sum(1 for e in events if str(e.get("status", "")).upper() in SUCCESS_STATUSES)
+    scrolled = sum(1 for e in events if str(e.get("status", "")).upper() == "SCROLLED")
+    lockouts = sum(1 for e in events if str(e.get("status", "")).upper() == "LOCKOUT")
+    rate = f"{(success / total * 100):.1f}" if total > 0 else "0.0"
 
-    rows = [render_table_row(e, _safe_confidence_pct) for e in events]
+    if events:
+        rows = [render_table_row(e, _safe_confidence_pct) for e in events]
+    else:
+        rows = [
+            '<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--text-secondary);">'
+            'No audit telemetry events recorded. Run Locara tests with audit ledger enabled first.'
+            '</td></tr>'
+        ]
     html = REPORT_TEMPLATE.format(
         generated_time=datetime.now().strftime("%d %B %Y, %H:%M:%S WIB"),
         engine_version=ENGINE_VERSION,

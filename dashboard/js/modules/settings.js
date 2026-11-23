@@ -6,7 +6,7 @@
  * ==============================================================================
  */
 
-import { saveEngineConfig } from "../api.js";
+import { fetchEngineConfig, saveEngineConfig } from "../api.js";
 import { escapeHtml } from "../utils.js";
 
 const TARGET_PRESETS = {
@@ -54,36 +54,53 @@ export function initSettingsModule() {
     initSliders();
     initProfileSwitcher();
     initSaveButton();
+    hydrateEngineConfig();
+}
+
+async function hydrateEngineConfig() {
+    const cfg = await fetchEngineConfig();
+    if (!cfg || typeof cfg !== "object") return;
+    const key = (typeof cfg.appTarget === "string" && TARGET_PRESETS[cfg.appTarget.toUpperCase()])
+        ? cfg.appTarget.toUpperCase()
+        : "AUTO";
+    applyTargetSelection(key, {
+        minSim: typeof cfg.minSimilarityThreshold === "number" ? cfg.minSimilarityThreshold : undefined,
+        textWeight: typeof cfg.textSimilarityWeight === "number" ? cfg.textSimilarityWeight : undefined,
+        idWeight: typeof cfg.resourceIdSimilarityWeight === "number" ? cfg.resourceIdSimilarityWeight : undefined,
+        descWeight: typeof cfg.contentDescSimilarityWeight === "number" ? cfg.contentDescSimilarityWeight : undefined
+    });
+}
+
+function applyTargetSelection(key, overrides = {}) {
+    const profileBtns = document.querySelectorAll(".profile-btn");
+    const pill = document.getElementById("target-profile-pill");
+    const desc = document.getElementById("target-preset-desc");
+    const normalizedKey = TARGET_PRESETS[key] ? key : "AUTO";
+    currentTargetKey = normalizedKey;
+
+    profileBtns.forEach(b => {
+        b.classList.toggle("active", (b.dataset.target || "AUTO") === normalizedKey);
+    });
+
+    const preset = TARGET_PRESETS[normalizedKey];
+    if (pill) {
+        pill.innerHTML = `<span style="color: var(--cyan);">●</span> ${escapeHtml(preset.pillText)}`;
+    }
+    if (desc) {
+        desc.textContent = preset.desc;
+    }
+
+    setSliderValue("slider-min-sim", "val-min-sim", overrides.minSim ?? preset.minSim, "%");
+    setSliderValue("slider-text-weight", "val-text-weight", overrides.textWeight ?? preset.textWeight, "%");
+    setSliderValue("slider-id-weight", "val-id-weight", overrides.idWeight ?? preset.idWeight, "%");
+    setSliderValue("slider-desc-weight", "val-desc-weight", overrides.descWeight ?? preset.descWeight, "%");
 }
 
 function initProfileSwitcher() {
     const profileBtns = document.querySelectorAll(".profile-btn");
-    const pill = document.getElementById("target-profile-pill");
-    const desc = document.getElementById("target-preset-desc");
-
     profileBtns.forEach(btn => {
         btn.addEventListener("click", () => {
-            const key = btn.dataset.target || "AUTO";
-            currentTargetKey = key;
-
-            profileBtns.forEach(b => b.classList.remove("active"));
-            btn.classList.add("active");
-
-            const preset = TARGET_PRESETS[key] || TARGET_PRESETS["AUTO"];
-
-            if (pill) {
-                pill.innerHTML = `<span style="color: var(--cyan);">●</span> ${escapeHtml(preset.pillText)}`;
-            }
-
-            if (desc) {
-                desc.textContent = preset.desc;
-            }
-
-            // Apply preset slider values
-            setSliderValue("slider-min-sim", "val-min-sim", preset.minSim, "%");
-            setSliderValue("slider-text-weight", "val-text-weight", preset.textWeight, "%");
-            setSliderValue("slider-id-weight", "val-id-weight", preset.idWeight, "%");
-            setSliderValue("slider-desc-weight", "val-desc-weight", preset.descWeight, "%");
+            applyTargetSelection(btn.dataset.target || "AUTO");
         });
     });
 }
@@ -91,8 +108,15 @@ function initProfileSwitcher() {
 function setSliderValue(sliderId, labelId, val, suffix) {
     const slider = document.getElementById(sliderId);
     const label = document.getElementById(labelId);
-    if (slider) slider.value = val;
-    if (label) label.textContent = `${(val * 100).toFixed(0)}${suffix}`;
+    let effective = val;
+    if (slider) {
+        slider.value = String(val);
+        const parsed = parseFloat(slider.value);
+        if (Number.isFinite(parsed)) {
+            effective = parsed;
+        }
+    }
+    if (label) label.textContent = `${(effective * 100).toFixed(0)}${suffix}`;
 }
 
 function initSliders() {
@@ -144,7 +168,11 @@ function initSaveButton() {
             btnSave.textContent = "Simpan Konfigurasi";
 
             if (saveNotice) {
-                saveNotice.textContent = success ? "Konfigurasi berhasil disimpan!" : "Tersimpan di memori sesi aktif.";
+                saveNotice.classList.toggle("text-emerald", success);
+                saveNotice.classList.toggle("text-danger", !success);
+                saveNotice.textContent = success
+                    ? "Konfigurasi berhasil disimpan!"
+                    : "Gagal menyimpan konfigurasi ke server (cek koneksi atau rentang nilai).";
                 saveNotice.classList.remove("hidden");
                 setTimeout(() => {
                     saveNotice.classList.add("hidden");

@@ -14,31 +14,19 @@ const SAMPLE_TRANSACTION_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <hierarchy rotation="0">
   <android.widget.FrameLayout bounds="[0,0][1080,2400]">
     <android.widget.LinearLayout bounds="[0,0][1080,2400]">
-      <!-- Header Screen -->
       <android.widget.TextView text="Detail Konfirmasi Transaksi" bounds="[60,140][900,220]" />
-      
-      <!-- Section: Detail Rekening -->
       <android.widget.TextView text="Rekening Sumber" bounds="[60,320][450,380]" />
       <android.widget.TextView text="Tabungan Utama •••• 9876" bounds="[460,320][1020,380]" />
-
       <android.widget.TextView text="Nama Pengirim" bounds="[60,400][450,460]" />
       <android.widget.TextView text="BUDI PRASETYO" bounds="[460,400][1020,460]" />
-
       <android.widget.TextView text="Nomor Tujuan" bounds="[60,480][450,540]" />
       <android.widget.TextView text="081234567890" bounds="[460,480][1020,540]" />
-
-      <!-- Section: Rincian Pembayaran -->
       <android.widget.TextView text="Nominal Paket" bounds="[60,620][450,680]" />
       <android.widget.TextView text="Rp 100.000" bounds="[460,620][1020,680]" />
-
       <android.widget.TextView text="Biaya Admin" bounds="[60,700][450,760]" />
       <android.widget.TextView text="Rp 1.500" bounds="[460,700][1020,760]" />
-
-      <!-- Terminal Total Row -->
       <android.widget.TextView text="Total Pembayaran" bounds="[60,820][450,900]" />
       <android.widget.TextView text="Rp 101.500" bounds="[460,820][1020,900]" />
-
-      <!-- Bottom Form Button -->
       <android.widget.Button text="Konfirmasi Bayar" bounds="[60,2100][1020,2240]" clickable="true" />
     </android.widget.LinearLayout>
   </android.widget.FrameLayout>
@@ -176,7 +164,17 @@ function renderSpatialResults(pairs, emptyEl, wrapperEl) {
         btn.addEventListener("click", () => {
             const key = escapeCodeString(btn.dataset.key || "");
             const val = escapeCodeString(btn.dataset.val || "");
-            const snippet = `// Locara v1.16.0 Spatial Field Assertion\nString actual = Locara.getFieldValue("${key}")\nassert actual == "${val}" : "Expected ${key} to be '${val}' but got '\${actual}'"`;
+            const snippet = [
+                "// Locara v1.16.0 Spatial Field Assertion (FieldRelationshipParser)",
+                "import com.qureon.locara.core.parser.FieldRelationshipParser",
+                "import com.qureon.locara.katalon.KatalonDriverBridge",
+                "import com.qureon.locara.katalon.Locara",
+                "",
+                "String xml = KatalonDriverBridge.getPageSource(KatalonDriverBridge.getMobileDriver())",
+                "def doc = new FieldRelationshipParser().parse(Locara.getEngine().parsePageSource(xml))",
+                `String actual = doc.get("${key}")`,
+                `assert actual == "${val}" : "Expected ${key} to be '${val}' but got '\${actual}'"`
+            ].join("\n");
             navigator.clipboard.writeText(snippet).then(() => {
                 const orig = btn.innerHTML;
                 btn.innerHTML = `<span style="color: var(--emerald);">✓ Copied</span>`;

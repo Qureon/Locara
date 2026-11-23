@@ -48,12 +48,16 @@ export function renderInspectorDetails(evt) {
     }
 
     if (badgeText) {
-        if (evt.status === "LOCKOUT") {
+        const status = String(evt.status || "").toUpperCase();
+        if (status === "LOCKOUT") {
             badgeText.textContent = "LOCKOUT: DANGER REJECTED";
             if (boundingBox) boundingBox.style.borderColor = "var(--danger)";
-        } else {
-            badgeText.textContent = `HEALED: ${(evt.confidence * 100).toFixed(1)}%`;
+        } else if (status === "SUCCESS" || status === "HEALED" || status === "SCROLLED") {
+            badgeText.textContent = `HEALED: ${((evt.confidence || 0) * 100).toFixed(1)}%`;
             if (boundingBox) boundingBox.style.borderColor = "var(--emerald)";
+        } else {
+            badgeText.textContent = `FAILED: ${status || "REJECTED"}`;
+            if (boundingBox) boundingBox.style.borderColor = "var(--danger)";
         }
     }
 
