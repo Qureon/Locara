@@ -21,6 +21,7 @@ from config_store import (
     BadRequestError,
     DEFAULT_CONFIG,
     DEFAULT_PORT,
+    ENGINE_VERSION,
     FLOAT_CONFIG_KEYS,
     PROPERTIES_KEY_MAP,
     PayloadTooLargeError,
@@ -49,10 +50,10 @@ from recon_service import (
     xp_literal,
 )
 
-ENGINE_VERSION = "v1.16.0"
 ENGINE_BANNER = f"Locara Core {ENGINE_VERSION} · Powered by Qureon (Katalon 11.7.0+ Ready)"
 MAX_REQUEST_BYTES = 2 * 1024 * 1024  # 2 MiB max JSON/XML payload
 
+# Retained for backward compatibility with pre-modularization external helper imports
 _BadRequestError = BadRequestError
 _PayloadTooLargeError = PayloadTooLargeError
 _validate_config_patch = validate_config_patch

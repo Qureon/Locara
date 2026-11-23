@@ -6,7 +6,10 @@ import posixpath
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
-from config_store import BadRequestError, PayloadTooLargeError
+try:
+    from .config_store import BadRequestError, PayloadTooLargeError
+except ImportError:
+    from config_store import BadRequestError, PayloadTooLargeError
 
 LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 ALLOWED_STATIC_ROOT_FILES = frozenset({"/", "/index.html"})

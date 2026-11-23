@@ -8,16 +8,21 @@ Generates an offline-ready, single-file HTML audit report suitable for
 attaching to Jira tickets, Jenkins artifacts, or UAT sign-off documentation.
 """
 
-import json
 import math
-import os
 import sys
 from datetime import datetime
 from pathlib import Path
 
-from report_template import REPORT_TEMPLATE, render_table_row
+try:
+    from .config_store import ENGINE_VERSION, build_audit_candidates
+    from .http_utils import load_audit_events
+    from .report_template import REPORT_TEMPLATE, render_table_row
+except ImportError:
+    from config_store import ENGINE_VERSION, build_audit_candidates
+    from http_utils import load_audit_events
+    from report_template import REPORT_TEMPLATE, render_table_row
 
-ENGINE_VERSION = "v1.16.0"
+SUCCESS_STATUSES = frozenset({"SUCCESS", "HEALED", "SCROLLED"})
 
 
 def _safe_confidence_pct(raw_value):
@@ -30,60 +35,11 @@ def _safe_confidence_pct(raw_value):
         return "0.0%"
 
 
-def _resolve_audit_candidates(base_dir):
-    candidates = []
-    env_log = os.environ.get("LOCARA_AUDIT_LOG")
-    if env_log:
-        candidates.append(Path(env_log).expanduser())
-
-    roots = [base_dir, Path.cwd()]
-    env_dirs = os.environ.get("LOCARA_AUDIT_DIRS", "")
-    for raw_dir in env_dirs.split(os.pathsep):
-        cleaned = raw_dir.strip()
-        if cleaned:
-            roots.append(Path(cleaned).expanduser())
-
-    for root in roots:
-        candidates.append(root / "Include" / "evidence" / "locara_audit.json")
-        candidates.append(root / "Include" / "evidence" / "healing_audit.json")
-    return candidates
-
-
-SUCCESS_STATUSES = frozenset({"SUCCESS", "HEALED", "SCROLLED"})
-
-
-def _load_audit_events(target_file):
-    if not target_file or not target_file.exists():
-        return []
-    try:
-        content = target_file.read_text(encoding="utf-8").strip()
-        if not content:
-            return []
-        if content.startswith("["):
-            parsed = json.loads(content)
-            return parsed if isinstance(parsed, list) else []
-        events = []
-        for idx, line in enumerate(content.splitlines(), start=1):
-            stripped = line.strip()
-            if not stripped:
-                continue
-            try:
-                item = json.loads(stripped)
-                if isinstance(item, dict):
-                    events.append(item)
-            except json.JSONDecodeError as exc:
-                print(f"Warning: skipping malformed JSONL line {idx} in {target_file}: {exc}")
-        return events
-    except Exception as exc:
-        print(f"Error reading audit file {target_file}: {exc}")
-        return []
-
-
 def generate_report(output_path=None, audit_path=None):
-    base_dir = Path(__file__).resolve().parent.parent
-    candidates = ([Path(audit_path)] if audit_path else []) + _resolve_audit_candidates(base_dir)
-    target_file = next((f for f in candidates if f.exists() and f.is_file()), None)
-    events = _load_audit_events(target_file)
+    dashboard_dir = Path(__file__).resolve().parent
+    base_dir = dashboard_dir.parent
+    candidates = ([Path(audit_path)] if audit_path else []) + build_audit_candidates(dashboard_dir)
+    events = [e for e in load_audit_events(candidates) if isinstance(e, dict)]
 
     total = len(events)
     success = sum(1 for e in events if str(e.get("status", "")).upper() in SUCCESS_STATUSES)
