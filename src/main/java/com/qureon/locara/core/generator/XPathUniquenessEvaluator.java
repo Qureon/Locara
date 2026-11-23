@@ -15,13 +15,15 @@ final class XPathUniquenessEvaluator {
     boolean isUnique(String xpath, UIElementNode target, List<UIElementNode> allNodes) {
         if (allNodes == null || allNodes.isEmpty()) return true;
         int matchCount = 0;
+        UIElementNode matched = null;
         for (UIElementNode node : allNodes) {
             if (matchesSimpleXPath(xpath, node)) {
+                matched = node;
                 matchCount++;
                 if (matchCount > 1) return false;
             }
         }
-        return matchCount == 1;
+        return matchCount == 1 && (target == null || matched == target);
     }
 
     boolean isTextUnique(String targetText, List<UIElementNode> allNodes) {
@@ -99,9 +101,11 @@ final class XPathUniquenessEvaluator {
             return node.getAttribute("aria-label").equals(aria) || node.getContentDesc().equals(aria);
         }
         if (xpath.contains("text()=") || xpath.contains("normalize-space(text())=")) {
-            String text = xpath.contains("normalize-space(text())=")
+            boolean normalized = xpath.contains("normalize-space(text())=");
+            String text = normalized
                     ? extractAttr(xpath, "normalize-space(text())=") : extractAttr(xpath, "text()=");
-            return node.getText().equals(text);
+            String nodeText = normalized ? node.getText().trim().replaceAll("\\s+", " ") : node.getText();
+            return nodeText.equals(text);
         }
 
         if (xpath.contains("@resource-id=") && xpath.contains("@text=")) {

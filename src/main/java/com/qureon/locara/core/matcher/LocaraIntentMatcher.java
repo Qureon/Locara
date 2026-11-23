@@ -134,8 +134,7 @@ public final class LocaraIntentMatcher {
         if (minLen >= 4 && lengthRatio >= 0.70) {
             String paddedActual = " " + actualNorm + " ";
             String paddedExpected = " " + expectedNorm + " ";
-            if (paddedActual.contains(paddedExpected) || paddedExpected.contains(paddedActual) ||
-                actualNorm.contains(expectedNorm) || expectedNorm.contains(actualNorm)) {
+            if (paddedActual.contains(paddedExpected) || paddedExpected.contains(paddedActual)) {
                 return 0.95;
             }
         }
@@ -250,7 +249,7 @@ public final class LocaraIntentMatcher {
 
     private static String normalize(String input) {
         if (input == null) return "";
-        return input.toLowerCase()
+        return input.toLowerCase(Locale.ROOT)
                 .replace('_', ' ')
                 .replace('-', ' ')
                 .replaceAll("[^a-z0-9\\s]", " ")

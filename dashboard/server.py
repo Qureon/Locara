@@ -9,62 +9,49 @@ Qureon Autonomous QA Engineering · Qureon Engineering
 import http.server
 import json
 import os
-import socketserver
 import sys
+import threading
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 from xml.etree.ElementTree import ParseError
 
-from config_store import (
-    ALLOWED_TARGETS,
-    BadRequestError,
-    DEFAULT_CONFIG,
-    DEFAULT_PORT,
-    FLOAT_CONFIG_KEYS,
-    PROPERTIES_KEY_MAP,
-    PayloadTooLargeError,
-    build_audit_candidates,
-    load_persisted_config as _load_persisted_config_into,
-    parse_port,
-    save_persisted_config as _save_persisted_config_to,
-    validate_config_patch,
-)
-from http_utils import (
-    LOOPBACK_HOSTS,
-    drain_small_body,
-    is_allowed_host_header,
-    is_allowed_loopback_origin,
-    load_audit_events,
-    read_json_body,
-)
-from recon_service import (
-    BOUNDS_PATTERN,
-    SAFE_TAG_PATTERN,
-    XML_FORBIDDEN_DECL_PATTERN,
-    classify_keyword_tier,
-    extract_label_value_pairs,
-    synthesize_ranked_xpaths,
-    xp_literal,
-)
+try:
+    from . import config_store, http_utils, recon_service
+except ImportError:
+    import config_store  # type: ignore[no-redef]
+    import http_utils  # type: ignore[no-redef]
+    import recon_service  # type: ignore[no-redef]
 
-ENGINE_VERSION = "v1.16.0"
+BadRequestError = config_store.BadRequestError
+PayloadTooLargeError = config_store.PayloadTooLargeError
+DEFAULT_CONFIG = config_store.DEFAULT_CONFIG
+ENGINE_VERSION = config_store.ENGINE_VERSION
+build_audit_candidates = config_store.build_audit_candidates
+_load_persisted_config_into = config_store.load_persisted_config
+parse_port = config_store.parse_port
+_save_persisted_config_to = config_store.save_persisted_config
+validate_config_patch = config_store.validate_config_patch
+drain_small_body = http_utils.drain_small_body
+is_allowed_host_header = http_utils.is_allowed_host_header
+is_allowed_loopback_origin = http_utils.is_allowed_loopback_origin
+is_allowed_static_path = http_utils.is_allowed_static_path
+load_audit_events = http_utils.load_audit_events
+read_json_body = http_utils.read_json_body
+classify_keyword_tier = recon_service.classify_keyword_tier
+extract_label_value_pairs = recon_service.extract_label_value_pairs
+synthesize_ranked_xpaths = recon_service.synthesize_ranked_xpaths
+
 ENGINE_BANNER = f"Locara Core {ENGINE_VERSION} · Powered by Qureon (Katalon 11.7.0+ Ready)"
 MAX_REQUEST_BYTES = 2 * 1024 * 1024  # 2 MiB max JSON/XML payload
 
-_BadRequestError = BadRequestError
-_PayloadTooLargeError = PayloadTooLargeError
-_validate_config_patch = validate_config_patch
-_build_audit_candidates = build_audit_candidates
-_is_allowed_loopback_origin = is_allowed_loopback_origin
-_is_allowed_host_header = is_allowed_host_header
-_xp_literal = xp_literal
-
 PORT = parse_port(sys.argv)
+CONFIG_LOCK = threading.Lock()
 CURRENT_CONFIG = dict(DEFAULT_CONFIG)
 DASHBOARD_DIR = Path(__file__).resolve().parent
 AUDIT_CANDIDATES = build_audit_candidates(DASHBOARD_DIR)
-REPORT_FILE = DASHBOARD_DIR.parent / "Include" / "evidence" / "healing_report.html"
+REPORT_FILE = DASHBOARD_DIR.parent / "Include" / "evidence" / "locara_report.html"
+LEGACY_REPORT_FILE = DASHBOARD_DIR.parent / "Include" / "evidence" / "healing_report.html"
 CONFIG_FILE = (
     Path(os.environ["LOCARA_CONFIG_FILE"]).expanduser()
     if os.environ.get("LOCARA_CONFIG_FILE")
@@ -75,7 +62,8 @@ CONFIG_FILE = (
 def load_persisted_config(config_path=None):
     """Load persisted locara.* configuration properties into CURRENT_CONFIG."""
     target_path = Path(config_path) if config_path is not None else CONFIG_FILE
-    return _load_persisted_config_into(CURRENT_CONFIG, target_path)
+    with CONFIG_LOCK:
+        return _load_persisted_config_into(CURRENT_CONFIG, target_path)
 
 
 def save_persisted_config(config_data, config_path=None):
@@ -102,11 +90,16 @@ class LocaraHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
         super().end_headers()
 
-    def _send_json(self, status_code, payload):
+    def _send_bytes(self, status_code, body, content_type):
         self.send_response(status_code)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        self.wfile.write(json.dumps(payload).encode("utf-8"))
+        if self.command != "HEAD":
+            self.wfile.write(body)
+
+    def _send_json(self, status_code, payload):
+        self._send_bytes(status_code, json.dumps(payload).encode("utf-8"), "application/json; charset=utf-8")
 
     def _validate_request_origin(self):
         if not is_allowed_host_header(self.headers.get("Host")):
@@ -127,24 +120,30 @@ class LocaraHandler(http.server.SimpleHTTPRequestHandler):
         self.send_response(204)
         self.end_headers()
 
-    def do_HEAD(self):
-        if urlparse(self.path).path in ("/api/health", "/api/audit", "/api/config", "/api/report"):
-            self.do_GET()
-        else:
-            super().do_HEAD()
+    def list_directory(self, path):
+        self._send_json(403, {"error": "Directory listing forbidden"})
+        return None
 
-    def do_GET(self):
-        routes = {
+    def _dispatch_read(self, static_handler):
+        path = urlparse(self.path).path
+        handler = {
             "/api/health": self.handle_health,
             "/api/audit": self.handle_audit,
             "/api/config": self.handle_get_config,
             "/api/report": self.handle_get_report,
-        }
-        handler = routes.get(urlparse(self.path).path)
+        }.get(path)
         if handler:
             handler()
+        elif not is_allowed_static_path(path):
+            self._send_json(403, {"error": "Forbidden static resource"})
         else:
-            super().do_GET()
+            static_handler()
+
+    def do_HEAD(self):
+        self._dispatch_read(super().do_HEAD)
+
+    def do_GET(self):
+        self._dispatch_read(super().do_GET)
 
     def do_POST(self):
         if not self._validate_request_origin():
@@ -181,11 +180,13 @@ class LocaraHandler(http.server.SimpleHTTPRequestHandler):
             self._send_json(500, {"error": "Internal server error"})
 
     def handle_health(self):
+        with CONFIG_LOCK:
+            target = CURRENT_CONFIG.get("appTarget", "AUTO")
         self._send_json(200, {
             "status": "ONLINE",
             "engine": ENGINE_BANNER,
             "version": ENGINE_VERSION,
-            "target": CURRENT_CONFIG.get("appTarget", "AUTO"),
+            "target": target,
             "timestamp": datetime.now().isoformat(),
             "server_port": PORT,
         })
@@ -194,28 +195,36 @@ class LocaraHandler(http.server.SimpleHTTPRequestHandler):
         self._send_json(200, load_audit_events(AUDIT_CANDIDATES))
 
     def handle_get_config(self):
-        self._send_json(200, CURRENT_CONFIG)
+        with CONFIG_LOCK:
+            snapshot = dict(CURRENT_CONFIG)
+        self._send_json(200, snapshot)
 
     def handle_post_config(self):
         def _apply(data):
-            CURRENT_CONFIG.update(validate_config_patch(data))
-            save_persisted_config(CURRENT_CONFIG)
-            return {"success": True, "message": "Config saved", "config": CURRENT_CONFIG}
+            validated = validate_config_patch(data)
+            with CONFIG_LOCK:
+                candidate = dict(CURRENT_CONFIG)
+                candidate.update(validated)
+                save_persisted_config(candidate)
+                CURRENT_CONFIG.clear()
+                CURRENT_CONFIG.update(candidate)
+                snapshot = dict(CURRENT_CONFIG)
+            return {"success": True, "message": "Config saved", "config": snapshot}
 
         self._execute_json_post("handle_post_config", _apply, allow_empty=False)
 
     def handle_get_report(self):
-        if REPORT_FILE.exists():
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.end_headers()
-            with open(REPORT_FILE, "rb") as f:
-                self.wfile.write(f.read())
+        report_path = REPORT_FILE if REPORT_FILE.exists() else (
+            LEGACY_REPORT_FILE if LEGACY_REPORT_FILE.exists() else None
+        )
+        if report_path is not None:
+            self._send_bytes(200, report_path.read_bytes(), "text/html; charset=utf-8")
         else:
-            self.send_response(404)
-            self.send_header("Content-Type", "text/plain; charset=utf-8")
-            self.end_headers()
-            self.wfile.write(b"Report not yet generated. Run dashboard/generate_report.py first.")
+            self._send_bytes(
+                404,
+                b"Report not yet generated. Run dashboard/generate_report.py first.",
+                "text/plain; charset=utf-8",
+            )
 
     def handle_extract_fields(self):
         def _extract(body):
@@ -248,8 +257,8 @@ class LocaraHandler(http.server.SimpleHTTPRequestHandler):
 
 
 def run():
-    socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("127.0.0.1", PORT), LocaraHandler) as httpd:
+    http.server.ThreadingHTTPServer.allow_reuse_address = True
+    with http.server.ThreadingHTTPServer(("127.0.0.1", PORT), LocaraHandler) as httpd:
         target_name = os.environ.get("LOCARA_TARGET_NAME", "Active Automation Suite")
         print("\n========================================================")
         print("🛡️  Locara Mission Control Dashboard · Powered by Qureon")
@@ -262,7 +271,6 @@ def run():
             httpd.serve_forever()
         except KeyboardInterrupt:
             print("\nShutting down server cleanly...")
-            httpd.shutdown()
 
 
 if __name__ == "__main__":

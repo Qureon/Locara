@@ -42,8 +42,10 @@ public class CodeNamingAuditor {
     }
 
     private void scanDirectory(File current, File rootDir, List<CodeNamingFinding> findings) {
-        String dirName = current.getName();
-        if (dirName.startsWith(".") || "build".equals(dirName) || "out".equals(dirName)) return;
+        if (!current.equals(rootDir)) {
+            String dirName = current.getName();
+            if (dirName.startsWith(".") || "build".equals(dirName) || "out".equals(dirName)) return;
+        }
 
         File[] files = current.listFiles();
         if (files == null) return;

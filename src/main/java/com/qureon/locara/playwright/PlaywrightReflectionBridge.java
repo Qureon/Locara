@@ -1,5 +1,7 @@
 package com.qureon.locara.playwright;
 
+import com.qureon.locara.core.driver.ReflectiveAccessUtil;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
@@ -18,7 +20,7 @@ final class PlaywrightReflectionBridge {
             return null;
         }
         try {
-            return page.getClass().getMethod("locator", String.class).invoke(page, selector);
+            return findAccessibleMethod(page.getClass(), "locator", String.class).invoke(page, selector);
         } catch (Throwable t) {
             return null;
         }
@@ -29,7 +31,7 @@ final class PlaywrightReflectionBridge {
             Object res = invokeWithTimeoutOptions(locator, "click",
                     "com.microsoft.playwright.Locator$ClickOptions", timeoutMs, new Class<?>[0]);
             if (res != UNSUPPORTED_OPTIONS) return true;
-            locator.getClass().getMethod("click").invoke(locator);
+            findAccessibleMethod(locator.getClass(), "click").invoke(locator);
             return true;
         } catch (Throwable t) {
             return false;
@@ -41,7 +43,7 @@ final class PlaywrightReflectionBridge {
             Object res = invokeWithTimeoutOptions(locator, "fill",
                     "com.microsoft.playwright.Locator$FillOptions", timeoutMs, new Class<?>[]{String.class}, text);
             if (res != UNSUPPORTED_OPTIONS) return true;
-            locator.getClass().getMethod("fill", String.class).invoke(locator, text);
+            findAccessibleMethod(locator.getClass(), "fill", String.class).invoke(locator, text);
             return true;
         } catch (Throwable t) {
             return false;
@@ -54,12 +56,12 @@ final class PlaywrightReflectionBridge {
         if (res != UNSUPPORTED_OPTIONS) {
             return res;
         }
-        return locator.getClass().getMethod("textContent").invoke(locator);
+        return findAccessibleMethod(locator.getClass(), "textContent").invoke(locator);
     }
 
     static boolean invokeIsVisible(Object locator) {
         try {
-            return Boolean.TRUE.equals(locator.getClass().getMethod("isVisible").invoke(locator));
+            return Boolean.TRUE.equals(findAccessibleMethod(locator.getClass(), "isVisible").invoke(locator));
         } catch (Throwable ignored) {
             return false;
         }
@@ -67,7 +69,7 @@ final class PlaywrightReflectionBridge {
 
     static int invokeCount(Object locator) {
         try {
-            Object res = locator.getClass().getMethod("count").invoke(locator);
+            Object res = findAccessibleMethod(locator.getClass(), "count").invoke(locator);
             return res instanceof Number ? ((Number) res).intValue() : 0;
         } catch (Throwable ignored) {
             return 0;
@@ -76,7 +78,7 @@ final class PlaywrightReflectionBridge {
 
     static String extractHtmlContent(Object page) {
         try {
-            Object res = page.getClass().getMethod("content").invoke(page);
+            Object res = findAccessibleMethod(page.getClass(), "content").invoke(page);
             return res != null ? res.toString() : "";
         } catch (Throwable t) {
             return null;
@@ -85,11 +87,11 @@ final class PlaywrightReflectionBridge {
 
     static String extractPageTitleOrUrl(Object page) {
         try {
-            Object title = page.getClass().getMethod("title").invoke(page);
+            Object title = findAccessibleMethod(page.getClass(), "title").invoke(page);
             if (title != null && !title.toString().trim().isEmpty()) {
                 return title.toString().trim();
             }
-            Object url = page.getClass().getMethod("url").invoke(page);
+            Object url = findAccessibleMethod(page.getClass(), "url").invoke(page);
             if (url != null) return url.toString();
         } catch (Throwable ignored) {}
         return "PlaywrightWebPage";
@@ -103,7 +105,7 @@ final class PlaywrightReflectionBridge {
         try {
             Class<?> optsClz = Class.forName(optionsClassName);
             Object opts = optsClz.getDeclaredConstructor().newInstance();
-            optsClz.getMethod("setTimeout", double.class).invoke(opts, (double) timeoutMs);
+            findAccessibleMethod(optsClz, "setTimeout", double.class).invoke(opts, (double) timeoutMs);
 
             Class<?>[] paramTypes = new Class<?>[prefixTypes.length + 1];
             System.arraycopy(prefixTypes, 0, paramTypes, 0, prefixTypes.length);
@@ -113,7 +115,7 @@ final class PlaywrightReflectionBridge {
             System.arraycopy(prefixArgs, 0, args, 0, prefixArgs.length);
             args[prefixArgs.length] = opts;
 
-            Method methodWithOpts = locator.getClass().getMethod(methodName, paramTypes);
+            Method methodWithOpts = findAccessibleMethod(locator.getClass(), methodName, paramTypes);
             return methodWithOpts.invoke(locator, args);
         } catch (ClassNotFoundException | NoSuchMethodException ignored) {
             return UNSUPPORTED_OPTIONS;
@@ -122,5 +124,9 @@ final class PlaywrightReflectionBridge {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    static Method findAccessibleMethod(Class<?> clazz, String name, Class<?>... paramTypes) throws NoSuchMethodException {
+        return ReflectiveAccessUtil.findAccessibleMethod(clazz, name, paramTypes);
     }
 }

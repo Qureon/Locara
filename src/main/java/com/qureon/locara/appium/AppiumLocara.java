@@ -3,6 +3,7 @@ package com.qureon.locara.appium;
 import com.qureon.locara.core.LocaraEngine;
 import com.qureon.locara.core.driver.AppiumDriverActionBridge;
 import com.qureon.locara.core.logging.LocaraLogger;
+import com.qureon.locara.core.model.HealConfig;
 import com.qureon.locara.core.model.HealContext;
 import com.qureon.locara.core.model.HealResult;
 import com.qureon.locara.core.model.UIElementNode;
@@ -21,7 +22,7 @@ import java.util.Locale;
 public class AppiumLocara {
 
     private static final String LOG_PREFIX = "[AppiumLocara]";
-    private static final LocaraEngine ENGINE = new LocaraEngine();
+    private static final LocaraEngine ENGINE = new LocaraEngine(HealConfig.loadDefault());
     private static final KeyboardGuard KEYBOARD_GUARD = new KeyboardGuard();
     private static volatile ScrollRecoveryEngine scrollEngine =
             new ScrollRecoveryEngine(ENGINE.getConfig().getMaxScrollAttempts());

@@ -3,7 +3,6 @@ package com.qureon.locara.core.driver;
 import com.qureon.locara.core.logging.LocaraLogger;
 
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.Collections;
 import java.util.List;
 
@@ -122,7 +121,7 @@ public final class AppiumDriverActionBridge {
             findAccessibleMethod(cls, "clear").invoke(element);
             return true;
         }
-        return true;
+        return false;
     }
 
     public static String readElementText(Object element) throws ReflectiveOperationException {
@@ -192,30 +191,11 @@ public final class AppiumDriverActionBridge {
     }
 
     /**
-     * Resolves a {@link Method} preferring a public superclass or interface declaration so
-     * anonymous or package-private test/proxy subclasses remain callable across package boundaries.
+     * Delegates to {@link ReflectiveAccessUtil#findAccessibleMethod} for backward compatibility.
      */
     public static Method findAccessibleMethod(Class<?> targetClass, String name, Class<?>... paramTypes)
             throws NoSuchMethodException {
-        Method direct = targetClass.getMethod(name, paramTypes);
-        if (Modifier.isPublic(direct.getDeclaringClass().getModifiers())) {
-            return direct;
-        }
-        for (Class<?> cur = targetClass.getSuperclass(); cur != null && cur != Object.class; cur = cur.getSuperclass()) {
-            if (Modifier.isPublic(cur.getModifiers())) {
-                try {
-                    return cur.getMethod(name, paramTypes);
-                } catch (NoSuchMethodException ignored) {}
-            }
-        }
-        for (Class<?> iface : targetClass.getInterfaces()) {
-            if (Modifier.isPublic(iface.getModifiers())) {
-                try {
-                    return iface.getMethod(name, paramTypes);
-                } catch (NoSuchMethodException ignored) {}
-            }
-        }
-        return direct;
+        return ReflectiveAccessUtil.findAccessibleMethod(targetClass, name, paramTypes);
     }
 
     private static Object createBy(String locatorOrXPath) throws ReflectiveOperationException {

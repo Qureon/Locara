@@ -17,7 +17,8 @@ public class ScriptVariableAligner {
 
     private static final Pattern TRY_BLOCK_PATTERN = Pattern.compile("^([ \\t]*)try\\s*\\{", Pattern.MULTILINE);
     private static final Pattern BINDING_VAR_DECL_PATTERN = Pattern.compile(
-            "([ \\t]*(?:String|def)\\s+[a-zA-Z_][a-zA-Z0-9_]*\\s*=[^\\n]*binding\\.[^\\n]*\\n)"
+            "^([ \\t]*(?:String|def)\\s+[a-zA-Z_][a-zA-Z0-9_]*\\s*=[^\\r\\n]*binding\\.[^\\r\\n]*(?:\\r?\\n|$))",
+            Pattern.MULTILINE
     );
 
     /**
@@ -66,10 +67,14 @@ public class ScriptVariableAligner {
             if (!mTry.find()) {
                 break;
             }
-            int tryPos = mTry.start();
+            int openBrace = mTry.end() - 1;
+            int closeBrace = findMatchingBrace(current, openBrace);
+            if (closeBrace < 0) {
+                break;
+            }
             Matcher mDecl = BINDING_VAR_DECL_PATTERN.matcher(current);
             while (mDecl.find()) {
-                if (mDecl.start() > tryPos) {
+                if (mDecl.start() > openBrace && mDecl.start() < closeBrace) {
                     current = relocateDeclarationBeforeTry(current, mDecl.start(), mDecl.end(), mDecl.group(1).trim());
                     moved = true;
                     break;
@@ -84,17 +89,79 @@ public class ScriptVariableAligner {
         if (!mTry.find()) {
             return content;
         }
-        int tryPos = mTry.start();
+        int openBrace = mTry.end() - 1;
+        int closeBrace = findMatchingBrace(content, openBrace);
+        if (closeBrace < 0) {
+            return content;
+        }
 
-        Pattern declPattern = Pattern.compile("([ \\t]*(?:String|def)\\s+" + Pattern.quote(varName) + "\\s*=[^\\n]*\\n)");
+        Pattern declPattern = Pattern.compile(
+                "^([ \\t]*(?:String|def)\\s+" + Pattern.quote(varName) + "\\s*=[^\\r\\n]*(?:\\r?\\n|$))",
+                Pattern.MULTILINE
+        );
         Matcher mDecl = declPattern.matcher(content);
 
         while (mDecl.find()) {
-            if (mDecl.start() > tryPos) {
+            if (mDecl.start() > openBrace && mDecl.start() < closeBrace) {
                 return relocateDeclarationBeforeTry(content, mDecl.start(), mDecl.end(), mDecl.group(1).trim());
             }
         }
         return content;
+    }
+
+    /**
+     * Finds the closing brace matching the try block's opening '{' while skipping comments and quoted literals
+     * so declarations inside catch/finally or after the try block are never moved.
+     */
+    private static int findMatchingBrace(String content, int openBraceIdx) {
+        int depth = 0;
+        boolean inSingle = false;
+        boolean inDouble = false;
+        boolean inLineComment = false;
+        boolean inBlockComment = false;
+        int len = content.length();
+
+        for (int i = openBraceIdx; i < len; i++) {
+            char c = content.charAt(i);
+            char next = (i + 1 < len) ? content.charAt(i + 1) : '\0';
+
+            if (inLineComment) {
+                if (c == '\n') inLineComment = false;
+                continue;
+            }
+            if (inBlockComment) {
+                if (c == '*' && next == '/') {
+                    inBlockComment = false;
+                    i++;
+                }
+                continue;
+            }
+            if (inSingle) {
+                if (c == '\\') { i++; continue; }
+                if (c == '\'') inSingle = false;
+                continue;
+            }
+            if (inDouble) {
+                if (c == '\\') { i++; continue; }
+                if (c == '"') inDouble = false;
+                continue;
+            }
+
+            if (c == '/' && next == '/') { inLineComment = true; i++; continue; }
+            if (c == '/' && next == '*') { inBlockComment = true; i++; continue; }
+            if (c == '\'') { inSingle = true; continue; }
+            if (c == '"') { inDouble = true; continue; }
+
+            if (c == '{') {
+                depth++;
+            } else if (c == '}') {
+                depth--;
+                if (depth == 0) {
+                    return i;
+                }
+            }
+        }
+        return -1;
     }
 
     private String relocateDeclarationBeforeTry(String content, int declStart, int declEnd, String cleanDecl) {

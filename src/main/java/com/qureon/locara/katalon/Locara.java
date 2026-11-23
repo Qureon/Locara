@@ -170,6 +170,7 @@ public class Locara {
     }
 
     public static String healAndGetText(Object testObject, int timeoutSeconds, String hint) {
+        if (!ENGINE.getConfig().isEnabled()) return "";
         return COORDINATOR.healAndGetText(testObject, timeoutSeconds, hint);
     }
 

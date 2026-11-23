@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("Locara CLI Subcommand Routing & Exit Code Suite")
@@ -82,14 +83,32 @@ class LocaraCliTest {
         Path xmlFile = tempDir.resolve("screen.xml");
         Files.writeString(xmlFile, SAMPLE_XML, StandardCharsets.UTF_8);
 
-        CliRun matched = invokeCli("--xml", xmlFile.toString(), "--hint", "Lanjut", "--action", "TAP");
+        Path isolatedProject = tempDir.resolve("proj-audit");
+        Files.createDirectories(isolatedProject);
+        CliRun matched = invokeCli(
+                "--xml", xmlFile.toString(),
+                "--hint", "Lanjut",
+                "--action", "TAP",
+                "--project-dir", isolatedProject.toString()
+        );
         assertEquals(0, matched.exitCode());
         assertTrue(matched.stdout().contains("MATCH FOUND"));
         assertTrue(matched.stdout().contains("btn_lanjut"));
+        assertTrue(Files.exists(isolatedProject.resolve("Include/evidence/locara_audit.json")),
+                "Audit ledger should be written inside isolated --project-dir");
 
-        CliRun missed = invokeCli("--xml", xmlFile.toString(), "--hint", "NonExistentQuantumButtonXYZ");
+        Path noAuditProject = tempDir.resolve("proj-no-audit");
+        Files.createDirectories(noAuditProject);
+        CliRun missed = invokeCli(
+                "--xml", xmlFile.toString(),
+                "--hint", "NonExistentQuantumButtonXYZ",
+                "--project-dir", noAuditProject.toString(),
+                "--no-audit"
+        );
         assertEquals(2, missed.exitCode());
         assertTrue(missed.stdout().contains("Healing Failed"));
+        assertFalse(Files.exists(noAuditProject.resolve("Include/evidence/locara_audit.json")),
+                "--no-audit must suppress ledger file writes");
     }
 
     @Test

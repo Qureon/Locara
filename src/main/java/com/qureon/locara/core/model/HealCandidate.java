@@ -61,10 +61,11 @@ public class HealCandidate implements Comparable<HealCandidate> {
 
     @Override
     public String toString() {
-        return String.format("HealCandidate{confidence=%.2f%%, id='%s', text='%s', xpath='%s', reason='%s'}",
+        return String.format(java.util.Locale.US,
+                "HealCandidate{confidence=%.2f%%, id='%s', text='%s', xpath='%s', reason='%s'}",
                 confidenceScore * 100.0,
-                node.getStrippedResourceId(),
-                node.getText(),
+                node != null ? node.getStrippedResourceId() : "",
+                node != null ? node.getText() : "",
                 suggestedXPath,
                 healReason);
     }

@@ -8,16 +8,21 @@ Generates an offline-ready, single-file HTML audit report suitable for
 attaching to Jira tickets, Jenkins artifacts, or UAT sign-off documentation.
 """
 
-import json
 import math
-import os
 import sys
 from datetime import datetime
 from pathlib import Path
 
-from report_template import REPORT_TEMPLATE, render_table_row
+try:
+    from .config_store import ENGINE_VERSION, build_audit_candidates
+    from .http_utils import load_audit_events
+    from .report_template import REPORT_TEMPLATE, render_table_row
+except ImportError:
+    from config_store import ENGINE_VERSION, build_audit_candidates
+    from http_utils import load_audit_events
+    from report_template import REPORT_TEMPLATE, render_table_row
 
-ENGINE_VERSION = "v1.16.0"
+SUCCESS_STATUSES = frozenset({"SUCCESS", "HEALED", "SCROLLED"})
 
 
 def _safe_confidence_pct(raw_value):
@@ -30,96 +35,29 @@ def _safe_confidence_pct(raw_value):
         return "0.0%"
 
 
-def _resolve_audit_candidates(base_dir):
-    candidates = []
-    env_log = os.environ.get("LOCARA_AUDIT_LOG")
-    if env_log:
-        candidates.append(Path(env_log).expanduser())
-
-    roots = [base_dir, Path.cwd()]
-    env_dirs = os.environ.get("LOCARA_AUDIT_DIRS", "")
-    for raw_dir in env_dirs.split(os.pathsep):
-        cleaned = raw_dir.strip()
-        if cleaned:
-            roots.append(Path(cleaned).expanduser())
-
-    for root in roots:
-        candidates.append(root / "Include" / "evidence" / "locara_audit.json")
-        candidates.append(root / "Include" / "evidence" / "healing_audit.json")
-    return candidates
-
-
-def _default_baseline_events():
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    return [
-        {
-            "timestamp": now_str,
-            "screen": "Transfer / Konfirmasi",
-            "targetHint": "Lanjut",
-            "status": "SUCCESS",
-            "confidence": 0.942,
-            "healedLocator": "//android.widget.Button[@resource-id='com.example.app:id/btn_next_transfer' and @text='Lanjut']",
-            "generatedRs": "Object Repository/Transfer/btn_next_transfer.rs",
-        },
-        {
-            "timestamp": now_str,
-            "screen": "Transfer / Verifikasi PIN",
-            "targetHint": "Input Security PIN 6 Digit",
-            "status": "SUCCESS",
-            "confidence": 0.912,
-            "healedLocator": "//android.widget.EditText[@resource-id='com.example.app:id/input_security_code']",
-            "generatedRs": "Object Repository/Transfer/input_security_code.rs",
-        },
-        {
-            "timestamp": now_str,
-            "screen": "Payment / Tagihan Utilitas",
-            "targetHint": "Bayar Tagihan",
-            "status": "SCROLLED",
-            "confidence": 0.895,
-            "healedLocator": "//android.widget.Button[@resource-id='com.example.app:id/btn_submit_bill']",
-            "generatedRs": "Object Repository/Payment/btn_submit_bill.rs",
-        },
-        {
-            "timestamp": now_str,
-            "screen": "Pengaturan / Blokir Kartu",
-            "targetHint": "Batal Blokir",
-            "status": "LOCKOUT",
-            "confidence": 0.450,
-            "healedLocator": "[BLOCKED BY SAFETY POLARITY GUARD]",
-            "generatedRs": "N/A",
-        },
-    ]
-
-
-def _load_audit_events(target_file):
-    events = []
-    if target_file and target_file.exists():
-        try:
-            content = target_file.read_text(encoding="utf-8").strip()
-            if content.startswith("["):
-                events = json.loads(content)
-            else:
-                events = [json.loads(line) for line in content.splitlines() if line.strip()]
-        except Exception as exc:
-            print(f"Error parsing audit file: {exc}")
-    return events or _default_baseline_events()
-
-
 def generate_report(output_path=None, audit_path=None):
-    base_dir = Path(__file__).resolve().parent.parent
-    candidates = ([Path(audit_path)] if audit_path else []) + _resolve_audit_candidates(base_dir)
-    target_file = next((f for f in candidates if f.exists() and f.is_file()), None)
-    events = _load_audit_events(target_file)
+    dashboard_dir = Path(__file__).resolve().parent
+    base_dir = dashboard_dir.parent
+    candidates = ([Path(audit_path)] if audit_path else []) + build_audit_candidates(dashboard_dir)
+    events = [e for e in load_audit_events(candidates) if isinstance(e, dict)]
 
     total = len(events)
-    success = sum(1 for e in events if e.get("status") in ("SUCCESS", "SCROLLED"))
-    scrolled = sum(1 for e in events if e.get("status") == "SCROLLED")
-    lockouts = sum(1 for e in events if e.get("status") == "LOCKOUT")
-    rate = f"{(success / total * 100):.1f}" if total > 0 else "100.0"
+    success = sum(1 for e in events if str(e.get("status", "")).upper() in SUCCESS_STATUSES)
+    scrolled = sum(1 for e in events if str(e.get("status", "")).upper() == "SCROLLED")
+    lockouts = sum(1 for e in events if str(e.get("status", "")).upper() == "LOCKOUT")
+    rate = f"{(success / total * 100):.1f}" if total > 0 else "0.0"
 
-    rows = [render_table_row(e, _safe_confidence_pct) for e in events]
+    if events:
+        rows = [render_table_row(e, _safe_confidence_pct) for e in events]
+    else:
+        rows = [
+            '<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--text-secondary);">'
+            'No audit telemetry events recorded. Run Locara tests with audit ledger enabled first.'
+            '</td></tr>'
+        ]
+    generated_ts = datetime.now().astimezone().strftime("%d %B %Y, %H:%M:%S %Z").strip()
     html = REPORT_TEMPLATE.format(
-        generated_time=datetime.now().strftime("%d %B %Y, %H:%M:%S WIB"),
+        generated_time=generated_ts,
         engine_version=ENGINE_VERSION,
         total_heals=total,
         success_rate=rate,
@@ -135,6 +73,7 @@ def generate_report(output_path=None, audit_path=None):
         (out_dir / "healing_report.html").write_text(html, encoding="utf-8")
     else:
         output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
 
     output_path.write_text(html, encoding="utf-8")
     print(f"✅ Locara Audit Report successfully written to: {output_path}")

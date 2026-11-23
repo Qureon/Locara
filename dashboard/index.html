@@ -6,9 +6,6 @@
     <title>Locara Mission Control · Powered by Qureon</title>
     <meta name="description" content="Locara by Qureon — Autonomous In-Memory Self-Healing & Instant Object Repository Synthesizer Dashboard">
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
@@ -27,7 +24,7 @@
                     <span class="brand-title">LOCARA</span>
                     <div class="brand-badge-row">
                         <span class="brand-sub">BY QUREON</span>
-                        <span class="semver-badge">v1.16.0</span>
+                        <span class="semver-badge">v1.16.1</span>
                     </div>
                 </div>
             </div>
@@ -81,7 +78,7 @@
                     <div class="status-indicator pulse"></div>
                     <div class="engine-status-meta">
                         <span class="status-title">Core Engine Active</span>
-                        <span class="status-sub">In-Flight Hook v1.16.0</span>
+                        <span class="status-sub">In-Flight Hook v1.16.1</span>
                     </div>
                 </div>
             </div>
@@ -268,7 +265,7 @@
                                 <div class="mock-msmile-app">
                                     <div class="mock-app-header">
                                         <span>Konfirmasi Transfer</span>
-                                        <span class="text-xs text-muted">M-Smile</span>
+                                        <span class="text-xs text-muted">Target App</span>
                                     </div>
                                     <div class="mock-card">
                                         <span class="mock-label">Rekening Sumber</span>
@@ -425,7 +422,7 @@
                                 <span class="btn-icon-wrap" data-icon="zap"></span> Jalankan Simulasi
                             </button>
                             <button class="btn btn-secondary" id="btn-load-sample">
-                                <span class="btn-icon-wrap" data-icon="fileText"></span> Muat Sampel M-Smile
+                                <span class="btn-icon-wrap" data-icon="fileText"></span> Muat Sampel XML
                             </button>
                         </div>
                     </div>
@@ -443,13 +440,13 @@
                 </div>
             </section>
 
-            <!-- TAB: Universal Spatial & Form Inspector (v1.16.0) -->
+            <!-- TAB: Universal Spatial & Form Inspector (v1.16.1) -->
             <section class="tab-pane" id="pane-form-inspector">
                 <div class="playground-layout">
                     <div class="card" style="padding: 24px;">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
                             <h3 class="card-title">Universal 2D Spatial Relationship Inspector</h3>
-                            <span class="badge badge-accent">Core v1.16.0</span>
+                            <span class="badge badge-accent">Core v1.16.1</span>
                         </div>
                         <p class="card-sub">Ekstraksi otonom pasangan field transaksi (Label &rarr; Value) berbasis irisan geometris 2D &amp; batas seksi tanpa hardcode selector.</p>
 
@@ -493,28 +490,31 @@
                     <div class="compliance-meta-grid">
                         <div class="meta-item"><span class="m-lbl">Aplikasi Target:</span> <span class="m-val">Mobile App (Android / iOS)</span></div>
                         <div class="meta-item"><span class="m-lbl">Siklus Pengujian:</span> <span class="m-val">Sprint UAT Regression Cycle</span></div>
-                        <div class="meta-item"><span class="m-lbl">Engine Version:</span> <span class="m-val font-mono">Locara Core v1.16.0</span></div>
-                        <div class="meta-item"><span class="m-lbl">Integritas Hash:</span> <span class="m-val font-mono text-cyan">SHA-256: 7f8a3c...9b1e</span></div>
+                        <div class="meta-item"><span class="m-lbl">Engine Version:</span> <span class="m-val font-mono" id="comp-engine-version">Locara Core v1.16.1</span></div>
+                        <div class="meta-item"><span class="m-lbl">Integritas Hash:</span> <span class="m-val font-mono text-cyan" id="comp-integrity-hash">Computing...</span></div>
                     </div>
 
                     <div class="audit-summary-box">
                         <div class="audit-stat">
-                            <span class="s-val text-emerald">100%</span>
-                            <span class="s-lbl">Safety Polarity Compliance</span>
+                            <span class="s-val text-emerald" id="comp-safety-rate">0.0%</span>
+                            <span class="s-lbl">Safety &amp; Heal Compliance</span>
                         </div>
                         <div class="audit-stat">
-                            <span class="s-val text-cyan">1,419</span>
+                            <span class="s-val text-cyan" id="comp-healed-count">0</span>
                             <span class="s-lbl">Successful In-Flight Heals</span>
                         </div>
                         <div class="audit-stat">
-                            <span class="s-val text-violet">0</span>
-                            <span class="s-lbl">False-Positive Destructive Actions</span>
+                            <span class="s-val text-violet" id="comp-lockout-count">0</span>
+                            <span class="s-lbl">Destructive Actions Blocked</span>
                         </div>
                     </div>
 
                     <div class="sign-off-actions" style="display: flex; justify-content: center; gap: 12px;">
                         <button class="btn btn-primary" id="btn-print-certificate">
                             <span class="btn-icon-wrap" data-icon="fileText"></span> Cetak Dokumen Sign-Off PDF
+                        </button>
+                        <button class="btn btn-secondary" id="btn-export-html-report">
+                            <span class="btn-icon-wrap" data-icon="download"></span> Buka Laporan HTML Mandiri
                         </button>
                     </div>
                 </div>
@@ -543,7 +543,7 @@
                                 <span>Minimum Similarity Threshold</span>
                                 <span class="slider-val" id="val-min-sim">70%</span>
                             </div>
-                            <input type="range" class="slider-input" id="slider-min-sim" min="0.50" max="0.95" step="0.05" value="0.70">
+                            <input type="range" class="slider-input" id="slider-min-sim" min="0.50" max="0.95" step="0.01" value="0.70">
                             <span class="text-xs text-muted">Ambang batas minimal skor kecocokan agar aksi in-flight dieksekusi.</span>
                         </div>
 
@@ -552,7 +552,7 @@
                                 <span>Text Exact / Jaro-Winkler Weight</span>
                                 <span class="slider-val" id="val-text-weight">35%</span>
                             </div>
-                            <input type="range" class="slider-input" id="slider-text-weight" min="0.10" max="0.60" step="0.05" value="0.35">
+                            <input type="range" class="slider-input" id="slider-text-weight" min="0.00" max="0.60" step="0.01" value="0.35">
                         </div>
 
                         <div class="slider-group">
@@ -560,7 +560,7 @@
                                 <span>Resource-ID Semantic Weight</span>
                                 <span class="slider-val" id="val-id-weight">25%</span>
                             </div>
-                            <input type="range" class="slider-input" id="slider-id-weight" min="0.10" max="0.50" step="0.05" value="0.25">
+                            <input type="range" class="slider-input" id="slider-id-weight" min="0.00" max="0.50" step="0.01" value="0.25">
                         </div>
 
                         <div class="slider-group">
@@ -568,7 +568,7 @@
                                 <span>Content-Description / Accessibility Weight</span>
                                 <span class="slider-val" id="val-desc-weight">20%</span>
                             </div>
-                            <input type="range" class="slider-input" id="slider-desc-weight" min="0.10" max="0.40" step="0.05" value="0.20">
+                            <input type="range" class="slider-input" id="slider-desc-weight" min="0.00" max="0.40" step="0.01" value="0.20">
                         </div>
 
                         <div style="margin-top: 24px; display: flex; align-items: center; gap: 12px;">

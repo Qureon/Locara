@@ -4,13 +4,17 @@
  * Evaluates candidates based on Text, WAI-ARIA, Test-ID, Element ID, and Role.
  */
 
+import { isPolarityViolation } from './polarity-guard.js';
+
 export interface RawDomNode {
   tag: string;
   id?: string;
   text?: string;
   ariaLabel?: string;
   role?: string;
+  inputType?: string;
   testId?: string;
+  testIdAttr?: 'data-testid' | 'data-test';
   name?: string;
   placeholder?: string;
   xpath?: string;
@@ -24,6 +28,7 @@ export interface CandidateElement {
   ariaLabel: string;
   role: string;
   testId: string;
+  testIdAttr?: 'data-testid' | 'data-test';
   name: string;
   placeholder: string;
   xpath: string;
@@ -33,42 +38,14 @@ export interface CandidateElement {
 }
 
 export class HeuristicDomMatcher {
+  private static readonly CLICKABLE_INPUT_TYPES = new Set(['submit', 'button', 'checkbox', 'radio', 'reset']);
+  private static readonly DEFAULT_THRESHOLD = 0.70;
   private minConfidenceThreshold: number;
 
-  private static readonly DANGER_KEYWORDS = [
-    'batal', 'batalkan', 'cancel', 'hapus', 'delete', 'remove', 'blokir', 'block',
-    'tolak', 'reject', 'decline', 'tutup akun', 'close account', 'logout', 'keluar', 'sign out'
-  ];
-
-  private static readonly FINANCIAL_KEYWORDS = [
-    'bayar', 'pembayaran', 'pay', 'payment', 'transfer', 'kirim uang', 'checkout',
-    'topup', 'top up', 'isi ulang', 'beli', 'pembelian', 'tarik tunai', 'withdraw', 'debet', 'autodebit'
-  ];
-
-  constructor(threshold = 0.70) {
-    this.minConfidenceThreshold = threshold;
-  }
-
-  private hasKeyword(input: string, keywords: string[]): boolean {
-    if (!input) return false;
-    const norm = input.toLowerCase();
-    const tokens = new Set(norm.split(/[\s_\-./]+/).filter(Boolean));
-    return keywords.some(kw => kw.includes(' ') ? norm.includes(kw) : tokens.has(kw));
-  }
-
-  private isPolarityViolation(targetHint: string, text: string, ariaLabel: string, testId: string, id: string, name: string): boolean {
-    const combined = `${text} ${ariaLabel} ${testId} ${id} ${name}`;
-    const targetDanger = this.hasKeyword(targetHint, HeuristicDomMatcher.DANGER_KEYWORDS);
-    const nodeDanger = this.hasKeyword(combined, HeuristicDomMatcher.DANGER_KEYWORDS);
-    if (targetDanger !== nodeDanger) {
-      return true;
-    }
-    const targetFinancial = this.hasKeyword(targetHint, HeuristicDomMatcher.FINANCIAL_KEYWORDS);
-    const nodeFinancial = this.hasKeyword(combined, HeuristicDomMatcher.FINANCIAL_KEYWORDS);
-    if (!targetFinancial && nodeFinancial) {
-      return true;
-    }
-    return false;
+  constructor(threshold = HeuristicDomMatcher.DEFAULT_THRESHOLD) {
+    this.minConfidenceThreshold = Number.isFinite(threshold)
+      ? Math.min(1.0, Math.max(0.0, threshold))
+      : HeuristicDomMatcher.DEFAULT_THRESHOLD;
   }
 
   /**
@@ -84,6 +61,9 @@ export class HeuristicDomMatcher {
     }
 
     const cleanHint = this.sanitizeHint(targetHint);
+    if (!cleanHint) {
+      return null;
+    }
     const rankedCandidates: CandidateElement[] = [];
 
     for (const el of elements) {
@@ -92,11 +72,12 @@ export class HeuristicDomMatcher {
       const text = (el.text || '').trim();
       const ariaLabel = el.ariaLabel || '';
       const role = el.role || '';
+      const inputType = (el.inputType || '').toLowerCase();
       const testId = el.testId || '';
       const name = el.name || '';
       const placeholder = el.placeholder || '';
 
-      if (this.isPolarityViolation(cleanHint, text, ariaLabel, testId, id, name)) {
+      if (isPolarityViolation(cleanHint, text, ariaLabel, testId, id, name)) {
         continue;
       }
 
@@ -119,7 +100,7 @@ export class HeuristicDomMatcher {
       );
 
       // Vector 5: Action & Role Compatibility
-      const actionScore = this.calculateActionCompatibility(tag, role, action);
+      const actionScore = this.calculateActionCompatibility(tag, role, action, inputType);
 
       // Dominant Semantic Anchor Scoring
       const maxSemantic = Math.max(textScore, ariaScore, testIdScore, idScore);
@@ -151,6 +132,7 @@ export class HeuristicDomMatcher {
           ariaLabel,
           role,
           testId,
+          testIdAttr: el.testIdAttr,
           name,
           placeholder,
           xpath: el.xpath || `//${tag}`,
@@ -194,6 +176,9 @@ export class HeuristicDomMatcher {
     role: string
   ): string {
     if (testId) {
+      if (el.testIdAttr === 'data-test') {
+        return `locator('${this.quoteJsString(`[data-test=${JSON.stringify(testId)}]`)}')`;
+      }
       return `getByTestId('${this.quoteJsString(testId)}')`;
     }
     if (role && (text || ariaLabel)) {
@@ -203,23 +188,39 @@ export class HeuristicDomMatcher {
     if (ariaLabel) {
       return `getByLabel('${this.quoteJsString(ariaLabel)}')`;
     }
-    if (text && text.length < 50) {
-      return `getByText('${this.quoteJsString(text)}')`;
+    if (el.placeholder) {
+      return `getByPlaceholder('${this.quoteJsString(el.placeholder)}')`;
     }
     if (el.id) {
       return `locator('${this.quoteJsString(`[id=${JSON.stringify(el.id)}]`)}')`;
     }
+    if (el.name) {
+      return `locator('${this.quoteJsString(`${el.tag}[name=${JSON.stringify(el.name)}]`)}')`;
+    }
+    if (text) {
+      return text.length < 40
+        ? `getByText('${this.quoteJsString(text)}', { exact: true })`
+        : `getByText('${this.quoteJsString(text)}')`;
+    }
     return el.xpath ? `locator('xpath=${this.quoteJsString(el.xpath)}')` : `locator('${this.quoteJsString(el.tag)}')`;
   }
 
-  private calculateActionCompatibility(tag: string, role: string, action: string): number {
+  private calculateActionCompatibility(tag: string, role: string, action: string, inputType = ''): number {
+    const normalizedRole = role.toLowerCase();
+    const isClickableInput = tag === 'input'
+      && (HeuristicDomMatcher.CLICKABLE_INPUT_TYPES.has(inputType)
+        || HeuristicDomMatcher.CLICKABLE_INPUT_TYPES.has(normalizedRole));
+
     if (action === 'CLICK') {
-      if (tag === 'button' || role === 'button' || tag === 'a' || role === 'link') return 1.0;
-      if (tag === 'input' && ['submit', 'button', 'checkbox', 'radio'].includes(role)) return 1.0;
+      if (tag === 'button' || normalizedRole === 'button' || tag === 'a' || normalizedRole === 'link') return 1.0;
+      if (isClickableInput || normalizedRole === 'checkbox' || normalizedRole === 'radio'
+        || normalizedRole === 'tab' || normalizedRole === 'menuitem') return 1.0;
       return 0.70;
     }
     if (action === 'FILL') {
-      if (tag === 'input' || tag === 'textarea' || role === 'textbox') return 1.0;
+      if (isClickableInput) return 0.50;
+      if (tag === 'input' || tag === 'textarea' || tag === 'select'
+        || normalizedRole === 'textbox' || normalizedRole === 'combobox' || normalizedRole === 'searchbox') return 1.0;
       return 0.50;
     }
     return 0.85;

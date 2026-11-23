@@ -4,7 +4,10 @@
 import re
 import xml.etree.ElementTree as ET
 
-from config_store import BadRequestError
+try:
+    from .config_store import BadRequestError
+except ImportError:
+    from config_store import BadRequestError
 
 BOUNDS_PATTERN = re.compile(r"\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]")
 XML_FORBIDDEN_DECL_PATTERN = re.compile(r"<!\s*(DOCTYPE|ENTITY)\b", re.IGNORECASE)
@@ -42,9 +45,10 @@ def extract_label_value_pairs(xml_text):
             "x1": x1, "y1": y1, "x2": x2, "y2": y2,
             "w": x2 - x1, "h": y2 - y1,
             "clickable": el.get("clickable", "false") == "true",
+            "displayed": (el.get("displayed", "true") or "true").lower() != "false",
         })
 
-    non_buttons = [n for n in nodes if "button" not in n["tag"].lower() and n["w"] > 0]
+    non_buttons = [n for n in nodes if "button" not in n["tag"].lower() and n["w"] > 0 and n["h"] > 0 and n["displayed"]]
     labels = [n for n in non_buttons if n["text"]]
     claimed = set()
     pairs = []
@@ -153,10 +157,11 @@ def classify_keyword_tier(keyword):
         kw.startswith("iselement")
         or kw.startswith("is_element")
         or "findfirst" in kw
+        or "find_first" in kw
         or "probe" in kw
         or "optional" in kw
     ):
         return "CONDITIONAL_PROBE"
-    if kw.startswith("verify") or kw.startswith("assert") or "checkpoint" in kw:
+    if kw.startswith("verify") or kw.startswith("assert") or "checkpoint" in kw or "check_point" in kw:
         return "CHECKPOINT"
     return "INTERACTION"

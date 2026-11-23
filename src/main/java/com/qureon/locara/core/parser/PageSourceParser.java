@@ -10,6 +10,7 @@ import org.xml.sax.InputSource;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import java.awt.Rectangle;
 import java.io.StringReader;
 import java.util.ArrayList;
@@ -37,7 +38,9 @@ public class PageSourceParser {
             factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
             factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
             factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
-        } catch (Exception ignored) {}
+        } catch (ParserConfigurationException e) {
+            throw new IllegalStateException("XML parser does not support mandatory XXE protection features", e);
+        }
         factory.setXIncludeAware(false);
         factory.setExpandEntityReferences(false);
         return factory;

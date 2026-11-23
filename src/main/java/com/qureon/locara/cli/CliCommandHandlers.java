@@ -59,9 +59,18 @@ final class CliCommandHandlers {
     }
 
     static int runHealingMode(String xmlContent, String hint, String action, String outPath) {
+        return runHealingMode(xmlContent, hint, action, outPath, null, true);
+    }
+
+    static int runHealingMode(String xmlContent, String hint, String action, String outPath,
+                              String projectDir, boolean auditEnabled) {
         HealConfig config = new HealConfig();
+        String effectiveProjectDir = (projectDir != null && !projectDir.trim().isEmpty())
+                ? new File(projectDir).getAbsolutePath()
+                : new File(".").getAbsolutePath();
+        config.setKatalonProjectPath(effectiveProjectDir);
+        config.setAuditLedgerEnabled(auditEnabled);
         if (outPath != null && !outPath.isEmpty()) {
-            config.setKatalonProjectPath(new File(".").getAbsolutePath());
             config.setAutoGenerateRs(true);
         }
         HealContext.Builder builder = HealContext.builder().targetHint(hint).action(action);

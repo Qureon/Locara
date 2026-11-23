@@ -1,44 +1,33 @@
 /**
  * ==============================================================================
- * LOCARA MISSION CONTROL — SPATIAL & FORM INSPECTOR MODULE (v1.16.0)
+ * LOCARA MISSION CONTROL — SPATIAL & FORM INSPECTOR MODULE (v1.16.1)
  * Visualizes 2D bounding box Left-to-Right and Top-to-Bottom field alignment,
  * section boundary detection, and key-value receipt pairing.
  * ==============================================================================
  */
 
 import { extractFields } from "../api.js";
+import { APP_CONFIG } from "../config.js";
 import { renderIcon } from "../icons.js";
-import { escapeHtml, escapeCodeString } from "../utils.js";
+import { copyToClipboard, escapeHtml, escapeCodeString } from "../utils.js";
 
 const SAMPLE_TRANSACTION_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <hierarchy rotation="0">
   <android.widget.FrameLayout bounds="[0,0][1080,2400]">
     <android.widget.LinearLayout bounds="[0,0][1080,2400]">
-      <!-- Header Screen -->
       <android.widget.TextView text="Detail Konfirmasi Transaksi" bounds="[60,140][900,220]" />
-      
-      <!-- Section: Detail Rekening -->
       <android.widget.TextView text="Rekening Sumber" bounds="[60,320][450,380]" />
       <android.widget.TextView text="Tabungan Utama •••• 9876" bounds="[460,320][1020,380]" />
-
       <android.widget.TextView text="Nama Pengirim" bounds="[60,400][450,460]" />
       <android.widget.TextView text="BUDI PRASETYO" bounds="[460,400][1020,460]" />
-
       <android.widget.TextView text="Nomor Tujuan" bounds="[60,480][450,540]" />
       <android.widget.TextView text="081234567890" bounds="[460,480][1020,540]" />
-
-      <!-- Section: Rincian Pembayaran -->
       <android.widget.TextView text="Nominal Paket" bounds="[60,620][450,680]" />
       <android.widget.TextView text="Rp 100.000" bounds="[460,620][1020,680]" />
-
       <android.widget.TextView text="Biaya Admin" bounds="[60,700][450,760]" />
       <android.widget.TextView text="Rp 1.500" bounds="[460,700][1020,760]" />
-
-      <!-- Terminal Total Row -->
       <android.widget.TextView text="Total Pembayaran" bounds="[60,820][450,900]" />
       <android.widget.TextView text="Rp 101.500" bounds="[460,820][1020,900]" />
-
-      <!-- Bottom Form Button -->
       <android.widget.Button text="Konfirmasi Bayar" bounds="[60,2100][1020,2240]" clickable="true" />
     </android.widget.LinearLayout>
   </android.widget.FrameLayout>
@@ -70,17 +59,14 @@ export function initFormInspectorModule() {
 
             try {
                 let res = await extractFields(xml);
-                
-                // Client-side fallback if server offline or standalone
                 if (!res || !res.pairs || res.pairs.length === 0) {
                     res = parseXmlSpatialClient(xml);
                 }
-
-                renderSpatialResults(res.pairs || [], outputEmpty, outputWrapper);
+                renderSpatialResults(res.pairs || [], outputEmpty, outputWrapper, res.parseError);
             } catch (err) {
                 console.error("Spatial extraction error:", err);
                 const fallback = parseXmlSpatialClient(xml);
-                renderSpatialResults(fallback.pairs || [], outputEmpty, outputWrapper);
+                renderSpatialResults(fallback.pairs || [], outputEmpty, outputWrapper, fallback.parseError);
             } finally {
                 btnRun.classList.remove("loading");
                 btnRun.disabled = false;
@@ -89,7 +75,15 @@ export function initFormInspectorModule() {
     }
 }
 
-function renderSpatialResults(pairs, emptyEl, wrapperEl) {
+function renderSpatialResults(pairs, emptyEl, wrapperEl, parseError = "") {
+    if (parseError) {
+        if (emptyEl) emptyEl.classList.add("hidden");
+        if (wrapperEl) {
+            wrapperEl.classList.remove("hidden");
+            wrapperEl.innerHTML = `<p class="text-danger">${escapeHtml(parseError)}</p>`;
+        }
+        return;
+    }
     if (!pairs || pairs.length === 0) {
         if (emptyEl) emptyEl.classList.remove("hidden");
         if (wrapperEl) wrapperEl.classList.add("hidden");
@@ -120,7 +114,7 @@ function renderSpatialResults(pairs, emptyEl, wrapperEl) {
                 <td>
                     <div style="display: flex; align-items: center; gap: 6px;">
                         <span style="font-size: 0.82rem; font-weight: 600;">${scorePct}%</span>
-                        <div style="flex: 1; height: 6px; background: var(--bg-hover); border-radius: 3px; overflow: hidden; min-width: 50px;">
+                        <div style="flex: 1; height: 6px; background: var(--bg-card-hover); border-radius: 3px; overflow: hidden; min-width: 50px;">
                             <div style="width: ${scorePct}%; height: 100%; background: ${scorePct > 85 ? 'var(--emerald)' : 'var(--amber)'};"></div>
                         </div>
                     </div>
@@ -141,7 +135,7 @@ function renderSpatialResults(pairs, emptyEl, wrapperEl) {
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
             <div style="display: flex; align-items: center; gap: 10px;">
                 <h4 style="font-size: 0.95rem; font-weight: 600; margin: 0;">Terdeteksi ${pairs.length} Pasang Field Spasial</h4>
-                <span class="badge badge-accent" style="font-size: 0.75rem;">Universal Spatial Engine v1.16.0</span>
+                <span class="badge badge-accent" style="font-size: 0.75rem;">Universal Spatial Engine ${escapeHtml(APP_CONFIG.semver)}</span>
             </div>
             <button class="btn btn-sm btn-secondary" id="btn-copy-all-json">
                 <span class="btn-icon-wrap" data-icon="download"></span> Export JSON
@@ -176,34 +170,46 @@ function renderSpatialResults(pairs, emptyEl, wrapperEl) {
         btn.addEventListener("click", () => {
             const key = escapeCodeString(btn.dataset.key || "");
             const val = escapeCodeString(btn.dataset.val || "");
-            const snippet = `// Locara v1.16.0 Spatial Field Assertion\nString actual = Locara.getFieldValue("${key}")\nassert actual == "${val}" : "Expected ${key} to be '${val}' but got '\${actual}'"`;
-            navigator.clipboard.writeText(snippet).then(() => {
+            const snippet = [
+                `// Locara ${APP_CONFIG.semver} Spatial Field Assertion (FieldRelationshipParser)`,
+                "import com.qureon.locara.core.parser.FieldRelationshipParser",
+                "import com.qureon.locara.katalon.KatalonDriverBridge",
+                "import com.qureon.locara.katalon.Locara",
+                "",
+                "String xml = KatalonDriverBridge.getPageSource(KatalonDriverBridge.getMobileDriver())",
+                "def doc = new FieldRelationshipParser().parse(Locara.getEngine().parsePageSource(xml))",
+                `String actual = doc.get("${key}")`,
+                `assert actual == "${val}" : "Expected ${key} to be '${val}' but got '\${actual}'"`
+            ].join("\n");
+            copyToClipboard(snippet).then(() => {
                 const orig = btn.innerHTML;
                 btn.innerHTML = `<span style="color: var(--emerald);">✓ Copied</span>`;
                 setTimeout(() => btn.innerHTML = orig, 1500);
+            }).catch(() => {
+                alert("Clipboard tidak tersedia di konteks browser ini.");
             });
         });
     });
 
-    // Wire Export All JSON
     const btnExportJson = document.getElementById("btn-copy-all-json");
     if (btnExportJson) {
         btnExportJson.addEventListener("click", () => {
-            const jsonStr = JSON.stringify(pairs, null, 2);
-            navigator.clipboard.writeText(jsonStr).then(() => {
+            copyToClipboard(JSON.stringify(pairs, null, 2)).then(() => {
                 alert("Seluruh pasangan field berhasil disalin ke clipboard dalam format JSON!");
+            }).catch(() => {
+                alert("Clipboard tidak tersedia di konteks browser ini.");
             });
         });
     }
 }
 
-/**
- * Fallback browser-side spatial parser matching server-side Left-to-Right & Top-to-Bottom rules
- */
 function parseXmlSpatialClient(xmlText) {
     try {
         const parser = new DOMParser();
         const doc = parser.parseFromString(xmlText, "text/xml");
+        if (doc.querySelector("parsererror")) {
+            return { pairs: [], parseError: "XML tidak valid (gagal parsing DOM)." };
+        }
         const elements = Array.from(doc.querySelectorAll("*"));
         const boundsPattern = /\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]/;
 
@@ -222,13 +228,14 @@ function parseXmlSpatialClient(xmlText) {
                     x1, y1, x2, y2,
                     w: x2 - x1,
                     h: y2 - y1,
-                    clickable: el.getAttribute("clickable") === "true"
+                    clickable: el.getAttribute("clickable") === "true",
+                    displayed: (el.getAttribute("displayed") || "true").toLowerCase() !== "false"
                 });
             }
         });
 
         const pairs = [];
-        const nonButtons = nodes.filter(n => !n.tag.includes("button") && n.w > 0);
+        const nonButtons = nodes.filter(n => !n.tag.includes("button") && n.w > 0 && n.h > 0 && n.displayed);
         const labels = nonButtons.filter(n => n.text);
         const claimed = new Set();
 

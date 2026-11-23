@@ -1,6 +1,7 @@
 package com.qureon.locara.katalon;
 
 import com.qureon.locara.core.driver.AppiumDriverActionBridge;
+import com.qureon.locara.core.driver.ReflectiveAccessUtil;
 import com.qureon.locara.core.model.UIElementNode;
 import java.lang.reflect.Method;
 
@@ -68,20 +69,23 @@ public class KatalonDriverBridge {
                     locatorValue = node.getResourceId();
                 } else if (node.hasText()) {
                     strategyName = "ATTRIBUTES";
+                    String classLit = com.qureon.locara.core.generator.DynamicXPathGenerator.toXPathLiteral(node.getClassName());
                     String textLit = com.qureon.locara.core.generator.DynamicXPathGenerator.toXPathLiteral(node.getText());
-                    locatorValue = "//*[@class = '" + node.getClassName() + "' and (@text = " + textLit + " or . = " + textLit + ")]";
+                    locatorValue = "//*[@class = " + classLit + " and (@text = " + textLit + " or . = " + textLit + ")]";
                 }
             }
+
+            boolean mutated = false;
 
             // 2. Set Mobile locator & strategy if supported (MobileTestObject)
             try {
                 Class<?> lsEnum = Class.forName("com.kms.katalon.core.enums.mobile.LocatorStrategy");
                 Object strategyVal = resolveEnumConstant(lsEnum, strategyName);
 
-                invokeOptional(toClass, testObject, "setLocatorStrategy", new Class<?>[]{lsEnum}, strategyVal);
-                invokeOptional(toClass, testObject, "setLocator", new Class<?>[]{String.class}, locatorValue);
-                invokeOptional(toClass, testObject, "setMobileLocator", new Class<?>[]{String.class}, locatorValue);
-                invokeOptional(toClass, testObject, "setLocatorValue", new Class<?>[]{lsEnum, String.class}, strategyVal, locatorValue);
+                mutated |= invokeOptional(toClass, testObject, "setLocatorStrategy", new Class<?>[]{lsEnum}, strategyVal);
+                mutated |= invokeOptional(toClass, testObject, "setLocator", new Class<?>[]{String.class}, locatorValue);
+                mutated |= invokeOptional(toClass, testObject, "setMobileLocator", new Class<?>[]{String.class}, locatorValue);
+                mutated |= invokeOptional(toClass, testObject, "setLocatorValue", new Class<?>[]{lsEnum, String.class}, strategyVal, locatorValue);
             } catch (Exception ignored) {
                 try {
                     Class<?> mlsEnum = Class.forName("com.kms.katalon.core.testobject.MobileTestObject$MobileLocatorStrategy");
@@ -91,6 +95,7 @@ public class KatalonDriverBridge {
 
                     Method setMobileLocator = toClass.getMethod("setMobileLocator", String.class);
                     setMobileLocator.invoke(testObject, locatorValue);
+                    mutated = true;
                 } catch (Exception ignored2) {}
             }
 
@@ -103,6 +108,7 @@ public class KatalonDriverBridge {
 
                 Method setValue = toClass.getMethod("setSelectorValue", smEnum, String.class);
                 setValue.invoke(testObject, xpathMethodVal, healedXPath);
+                mutated = true;
             } catch (Exception ignored) {}
 
             // 4. Populate / update rich properties
@@ -114,6 +120,7 @@ public class KatalonDriverBridge {
                 java.lang.reflect.Constructor<?> propCtor = propClass.getConstructor(String.class, ctEnum, String.class, boolean.class);
 
                 addTestObjectProperty(testObject, addProp, propCtor, equalsVal, "xpath", healedXPath);
+                mutated = true;
                 if (node != null) {
                     if (node.hasContentDesc()) {
                         addTestObjectProperty(testObject, addProp, propCtor, equalsVal, "content-desc", node.getContentDesc());
@@ -130,7 +137,7 @@ public class KatalonDriverBridge {
                 }
             } catch (Exception ignored) {}
 
-            return true;
+            return mutated;
         } catch (Exception e) {
             return false;
         }
@@ -139,14 +146,14 @@ public class KatalonDriverBridge {
     static int[] getScreenDimensions(Object driver, int defaultWidth, int defaultHeight) {
         if (driver != null) {
             try {
-                Method manageMethod = driver.getClass().getMethod("manage");
+                Method manageMethod = ReflectiveAccessUtil.findAccessibleMethod(driver.getClass(), "manage");
                 Object windowOptions = manageMethod.invoke(driver);
-                Method windowMethod = windowOptions.getClass().getMethod("window");
+                Method windowMethod = ReflectiveAccessUtil.findAccessibleMethod(windowOptions.getClass(), "window");
                 Object window = windowMethod.invoke(windowOptions);
-                Method getSizeMethod = window.getClass().getMethod("getSize");
+                Method getSizeMethod = ReflectiveAccessUtil.findAccessibleMethod(window.getClass(), "getSize");
                 Object size = getSizeMethod.invoke(window);
-                Method getWidthMethod = size.getClass().getMethod("getWidth");
-                Method getHeightMethod = size.getClass().getMethod("getHeight");
+                Method getWidthMethod = ReflectiveAccessUtil.findAccessibleMethod(size.getClass(), "getWidth");
+                Method getHeightMethod = ReflectiveAccessUtil.findAccessibleMethod(size.getClass(), "getHeight");
                 int w = (int) getWidthMethod.invoke(size);
                 int h = (int) getHeightMethod.invoke(size);
                 if (w > 0 && h > 0) {
@@ -172,12 +179,15 @@ public class KatalonDriverBridge {
         throw new IllegalArgumentException("No enum constant " + enumClass.getName() + "." + constantName);
     }
 
-    private static void invokeOptional(Class<?> targetClass, Object instance, String methodName,
-                                       Class<?>[] paramTypes, Object... args) {
+    private static boolean invokeOptional(Class<?> targetClass, Object instance, String methodName,
+                                          Class<?>[] paramTypes, Object... args) {
         try {
             Method m = targetClass.getMethod(methodName, paramTypes);
             m.invoke(instance, args);
-        } catch (Exception ignored) {}
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     private static void addTestObjectProperty(Object testObject, Method addProp,

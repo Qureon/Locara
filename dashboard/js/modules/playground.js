@@ -7,7 +7,7 @@
 
 import { APP_CONFIG } from "../config.js";
 import { renderIcon } from "../icons.js";
-import { escapeHtml, escapeXml, toXPathLiteral } from "../utils.js";
+import { copyToClipboard, escapeHtml, escapeXml, toXPathLiteral } from "../utils.js";
 import { SAMPLE_XML, runReconEngine } from "./playground-engine.js";
 
 export function initPlaygroundModule() {
@@ -28,7 +28,7 @@ export function initPlaygroundModule() {
             const hint = inputHint.value.trim();
 
             if (!rawXml) {
-                alert("Silakan masukkan potongan Appium XML atau klik 'Muat Sampel M-Smile'!");
+                alert("Silakan masukkan potongan Appium XML atau klik 'Muat Sampel XML'!");
                 return;
             }
 
@@ -47,55 +47,71 @@ function buildXPathSet(w) {
     else if (w.text) xpathAttributes += `[@text=${toXPathLiteral(w.text)}]`;
 
     const xpathRelative = w.resId
-        ? `//*[@resource-id=${toXPathLiteral(w.resId)}]//${safeTag}`
+        ? `//*[@resource-id=${toXPathLiteral(w.resId)} or @id=${toXPathLiteral(w.resId)}]`
         : `//android.widget.LinearLayout/${safeTag}`;
     const xpathCustom = w.text ? `//${safeTag}[text()=${toXPathLiteral(w.text)} or .=${toXPathLiteral(w.text)}]` : "";
     const xpathPosition = `//${safeTag}[1]`;
     return { xpathAttributes, xpathRelative, xpathCustom, xpathPosition };
 }
 
-function buildKatalonRsXml(w, confPct, xpaths) {
+function renderRsProperty(name, value, selected) {
+    return `   <webElementProperties>
+      <isSelected>${selected ? "true" : "false"}</isSelected>
+      <matchCondition>equals</matchCondition>
+      <name>${escapeXml(name)}</name>
+      <type>Main</type>
+      <value>${escapeXml(value)}</value>
+      <webElementGuid>${generateGuid()}</webElementGuid>
+   </webElementProperties>`;
+}
+
+function buildKatalonRsXml(w, confPct, xpaths, frameworkTag) {
     const rawRsBase = (w.resId ? w.resId.split("/").pop() : "element_healed").replace(/[^A-Za-z0-9_.-]/g, "_");
-    const rsName = `${rawRsBase || "element_healed"}.rs`;
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<WebElementEntity>
+    const rsName = (rawRsBase || "element_healed").replace(/\.rs$/, "");
+    const isWeb = frameworkTag === "WebView" || /^(a|button|div|span|input|select|textarea|form|label)$/i.test(w.clazz || "");
+    const header = `<?xml version="1.0" encoding="UTF-8"?>
+<${isWeb ? "WebElementEntity" : "MobileElementEntity"}>
    <description>Autonomous In-Flight Healed by Locara Engine · Qureon (Confidence: ${escapeXml(confPct)}%)</description>
-   <name>${escapeXml(rsName.replace(/\.rs$/, ""))}</name>
+   <name>${escapeXml(rsName)}</name>
    <tag></tag>
    <elementGuidId>${generateGuid()}</elementGuidId>
    <selectorMethod>XPATH</selectorMethod>
-   <useRalativeImagePath>false</useRalativeImagePath>
-   <webElementProperties>
-      <isSelected>true</isSelected>
-      <matchCondition>equals</matchCondition>
-      <name>xpath:attributes</name>
-      <type>Main</type>
-      <value>${escapeXml(xpaths.xpathAttributes)}</value>
-      <webElementGuid>${generateGuid()}</webElementGuid>
-   </webElementProperties>
-   <webElementProperties>
-      <isSelected>false</isSelected>
-      <matchCondition>equals</matchCondition>
-      <name>xpath:idRelative</name>
-      <type>Main</type>
-      <value>${escapeXml(xpaths.xpathRelative)}</value>
-      <webElementGuid>${generateGuid()}</webElementGuid>
-   </webElementProperties>
-   <webElementProperties>
-      <isSelected>false</isSelected>
-      <matchCondition>equals</matchCondition>
-      <name>xpath:position</name>
-      <type>Main</type>
-      <value>${escapeXml(xpaths.xpathPosition)}</value>
-      <webElementGuid>${generateGuid()}</webElementGuid>
-   </webElementProperties>
+   <smartLocatorEnabled>false</smartLocatorEnabled>
+   <useRalativeImagePath>false</useRalativeImagePath>`;
+
+    if (isWeb) {
+        const webProps = [
+            renderRsProperty("xpath:attributes", xpaths.xpathAttributes, true),
+            renderRsProperty("xpath:idRelative", xpaths.xpathRelative, false),
+            renderRsProperty("xpath:position", xpaths.xpathPosition, false),
+        ].join("\n");
+        return `${header}
+${webProps}
    <selectorCollection>
-      <entry>
-         <key>XPATH</key>
-         <value>${escapeXml(xpaths.xpathAttributes)}</value>
-      </entry>
+      <entry><key>XPATH</key><value>${escapeXml(xpaths.xpathAttributes)}</value></entry>
    </selectorCollection>
 </WebElementEntity>`;
+    }
+
+    const mobileProps = [
+        renderRsProperty("class", w.clazz || "", true),
+        ...(w.text ? [renderRsProperty("text", w.text, false)] : []),
+        ...(w.resId ? [renderRsProperty("resource-id", w.resId, false)] : []),
+        ...(w.desc ? [renderRsProperty("content-desc", w.desc, false)] : []),
+        renderRsProperty("xpath", xpaths.xpathAttributes, true),
+    ].join("\n");
+    const platform = frameworkTag === "iOS" || (w.clazz || "").startsWith("XCUIElementType") ? "IOS" : "ANDROID";
+    return `${header}
+${mobileProps}
+   <locator>${escapeXml(xpaths.xpathAttributes)}</locator>
+   <locatorCollection>
+      <entry><key>XPATH</key><value>${escapeXml(xpaths.xpathAttributes)}</value></entry>
+      <entry><key>ID</key><value>${escapeXml(w.resId || "")}</value></entry>
+      <entry><key>ACCESSIBILITY</key><value>${escapeXml(w.desc || "")}</value></entry>
+   </locatorCollection>
+   <locatorStrategy>XPATH</locatorStrategy>
+   <platform>${platform}</platform>
+</MobileElementEntity>`;
 }
 
 function renderReconResult(result) {
@@ -106,8 +122,13 @@ function renderReconResult(result) {
     if (emptyBox) emptyBox.classList.add("hidden");
     contentBox.classList.remove("hidden");
 
+    if (result.parseError) {
+        contentBox.innerHTML = `<p class="text-danger">${escapeHtml(result.parseError)}</p>`;
+        return;
+    }
+
     const w = result.winner;
-    const fw = result.framework || { name: "Detecting...", conf: 90 };
+    const fw = result.framework || { name: "Detecting...", tag: "Android XML", conf: 90 };
 
     if (!w) {
         contentBox.innerHTML = `<p class="text-danger">Tidak ada elemen yang dapat dicocokkan dari potongan XML ini.</p>`;
@@ -117,7 +138,7 @@ function renderReconResult(result) {
     const confPct = (w.score * 100).toFixed(1);
     const isSuccess = w.score >= APP_CONFIG.defaultThresholds.minSimilarity && !w.lockout;
     const xpaths = buildXPathSet(w);
-    const rsXml = buildKatalonRsXml(w, confPct, xpaths);
+    const rsXml = buildKatalonRsXml(w, confPct, xpaths, fw.tag);
 
     contentBox.innerHTML = `
         <div class="recon-summary-card">
@@ -145,7 +166,7 @@ function renderReconResult(result) {
             </div>
 
             <!-- Katalon 11.6.0+ Object's XPaths Table Simulator -->
-            <div style="margin-top: 16px; background: var(--bg-card); border: 1px solid var(--card-border); border-radius: 8px; padding: 14px;">
+            <div style="margin-top: 16px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <span style="font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--cyan);">Katalon 11.6.0+ Object's XPaths Table</span>
                     <span style="font-size:0.72rem; color:var(--text-muted);">Editable Locator Tiers</span>
@@ -190,11 +211,13 @@ function renderReconResult(result) {
     const copyBtn = document.getElementById("btn-copy-playground-rs");
     if (copyBtn) {
         copyBtn.addEventListener("click", () => {
-            navigator.clipboard.writeText(rsXml).then(() => {
+            copyToClipboard(rsXml).then(() => {
                 copyBtn.innerHTML = `<span class="btn-icon-wrap">${renderIcon("check")}</span> Tersalin!`;
                 setTimeout(() => {
                     copyBtn.innerHTML = `<span class="btn-icon-wrap">${renderIcon("copy")}</span> Salin XML .rs`;
                 }, 2000);
+            }).catch(() => {
+                copyBtn.textContent = "Gagal menyalin";
             });
         });
     }

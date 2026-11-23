@@ -6,6 +6,8 @@
  * during autonomous LLM agent execution in Claude Desktop, Claude Code, and Antigravity IDE.
  */
 
+import { isPolarityViolation } from '../engine/polarity-guard.js';
+
 export interface McpAriaNode {
   role: string;
   name: string;
@@ -15,37 +17,43 @@ export interface McpAriaNode {
 }
 
 export class PlaywrightMcpAdapter {
-  private static readonly NODE_REGEX = /^\s*-\s*([a-zA-Z0-9_-]+)(?:\s+"([^"]*)")?(?:\s*\[([^\]]*)\])?/;
+  private static readonly NODE_REGEX = /^\s*-\s*([a-zA-Z0-9_-]+)(?:\s+"((?:\\.|[^"\\])*)")?(.*)$/;
+  private static readonly META_BLOCK_REGEX = /\[([^\]]*)\]/g;
+  private static readonly MIN_RECOVERY_SCORE = 0.70;
 
   /**
    * Parses an ARIA snapshot produced by @playwright/mcp `browser_snapshot` tool.
    * Format example:
-   *   - heading "Checkout Transaksi" [level=2]
-   *   - textbox "Nomor Rekening" [ref=e1]
-   *   - button "Bayar Sekarang" [ref=e2]
+   *   - heading "Checkout Transaksi" [level=2] [ref=e1]
+   *   - textbox "Nomor Rekening" [ref=e2]
+   *   - button "Bayar Sekarang" [disabled] [ref=e3]
    */
   public parseAriaSnapshot(snapshotText: string): McpAriaNode[] {
     if (!snapshotText) return [];
 
-    const lines = snapshotText.split('\n');
+    const lines = snapshotText.split(/\r?\n/);
     const nodes: McpAriaNode[] = [];
 
     for (const line of lines) {
       const match = line.match(PlaywrightMcpAdapter.NODE_REGEX);
       if (match) {
         const role = match[1];
-        const name = match[2] || '';
-        const meta = match[3] || '';
+        const name = match[2] ? match[2].replace(/\\(["\\])/g, '$1') : '';
+        const tail = match[3] || '';
 
         let ref: string | undefined;
         let level: number | undefined;
 
-        if (meta) {
-          const refMatch = meta.match(/ref=([a-zA-Z0-9_-]+)/);
-          if (refMatch) ref = refMatch[1];
-
-          const levelMatch = meta.match(/level=(\d+)/);
-          if (levelMatch) level = parseInt(levelMatch[1], 10);
+        for (const block of tail.matchAll(PlaywrightMcpAdapter.META_BLOCK_REGEX)) {
+          const meta = block[1] || '';
+          if (!ref) {
+            const refMatch = meta.match(/\bref=([a-zA-Z0-9_-]+)/);
+            if (refMatch) ref = refMatch[1];
+          }
+          if (level === undefined) {
+            const levelMatch = meta.match(/\blevel=(\d+)/);
+            if (levelMatch) level = parseInt(levelMatch[1], 10);
+          }
         }
 
         nodes.push({
@@ -76,19 +84,22 @@ export class PlaywrightMcpAdapter {
     expectedRole?: string
   ): McpAriaNode | null {
     const nodes = this.parseAriaSnapshot(snapshotText);
-    if (nodes.length === 0 || !targetHint) return null;
+    const cleanHint = (targetHint || '').toLowerCase().trim();
+    if (nodes.length === 0 || !cleanHint) return null;
 
-    const cleanHint = targetHint.toLowerCase().trim();
     let bestNode: McpAriaNode | null = null;
     let highestScore = 0.0;
 
     for (const node of nodes) {
+      if (!node.ref) {
+        continue;
+      }
       if (expectedRole && node.role.toLowerCase() !== expectedRole.toLowerCase()) {
         continue;
       }
 
       const nodeName = (node.name || '').toLowerCase().trim();
-      if (!nodeName) {
+      if (!nodeName || isPolarityViolation(cleanHint, nodeName)) {
         continue;
       }
       let score = 0.0;
@@ -115,7 +126,7 @@ export class PlaywrightMcpAdapter {
         score += 0.05;
       }
 
-      if (score > highestScore && score >= 0.70) {
+      if (score > highestScore && score >= PlaywrightMcpAdapter.MIN_RECOVERY_SCORE) {
         highestScore = score;
         bestNode = node;
       }

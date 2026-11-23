@@ -2,11 +2,35 @@
 """HTTP security checks, bounded JSON body reader, and audit file loader for Locara Dashboard."""
 
 import json
-from urllib.parse import urlparse
+import posixpath
+from pathlib import Path
+from urllib.parse import unquote, urlparse
 
-from config_store import BadRequestError, PayloadTooLargeError
+try:
+    from .config_store import BadRequestError, PayloadTooLargeError
+except ImportError:
+    from config_store import BadRequestError, PayloadTooLargeError
 
 LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
+ALLOWED_STATIC_ROOT_FILES = frozenset({"/", "/index.html"})
+ALLOWED_STATIC_PREFIXES = ("/assets/", "/css/", "/js/")
+ALLOWED_STATIC_EXTENSIONS = frozenset({".html", ".css", ".js", ".svg", ".png", ".jpg", ".jpeg", ".ico"})
+
+
+def is_allowed_static_path(raw_path):
+    """Allow only dashboard frontend assets; block backend source, tests, caches, and traversal."""
+    decoded = unquote(raw_path or "")
+    if not decoded or "\\" in decoded or "\x00" in decoded:
+        return False
+    parts = [p for p in decoded.split("/") if p]
+    if any(p in (".", "..", "__pycache__") or p.startswith(".") for p in parts):
+        return False
+    normalized = "/" if decoded == "/" else posixpath.normpath(decoded)
+    if normalized in ALLOWED_STATIC_ROOT_FILES:
+        return True
+    if normalized.endswith("/") or not normalized.startswith(ALLOWED_STATIC_PREFIXES):
+        return False
+    return Path(normalized).suffix.lower() in ALLOWED_STATIC_EXTENSIONS
 
 
 def is_allowed_loopback_origin(origin_value):

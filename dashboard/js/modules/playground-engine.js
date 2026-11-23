@@ -37,6 +37,9 @@ export const SAMPLE_XML = `<?xml version="1.0" encoding="UTF-8"?>
 export function runReconEngine(xmlString, targetHint) {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+    if (xmlDoc.querySelector("parsererror")) {
+        return { targetHint, winner: null, framework: null, parseError: "XML tidak valid (gagal parsing DOM)." };
+    }
 
     const elements = Array.from(xmlDoc.querySelectorAll("*")).filter(el => {
         const tag = el.tagName.toLowerCase();
@@ -44,7 +47,7 @@ export function runReconEngine(xmlString, targetHint) {
                el.getAttribute("clickable") === "true" || el.getAttribute("text") || el.getAttribute("content-desc");
     });
 
-    const targetHintTokens = targetHint.toLowerCase().split(/\s+/).filter(Boolean);
+    const targetHintTokens = new Set(targetHint.toLowerCase().split(/[\s_\-./]+/).filter(Boolean));
     const dangerKeywords = APP_CONFIG.dangerKeywords;
 
     const candidates = elements.map(el => {
@@ -54,12 +57,9 @@ export function runReconEngine(xmlString, targetHint) {
         const clazz = el.tagName;
         const bounds = el.getAttribute("bounds") || "[0,0][100,100]";
 
-        const textLower = text.toLowerCase();
-        const descLower = desc.toLowerCase();
-        const idLower = resId.toLowerCase();
-
-        const isDangerElement = dangerKeywords.some(dk => textLower.includes(dk) || descLower.includes(dk) || idLower.includes(dk));
-        const isTargetDanger = dangerKeywords.some(dk => targetHintTokens.includes(dk));
+        const nodeTokens = new Set(`${text} ${desc} ${resId}`.toLowerCase().split(/[\s_\-./:]+/).filter(Boolean));
+        const isDangerElement = dangerKeywords.some(dk => nodeTokens.has(dk));
+        const isTargetDanger = dangerKeywords.some(dk => targetHintTokens.has(dk));
 
         if (isDangerElement && !isTargetDanger) {
             return {

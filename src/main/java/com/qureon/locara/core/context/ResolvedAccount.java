@@ -53,11 +53,17 @@ public class ResolvedAccount {
     @Override
     public String toString() {
         return "ResolvedAccount{" +
-                "accountNumber='" + accountNumber + '\'' +
+                "accountNumber='" + maskAccountNumber(accountNumber) + '\'' +
                 ", accountType='" + accountType + '\'' +
-                ", holderName='" + holderName + '\'' +
+                ", holderName='" + (holderName.isEmpty() ? "" : "***") + '\'' +
                 ", maskedBalancePresent=" + maskedBalancePresent +
                 '}';
+    }
+
+    private static String maskAccountNumber(String raw) {
+        if (raw == null || raw.isEmpty()) return "";
+        if (raw.length() <= 4) return "****";
+        return "****" + raw.substring(raw.length() - 4);
     }
 
     @Override

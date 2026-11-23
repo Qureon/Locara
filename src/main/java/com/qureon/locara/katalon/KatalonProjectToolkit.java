@@ -20,11 +20,6 @@ import java.util.List;
 final class KatalonProjectToolkit {
 
     private static final String LOG_PREFIX = "[Locara by Qureon]";
-    private static final String[] CONFIG_CANDIDATES = {
-            "locara.properties", "qureon.properties",
-            "Include/config/locara.properties", "Include/config/qureon.properties"
-    };
-
     private static final ContextualEntityResolver CONTEXT_RESOLVER = new ContextualEntityResolver();
     private static final AutoVariableSynthesizer VARIABLE_SYNTHESIZER = new AutoVariableSynthesizer();
     private static final ScriptVariableAligner SCRIPT_ALIGNER = new ScriptVariableAligner();
@@ -32,20 +27,7 @@ final class KatalonProjectToolkit {
     private KatalonProjectToolkit() {}
 
     static LocaraEngine createDefaultEngine() {
-        String userDir = System.getProperty("user.dir");
-        File targetProp = null;
-        for (String candidate : CONFIG_CANDIDATES) {
-            File f = new File(userDir, candidate);
-            if (f.exists()) {
-                targetProp = f;
-                break;
-            }
-        }
-        HealConfig config = HealConfig.loadFromProperties(targetProp);
-        if (targetProp != null) {
-            LocaraLogger.info(LOG_PREFIX, "Loaded configuration from: " + targetProp.getAbsolutePath());
-        }
-        return new LocaraEngine(config);
+        return new LocaraEngine(HealConfig.loadDefault());
     }
 
     static ResolvedAccount resolveAccountByNumber(Object driver, String targetAccountNumber) {

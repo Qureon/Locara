@@ -3,6 +3,8 @@ package com.qureon.locara.core.model;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 /**
@@ -11,13 +13,34 @@ import java.util.Properties;
  */
 final class HealConfigLoader {
 
+    private static final String[] CONFIG_CANDIDATES = {
+            "locara.properties", "qureon.properties",
+            "Include/config/locara.properties", "Include/config/qureon.properties"
+    };
     private static final String[] LOCAL_OVERRIDE_FILES = {"locara.local.properties", "qureon.local.properties"};
 
     private HealConfigLoader() {}
 
+    static HealConfig loadDefault(File projectDir) {
+        File root = projectDir != null ? projectDir : new File(System.getProperty("user.dir"));
+        File propFile = null;
+        for (String candidate : CONFIG_CANDIDATES) {
+            File f = new File(root, candidate);
+            if (f.exists()) {
+                propFile = f;
+                break;
+            }
+        }
+        return load(propFile, root);
+    }
+
     static HealConfig load(File propFile) {
+        return load(propFile, new File(System.getProperty("user.dir")));
+    }
+
+    static HealConfig load(File propFile, File projectRootDir) {
         HealConfig config = new HealConfig();
-        Properties props = loadMergedProperties(propFile);
+        Properties props = loadMergedProperties(propFile, projectRootDir);
 
         config.setEnabled(resolveBoolean(props, config.isEnabled(),
                 new String[]{"LOCARA_ENABLED", "QUREON_ENABLED", "HEALING_ENABLED"},
@@ -79,24 +102,43 @@ final class HealConfigLoader {
         return config;
     }
 
-    private static Properties loadMergedProperties(File propFile) {
+    private static Properties loadMergedProperties(File propFile, File projectRootDir) {
         Properties props = new Properties();
         if (propFile != null && propFile.exists()) {
-            try (FileInputStream fis = new FileInputStream(propFile)) {
-                props.load(fis);
-            } catch (IOException ignored) {}
+            loadFileInto(propFile, props);
         }
-        String userDir = System.getProperty("user.dir");
+        File propParent = (propFile != null) ? propFile.getParentFile() : null;
+        File rootDir = projectRootDir != null ? projectRootDir : new File(System.getProperty("user.dir"));
+        if (propParent != null && !sameDir(propParent, rootDir)) {
+            loadLocalOverrideFromDir(propParent, props);
+        }
+        loadLocalOverrideFromDir(rootDir, props);
+        return props;
+    }
+
+    private static void loadLocalOverrideFromDir(File dir, Properties props) {
+        if (dir == null) return;
         for (String name : LOCAL_OVERRIDE_FILES) {
-            File candidate = new File(userDir, name);
+            File candidate = new File(dir, name);
             if (candidate.exists()) {
-                try (FileInputStream lfis = new FileInputStream(candidate)) {
-                    props.load(lfis);
-                    break;
-                } catch (IOException ignored) {}
+                loadFileInto(candidate, props);
+                break;
             }
         }
-        return props;
+    }
+
+    private static void loadFileInto(File file, Properties props) {
+        try (InputStreamReader reader = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)) {
+            props.load(reader);
+        } catch (IOException ignored) {}
+    }
+
+    private static boolean sameDir(File a, File b) {
+        try {
+            return a.getCanonicalFile().equals(b.getCanonicalFile());
+        } catch (IOException e) {
+            return a.getAbsoluteFile().equals(b.getAbsoluteFile());
+        }
     }
 
     private static String resolveString(Properties props, String[] envKeys, String... propKeys) {

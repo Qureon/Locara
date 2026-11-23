@@ -39,8 +39,11 @@ class StateStore {
         const action = (e.action || "TAP").toUpperCase();
         const hint = e.targetHint || e.hint || "Unnamed Element";
         const screen = e.screen || "DefaultScreen";
-        const status = e.status || "SUCCESS";
-        const confidence = typeof e.confidence === "number" ? e.confidence : 0.90;
+        const status = e.status || "UNKNOWN";
+        const rawConf = typeof e.confidence === "number" ? e.confidence : Number(e.confidence);
+        const confidence = Number.isFinite(rawConf) ? rawConf : 0.0;
+        const rawLatency = e.latencyMs !== undefined && e.latencyMs !== null ? Number(e.latencyMs) : NaN;
+        const latencyMs = Number.isFinite(rawLatency) && rawLatency >= 0 ? rawLatency : null;
         const brokenLocator = e.brokenLocator || e.origLocator || "";
         const healedLocator = e.healedLocator || e.healedXPath || "";
         const generatedRs = e.generatedRs || e.rsFile || "";
@@ -59,6 +62,8 @@ class StateStore {
             screen,
             targetHint: hint,
             action,
+            method: e.method || "",
+            strategy: e.strategy || "",
             intentionTier,
             intentionGroup,
             tags,
@@ -68,8 +73,8 @@ class StateStore {
             healedLocator,
             generatedRs,
             module,
-            latencyMs: e.latencyMs || 35,
-            vectors: e.vectors || { text: 0.95, id: 0.90, desc: 0.90, clazz: 1.0, proximity: 1.0 },
+            latencyMs,
+            vectors: e.vectors || null,
             guards: e.guards || {
                 dangerLockout: status === "LOCKOUT" ? "TRIGGERED_LOCKOUT" : "PASSED",
                 keyboard: "CLEAR",
@@ -86,8 +91,9 @@ class StateStore {
         } else {
             this.events = [];
         }
-        if (!this.selectedEvent && this.events.length > 0) {
-            this.selectedEvent = this.events[0];
+        const stillExists = this.selectedEvent && this.events.some(x => x.id === this.selectedEvent.id);
+        if (!stillExists) {
+            this.selectedEvent = this.events.length > 0 ? this.events[0] : null;
         }
         this.currentPage = 1;
         this.notify();
@@ -152,11 +158,18 @@ class StateStore {
         result.sort((a, b) => {
             const valA = a[this.sortField];
             const valB = b[this.sortField];
-            if (valA === undefined || valB === undefined) return 0;
-            if (typeof valA === "string") {
+            if (valA == null && valB == null) return 0;
+            if (valA == null) return 1;
+            if (valB == null) return -1;
+            if (typeof valA === "string" && typeof valB === "string") {
                 return this.sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
             }
-            return this.sortOrder === "asc" ? valA - valB : valB - valA;
+            if (typeof valA === "number" && typeof valB === "number") {
+                return this.sortOrder === "asc" ? valA - valB : valB - valA;
+            }
+            const strA = String(valA);
+            const strB = String(valB);
+            return this.sortOrder === "asc" ? strA.localeCompare(strB) : strB.localeCompare(strA);
         });
 
         return result;

@@ -24,8 +24,10 @@ public class LocaraCli {
 
         String command = args[0];
         if ("sanitize-or".equalsIgnoreCase(command) || hasArg(args, "--sanitize-or")) {
+            String sanitizePath = getArg(args, "--path", null);
+            if (sanitizePath == null) sanitizePath = getArg(args, "--dir", "Object Repository");
             return CliCommandHandlers.runSanitizeMode(
-                    getArg(args, "--path", "Object Repository"), hasArg(args, "--fix"), !hasArg(args, "--no-backup"));
+                    sanitizePath, hasArg(args, "--fix"), !hasArg(args, "--no-backup"));
         }
         if ("inspect-fields".equalsIgnoreCase(command) || hasArg(args, "--inspect-fields")) {
             String xmlPath = resolveFlagOrPositional(args, "--xml");
@@ -52,7 +54,9 @@ public class LocaraCli {
             return CliCommandHandlers.runAlignScriptMode(resolveFlagOrPositional(args, "--script"));
         }
         if ("audit-naming".equalsIgnoreCase(command) || hasArg(args, "--audit-naming")) {
-            String targetPath = resolveFlagOrPositional(args, "--path");
+            String targetPath = getArg(args, "--path", null);
+            if (targetPath == null) targetPath = getArg(args, "--dir", null);
+            if (targetPath == null && args.length > 1 && !args[1].startsWith("-")) targetPath = args[1];
             return CliCommandHandlers.runAuditNamingMode((targetPath == null || targetPath.isEmpty()) ? "." : targetPath);
         }
 
@@ -86,7 +90,14 @@ public class LocaraCli {
             System.err.println("❌ Error: Missing target hint. Use --hint \"<Button Name or Description>\"");
             return 1;
         }
-        return CliCommandHandlers.runHealingMode(xmlContent, hint, getArg(args, "--action", "TAP"), getArg(args, "--out", null));
+        return CliCommandHandlers.runHealingMode(
+                xmlContent,
+                hint,
+                getArg(args, "--action", "TAP"),
+                getArg(args, "--out", null),
+                getArg(args, "--project-dir", null),
+                !hasArg(args, "--no-audit")
+        );
     }
 
     private static String resolveFlagOrPositional(String[] args, String flag) {
@@ -112,9 +123,9 @@ public class LocaraCli {
     }
 
     private static void printUsage() {
-        System.out.println("Locara by Qureon CLI v1.16.0 — Autonomous Mobile Recon & Synthesizer");
+        System.out.println("Locara by Qureon CLI v1.16.1 — Autonomous Mobile Recon & Synthesizer");
         System.out.println("Usage:");
-        System.out.println("  locara --xml <path> --hint <hint> [options]");
+        System.out.println("  locara --xml <path> --hint <hint> [--action TAP] [--out <rs>] [--project-dir <dir>] [--no-audit]");
         System.out.println("  locara sanitize-or --path <path> [--fix] [--no-backup]");
         System.out.println("  locara inspect-fields --xml <path>");
         System.out.println("  locara extract-account --xml <path>");
