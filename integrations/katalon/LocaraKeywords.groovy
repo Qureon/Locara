@@ -42,7 +42,14 @@ class LocaraKeywords {
             KeywordUtil.logInfo("[Locara Ghost Mode] locara JAR not found on Drivers classpath; delegating '${methodName}' to native Mobile keyword.")
             return ghostFallback.call()
         }
-        return clz.getMethod(methodName, paramTypes).invoke(null, args)
+        try {
+            return clz.getMethod(methodName, paramTypes).invoke(null, args)
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            Throwable cause = e.getCause()
+            if (cause instanceof Error) throw (Error) cause
+            if (cause instanceof RuntimeException) throw (RuntimeException) cause
+            throw new RuntimeException(cause != null ? cause : e)
+        }
     }
 
     @Keyword(keywordObject = 'Locara')
@@ -52,7 +59,7 @@ class LocaraKeywords {
 
     @Keyword(keywordObject = 'Locara')
     static boolean tap(TestObject testObject, int timeoutSeconds, String hint = "") {
-        return invokeOrFallback("tap", [TestObject.class, int.class, String.class] as Class[], [testObject, timeoutSeconds, hint] as Object[], {
+        return invokeOrFallback("tap", [Object.class, int.class, String.class] as Class[], [testObject, timeoutSeconds, hint] as Object[], {
             Mobile.tap(testObject, timeoutSeconds)
             return true
         }) as boolean
@@ -78,7 +85,7 @@ class LocaraKeywords {
 
     @Keyword(keywordObject = 'Locara')
     static boolean setText(TestObject testObject, String text, int timeoutSeconds, String hint = "") {
-        return invokeOrFallback("setText", [TestObject.class, String.class, int.class, String.class] as Class[], [testObject, text, timeoutSeconds, hint] as Object[], {
+        return invokeOrFallback("setText", [Object.class, String.class, int.class, String.class] as Class[], [testObject, text, timeoutSeconds, hint] as Object[], {
             Mobile.setText(testObject, text, timeoutSeconds)
             return true
         }) as boolean
@@ -91,7 +98,7 @@ class LocaraKeywords {
 
     @Keyword(keywordObject = 'Locara')
     static String getText(TestObject testObject, int timeoutSeconds, String hint = "") {
-        return invokeOrFallback("getText", [TestObject.class, int.class, String.class] as Class[], [testObject, timeoutSeconds, hint] as Object[], {
+        return invokeOrFallback("getText", [Object.class, int.class, String.class] as Class[], [testObject, timeoutSeconds, hint] as Object[], {
             return Mobile.getText(testObject, timeoutSeconds)
         }) as String
     }
@@ -103,7 +110,7 @@ class LocaraKeywords {
 
     @Keyword(keywordObject = 'Locara')
     static boolean clearText(TestObject testObject, int timeoutSeconds, String hint = "") {
-        return invokeOrFallback("clearText", [TestObject.class, int.class, String.class] as Class[], [testObject, timeoutSeconds, hint] as Object[], {
+        return invokeOrFallback("clearText", [Object.class, int.class, String.class] as Class[], [testObject, timeoutSeconds, hint] as Object[], {
             Mobile.clearText(testObject, timeoutSeconds)
             return true
         }) as boolean
@@ -111,14 +118,14 @@ class LocaraKeywords {
 
     @Keyword(keywordObject = 'Locara')
     static boolean isElementPresent(TestObject testObject, String hint = "") {
-        return invokeOrFallback("isElementPresent", [TestObject.class, String.class] as Class[], [testObject, hint] as Object[], {
+        return invokeOrFallback("isElementPresent", [Object.class, String.class] as Class[], [testObject, hint] as Object[], {
             return Mobile.waitForElementPresent(testObject, DEFAULT_WAIT_TIMEOUT_SECONDS)
         }) as boolean
     }
 
     @Keyword(keywordObject = 'Locara')
     static boolean assertElementPresent(TestObject testObject, String hint = "") {
-        return invokeOrFallback("assertElementPresent", [TestObject.class, String.class] as Class[], [testObject, hint] as Object[], {
+        return invokeOrFallback("assertElementPresent", [Object.class, String.class] as Class[], [testObject, hint] as Object[], {
             Mobile.verifyElementExist(testObject, 10)
             return true
         }) as boolean
@@ -140,8 +147,15 @@ class LocaraKeywords {
         if (clz == null) {
             return
         }
-        Class<?> appTargetClz = Class.forName("com.qureon.locara.core.model.AppTarget")
-        Object profile = appTargetClz.getMethod("fromString", String.class).invoke(null, profileName)
-        clz.getMethod("setAppTarget", appTargetClz).invoke(null, profile)
+        try {
+            Class<?> appTargetClz = Class.forName("com.qureon.locara.core.model.AppTarget")
+            Object profile = appTargetClz.getMethod("fromString", String.class).invoke(null, profileName)
+            clz.getMethod("setAppTarget", appTargetClz).invoke(null, profile)
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            Throwable cause = e.getCause()
+            if (cause instanceof Error) throw (Error) cause
+            if (cause instanceof RuntimeException) throw (RuntimeException) cause
+            throw new RuntimeException(cause != null ? cause : e)
+        }
     }
 }
