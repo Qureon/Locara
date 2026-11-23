@@ -90,7 +90,14 @@ public class LocaraCli {
             System.err.println("❌ Error: Missing target hint. Use --hint \"<Button Name or Description>\"");
             return 1;
         }
-        return CliCommandHandlers.runHealingMode(xmlContent, hint, getArg(args, "--action", "TAP"), getArg(args, "--out", null));
+        return CliCommandHandlers.runHealingMode(
+                xmlContent,
+                hint,
+                getArg(args, "--action", "TAP"),
+                getArg(args, "--out", null),
+                getArg(args, "--project-dir", null),
+                !hasArg(args, "--no-audit")
+        );
     }
 
     private static String resolveFlagOrPositional(String[] args, String flag) {
@@ -118,7 +125,7 @@ public class LocaraCli {
     private static void printUsage() {
         System.out.println("Locara by Qureon CLI v1.16.0 — Autonomous Mobile Recon & Synthesizer");
         System.out.println("Usage:");
-        System.out.println("  locara --xml <path> --hint <hint> [options]");
+        System.out.println("  locara --xml <path> --hint <hint> [--action TAP] [--out <rs>] [--project-dir <dir>] [--no-audit]");
         System.out.println("  locara sanitize-or --path <path> [--fix] [--no-backup]");
         System.out.println("  locara inspect-fields --xml <path>");
         System.out.println("  locara extract-account --xml <path>");

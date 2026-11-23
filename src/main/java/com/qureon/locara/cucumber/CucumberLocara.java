@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 public class CucumberLocara {
 
     private static final Pattern QUOTED_PATTERN = Pattern.compile("([\"'])((?:(?!\\1).)+)\\1");
-    private static final Pattern GHERKIN_PREFIX_PATTERN = Pattern.compile("^(?i)(Given|When|Then|And|But|\\*)\\s+");
+    private static final Pattern GHERKIN_PREFIX_PATTERN = Pattern.compile("^(?i)(?:(?:Given|When|Then|And|But)\\b|\\*)(?:\\s+|$)");
     private static final Pattern QUOTED_TOKEN_REMOVE_PATTERN = QUOTED_PATTERN;
     private static final Pattern SET_TEXT_NOISE_PATTERN = Pattern.compile("(?i)\\b(fill|type|into|field|kolom|input|masukkan|pada)\\b");
     private static final Pattern CLICK_NOISE_PATTERN = Pattern.compile("(?i)\\b(button|tombol|klik|click|tap|tekan|pilih|verify|assert|harus|tampil)\\b");
