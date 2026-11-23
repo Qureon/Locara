@@ -9,7 +9,7 @@
 import { extractFields } from "../api.js";
 import { APP_CONFIG } from "../config.js";
 import { renderIcon } from "../icons.js";
-import { escapeHtml, escapeCodeString } from "../utils.js";
+import { copyToClipboard, escapeHtml, escapeCodeString } from "../utils.js";
 
 const SAMPLE_TRANSACTION_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <hierarchy rotation="0">
@@ -59,17 +59,14 @@ export function initFormInspectorModule() {
 
             try {
                 let res = await extractFields(xml);
-                
-                // Client-side fallback if server offline or standalone
                 if (!res || !res.pairs || res.pairs.length === 0) {
                     res = parseXmlSpatialClient(xml);
                 }
-
-                renderSpatialResults(res.pairs || [], outputEmpty, outputWrapper);
+                renderSpatialResults(res.pairs || [], outputEmpty, outputWrapper, res.parseError);
             } catch (err) {
                 console.error("Spatial extraction error:", err);
                 const fallback = parseXmlSpatialClient(xml);
-                renderSpatialResults(fallback.pairs || [], outputEmpty, outputWrapper);
+                renderSpatialResults(fallback.pairs || [], outputEmpty, outputWrapper, fallback.parseError);
             } finally {
                 btnRun.classList.remove("loading");
                 btnRun.disabled = false;
@@ -78,7 +75,15 @@ export function initFormInspectorModule() {
     }
 }
 
-function renderSpatialResults(pairs, emptyEl, wrapperEl) {
+function renderSpatialResults(pairs, emptyEl, wrapperEl, parseError = "") {
+    if (parseError) {
+        if (emptyEl) emptyEl.classList.add("hidden");
+        if (wrapperEl) {
+            wrapperEl.classList.remove("hidden");
+            wrapperEl.innerHTML = `<p class="text-danger">${escapeHtml(parseError)}</p>`;
+        }
+        return;
+    }
     if (!pairs || pairs.length === 0) {
         if (emptyEl) emptyEl.classList.remove("hidden");
         if (wrapperEl) wrapperEl.classList.add("hidden");
@@ -176,7 +181,7 @@ function renderSpatialResults(pairs, emptyEl, wrapperEl) {
                 `String actual = doc.get("${key}")`,
                 `assert actual == "${val}" : "Expected ${key} to be '${val}' but got '\${actual}'"`
             ].join("\n");
-            navigator.clipboard.writeText(snippet).then(() => {
+            copyToClipboard(snippet).then(() => {
                 const orig = btn.innerHTML;
                 btn.innerHTML = `<span style="color: var(--emerald);">✓ Copied</span>`;
                 setTimeout(() => btn.innerHTML = orig, 1500);
@@ -186,12 +191,10 @@ function renderSpatialResults(pairs, emptyEl, wrapperEl) {
         });
     });
 
-    // Wire Export All JSON
     const btnExportJson = document.getElementById("btn-copy-all-json");
     if (btnExportJson) {
         btnExportJson.addEventListener("click", () => {
-            const jsonStr = JSON.stringify(pairs, null, 2);
-            navigator.clipboard.writeText(jsonStr).then(() => {
+            copyToClipboard(JSON.stringify(pairs, null, 2)).then(() => {
                 alert("Seluruh pasangan field berhasil disalin ke clipboard dalam format JSON!");
             }).catch(() => {
                 alert("Clipboard tidak tersedia di konteks browser ini.");
@@ -200,13 +203,13 @@ function renderSpatialResults(pairs, emptyEl, wrapperEl) {
     }
 }
 
-/**
- * Fallback browser-side spatial parser matching server-side Left-to-Right & Top-to-Bottom rules
- */
 function parseXmlSpatialClient(xmlText) {
     try {
         const parser = new DOMParser();
         const doc = parser.parseFromString(xmlText, "text/xml");
+        if (doc.querySelector("parsererror")) {
+            return { pairs: [], parseError: "XML tidak valid (gagal parsing DOM)." };
+        }
         const elements = Array.from(doc.querySelectorAll("*"));
         const boundsPattern = /\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]/;
 

@@ -49,7 +49,7 @@ export function initTheme() {
     }
 }
 
-export function applyTheme(theme) {
+function applyTheme(theme) {
     const normalized = theme === "light" ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", normalized);
     safeStorageSet(THEME_STORAGE_KEY, normalized);

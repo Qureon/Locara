@@ -158,11 +158,18 @@ class StateStore {
         result.sort((a, b) => {
             const valA = a[this.sortField];
             const valB = b[this.sortField];
-            if (valA === undefined || valB === undefined) return 0;
-            if (typeof valA === "string") {
+            if (valA == null && valB == null) return 0;
+            if (valA == null) return 1;
+            if (valB == null) return -1;
+            if (typeof valA === "string" && typeof valB === "string") {
                 return this.sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
             }
-            return this.sortOrder === "asc" ? valA - valB : valB - valA;
+            if (typeof valA === "number" && typeof valB === "number") {
+                return this.sortOrder === "asc" ? valA - valB : valB - valA;
+            }
+            const strA = String(valA);
+            const strB = String(valB);
+            return this.sortOrder === "asc" ? strA.localeCompare(strB) : strB.localeCompare(strA);
         });
 
         return result;

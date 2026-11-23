@@ -1,8 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { escapeHtml, escapeXml, toXPathLiteral, escapeCodeString } from "../js/utils.js";
+import { copyToClipboard, escapeHtml, escapeXml, toXPathLiteral, escapeCodeString } from "../js/utils.js";
 import { computeStringScore, detectFramework, runReconEngine } from "../js/modules/playground-engine.js";
+import { computeModuleAnalytics, computeVolatileLocators } from "../js/modules/analytics.js";
 import { appState } from "../js/state.js";
 
 test("escapeHtml escapes HTML special characters safely", () => {
@@ -81,4 +82,28 @@ test("runReconEngine reports parseError on malformed DOMParser XML output", () =
     } finally {
         globalThis.DOMParser = prevDomParser;
     }
+});
+
+test("copyToClipboard rejects cleanly when navigator.clipboard is unavailable", async () => {
+    await assert.rejects(() => copyToClipboard("sample"), /Clipboard API unavailable/);
+});
+
+test("StateStore sorts nullable fields deterministically and analytics aggregates live events", () => {
+    appState.setEvents([
+        { id: "e1", module: "Transfer", brokenLocator: "#old_pay", status: "SUCCESS", confidence: 0.9, latencyMs: null },
+        { id: "e2", module: "Transfer", brokenLocator: "#old_pay", status: "HEALED", confidence: 0.85, latencyMs: 18 },
+        { id: "e3", module: "Login", brokenLocator: "#old_login", status: "SUCCESS", confidence: 0.95, latencyMs: 42 },
+    ]);
+    appState.setSort("latencyMs");
+    appState.setSort("latencyMs"); // ascending
+    const sorted = appState.getFilteredAndSortedEvents();
+    assert.deepEqual(sorted.map(e => e.id), ["e2", "e3", "e1"]);
+
+    const mods = computeModuleAnalytics(appState.events);
+    assert.equal(mods[0].module, "Transfer");
+    assert.equal(mods[0].count, 2);
+
+    const volatile = computeVolatileLocators(appState.events);
+    assert.equal(volatile[0].id, "#old_pay");
+    assert.equal(volatile[0].changes, 2);
 });

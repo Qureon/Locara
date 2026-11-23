@@ -7,7 +7,7 @@
 
 import { APP_CONFIG } from "../config.js";
 import { renderIcon } from "../icons.js";
-import { escapeHtml, escapeXml, toXPathLiteral } from "../utils.js";
+import { copyToClipboard, escapeHtml, escapeXml, toXPathLiteral } from "../utils.js";
 import { SAMPLE_XML, runReconEngine } from "./playground-engine.js";
 
 export function initPlaygroundModule() {
@@ -28,7 +28,7 @@ export function initPlaygroundModule() {
             const hint = inputHint.value.trim();
 
             if (!rawXml) {
-                alert("Silakan masukkan potongan Appium XML atau klik 'Muat Sampel M-Smile'!");
+                alert("Silakan masukkan potongan Appium XML atau klik 'Muat Sampel XML'!");
                 return;
             }
 
@@ -54,51 +54,64 @@ function buildXPathSet(w) {
     return { xpathAttributes, xpathRelative, xpathCustom, xpathPosition };
 }
 
+function renderRsProperty(name, value, selected) {
+    return `   <webElementProperties>
+      <isSelected>${selected ? "true" : "false"}</isSelected>
+      <matchCondition>equals</matchCondition>
+      <name>${escapeXml(name)}</name>
+      <type>Main</type>
+      <value>${escapeXml(value)}</value>
+      <webElementGuid>${generateGuid()}</webElementGuid>
+   </webElementProperties>`;
+}
+
 function buildKatalonRsXml(w, confPct, xpaths, frameworkTag) {
     const rawRsBase = (w.resId ? w.resId.split("/").pop() : "element_healed").replace(/[^A-Za-z0-9_.-]/g, "_");
-    const rsName = `${rawRsBase || "element_healed"}.rs`;
+    const rsName = (rawRsBase || "element_healed").replace(/\.rs$/, "");
     const isWeb = frameworkTag === "WebView" || /^(a|button|div|span|input|select|textarea|form|label)$/i.test(w.clazz || "");
-    const rootTag = isWeb ? "WebElementEntity" : "MobileElementEntity";
-    const collectionTag = isWeb ? "selectorCollection" : "locatorCollection";
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<${rootTag}>
+    const header = `<?xml version="1.0" encoding="UTF-8"?>
+<${isWeb ? "WebElementEntity" : "MobileElementEntity"}>
    <description>Autonomous In-Flight Healed by Locara Engine · Qureon (Confidence: ${escapeXml(confPct)}%)</description>
-   <name>${escapeXml(rsName.replace(/\.rs$/, ""))}</name>
+   <name>${escapeXml(rsName)}</name>
    <tag></tag>
    <elementGuidId>${generateGuid()}</elementGuidId>
    <selectorMethod>XPATH</selectorMethod>
-   <useRalativeImagePath>false</useRalativeImagePath>
-   <webElementProperties>
-      <isSelected>true</isSelected>
-      <matchCondition>equals</matchCondition>
-      <name>xpath:attributes</name>
-      <type>Main</type>
-      <value>${escapeXml(xpaths.xpathAttributes)}</value>
-      <webElementGuid>${generateGuid()}</webElementGuid>
-   </webElementProperties>
-   <webElementProperties>
-      <isSelected>false</isSelected>
-      <matchCondition>equals</matchCondition>
-      <name>xpath:idRelative</name>
-      <type>Main</type>
-      <value>${escapeXml(xpaths.xpathRelative)}</value>
-      <webElementGuid>${generateGuid()}</webElementGuid>
-   </webElementProperties>
-   <webElementProperties>
-      <isSelected>false</isSelected>
-      <matchCondition>equals</matchCondition>
-      <name>xpath:position</name>
-      <type>Main</type>
-      <value>${escapeXml(xpaths.xpathPosition)}</value>
-      <webElementGuid>${generateGuid()}</webElementGuid>
-   </webElementProperties>
-   <${collectionTag}>
-      <entry>
-         <key>XPATH</key>
-         <value>${escapeXml(xpaths.xpathAttributes)}</value>
-      </entry>
-   </${collectionTag}>
-</${rootTag}>`;
+   <smartLocatorEnabled>false</smartLocatorEnabled>
+   <useRalativeImagePath>false</useRalativeImagePath>`;
+
+    if (isWeb) {
+        const webProps = [
+            renderRsProperty("xpath:attributes", xpaths.xpathAttributes, true),
+            renderRsProperty("xpath:idRelative", xpaths.xpathRelative, false),
+            renderRsProperty("xpath:position", xpaths.xpathPosition, false),
+        ].join("\n");
+        return `${header}
+${webProps}
+   <selectorCollection>
+      <entry><key>XPATH</key><value>${escapeXml(xpaths.xpathAttributes)}</value></entry>
+   </selectorCollection>
+</WebElementEntity>`;
+    }
+
+    const mobileProps = [
+        renderRsProperty("class", w.clazz || "", true),
+        ...(w.text ? [renderRsProperty("text", w.text, false)] : []),
+        ...(w.resId ? [renderRsProperty("resource-id", w.resId, false)] : []),
+        ...(w.desc ? [renderRsProperty("content-desc", w.desc, false)] : []),
+        renderRsProperty("xpath", xpaths.xpathAttributes, true),
+    ].join("\n");
+    const platform = frameworkTag === "iOS" || (w.clazz || "").startsWith("XCUIElementType") ? "IOS" : "ANDROID";
+    return `${header}
+${mobileProps}
+   <locator>${escapeXml(xpaths.xpathAttributes)}</locator>
+   <locatorCollection>
+      <entry><key>XPATH</key><value>${escapeXml(xpaths.xpathAttributes)}</value></entry>
+      <entry><key>ID</key><value>${escapeXml(w.resId || "")}</value></entry>
+      <entry><key>ACCESSIBILITY</key><value>${escapeXml(w.desc || "")}</value></entry>
+   </locatorCollection>
+   <locatorStrategy>XPATH</locatorStrategy>
+   <platform>${platform}</platform>
+</MobileElementEntity>`;
 }
 
 function renderReconResult(result) {
@@ -198,7 +211,7 @@ function renderReconResult(result) {
     const copyBtn = document.getElementById("btn-copy-playground-rs");
     if (copyBtn) {
         copyBtn.addEventListener("click", () => {
-            navigator.clipboard.writeText(rsXml).then(() => {
+            copyToClipboard(rsXml).then(() => {
                 copyBtn.innerHTML = `<span class="btn-icon-wrap">${renderIcon("check")}</span> Tersalin!`;
                 setTimeout(() => {
                     copyBtn.innerHTML = `<span class="btn-icon-wrap">${renderIcon("copy")}</span> Salin XML .rs`;

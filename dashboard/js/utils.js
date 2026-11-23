@@ -58,3 +58,13 @@ export function escapeCodeString(str) {
         .replace(/\n/g, "\\n");
 }
 
+/**
+ * Safely copy text to clipboard even in non-secure contexts where navigator.clipboard is undefined.
+ */
+export function copyToClipboard(text) {
+    if (typeof navigator !== "undefined" && navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+        return navigator.clipboard.writeText(String(text ?? ""));
+    }
+    return Promise.reject(new Error("Clipboard API unavailable in this browser context"));
+}
+

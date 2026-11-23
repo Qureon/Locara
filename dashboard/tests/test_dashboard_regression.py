@@ -1,6 +1,5 @@
 import http.client
 import importlib
-import json
 import sys
 import tempfile
 import threading
@@ -155,6 +154,9 @@ class DashboardRegressionTest(unittest.TestCase):
         self.assertEqual(recon_service.classify_keyword_tier("WebUI.check_point_status"), "CHECKPOINT")
 
     def test_package_import_and_generate_report_creates_nested_parent_dirs(self):
+        for mod_name in ("dashboard.config_store", "dashboard.http_utils", "dashboard.recon_service", "dashboard.server", "dashboard.generate_report"):
+            mod = importlib.import_module(mod_name)
+            self.assertIsNotNone(mod)
         pkg_mod = importlib.import_module("dashboard.generate_report")
         self.assertTrue(hasattr(pkg_mod, "generate_report"))
 

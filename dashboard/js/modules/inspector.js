@@ -13,15 +13,37 @@ export function initInspectorModule() {
     appState.subscribe(state => {
         if (state.selectedEvent) {
             renderInspectorDetails(state.selectedEvent);
+        } else {
+            renderEmptyInspectorState();
         }
     });
 
     if (appState.selectedEvent) {
         renderInspectorDetails(appState.selectedEvent);
+    } else {
+        renderEmptyInspectorState();
     }
 }
 
-export function renderInspectorDetails(evt) {
+function renderEmptyInspectorState() {
+    const oldLoc = document.getElementById("diff-old-locator");
+    const newLoc = document.getElementById("diff-new-locator");
+    if (oldLoc) oldLoc.textContent = "-";
+    if (newLoc) newLoc.textContent = "-";
+    ["vec-text", "vec-id", "vec-desc", "vec-class", "vec-prox"].forEach(id => updateVectorRow(id, 0));
+
+    const mockBtn = document.getElementById("target-element-btn");
+    const boundingBox = document.getElementById("visual-bounding-box");
+    const badgeText = boundingBox ? boundingBox.querySelector(".badge-text") : null;
+    if (mockBtn) mockBtn.textContent = "—";
+    if (badgeText) badgeText.textContent = "NO EVENT SELECTED";
+    if (boundingBox) boundingBox.style.borderColor = "var(--border-color)";
+
+    const container = document.getElementById("guards-status-grid");
+    if (container) container.innerHTML = `<p class="text-muted text-sm">Belum ada event audit terpilih.</p>`;
+}
+
+function renderInspectorDetails(evt) {
     if (!evt) return;
 
     // 1. Locator Diff Blocks

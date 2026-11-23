@@ -100,7 +100,7 @@ function initExportButton() {
     }
 }
 
-export function renderTelemetryTable() {
+function renderTelemetryTable() {
     const tbody = document.getElementById("audit-table-body");
     if (!tbody) return;
 

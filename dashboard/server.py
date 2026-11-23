@@ -16,51 +16,34 @@ from pathlib import Path
 from urllib.parse import urlparse
 from xml.etree.ElementTree import ParseError
 
-from config_store import (
-    ALLOWED_TARGETS,
-    BadRequestError,
-    DEFAULT_CONFIG,
-    DEFAULT_PORT,
-    ENGINE_VERSION,
-    FLOAT_CONFIG_KEYS,
-    PROPERTIES_KEY_MAP,
-    PayloadTooLargeError,
-    build_audit_candidates,
-    load_persisted_config as _load_persisted_config_into,
-    parse_port,
-    save_persisted_config as _save_persisted_config_to,
-    validate_config_patch,
-)
-from http_utils import (
-    LOOPBACK_HOSTS,
-    drain_small_body,
-    is_allowed_host_header,
-    is_allowed_loopback_origin,
-    is_allowed_static_path,
-    load_audit_events,
-    read_json_body,
-)
-from recon_service import (
-    BOUNDS_PATTERN,
-    SAFE_TAG_PATTERN,
-    XML_FORBIDDEN_DECL_PATTERN,
-    classify_keyword_tier,
-    extract_label_value_pairs,
-    synthesize_ranked_xpaths,
-    xp_literal,
-)
+try:
+    from . import config_store, http_utils, recon_service
+except ImportError:
+    import config_store  # type: ignore[no-redef]
+    import http_utils  # type: ignore[no-redef]
+    import recon_service  # type: ignore[no-redef]
+
+BadRequestError = config_store.BadRequestError
+PayloadTooLargeError = config_store.PayloadTooLargeError
+DEFAULT_CONFIG = config_store.DEFAULT_CONFIG
+ENGINE_VERSION = config_store.ENGINE_VERSION
+build_audit_candidates = config_store.build_audit_candidates
+_load_persisted_config_into = config_store.load_persisted_config
+parse_port = config_store.parse_port
+_save_persisted_config_to = config_store.save_persisted_config
+validate_config_patch = config_store.validate_config_patch
+drain_small_body = http_utils.drain_small_body
+is_allowed_host_header = http_utils.is_allowed_host_header
+is_allowed_loopback_origin = http_utils.is_allowed_loopback_origin
+is_allowed_static_path = http_utils.is_allowed_static_path
+load_audit_events = http_utils.load_audit_events
+read_json_body = http_utils.read_json_body
+classify_keyword_tier = recon_service.classify_keyword_tier
+extract_label_value_pairs = recon_service.extract_label_value_pairs
+synthesize_ranked_xpaths = recon_service.synthesize_ranked_xpaths
 
 ENGINE_BANNER = f"Locara Core {ENGINE_VERSION} · Powered by Qureon (Katalon 11.7.0+ Ready)"
 MAX_REQUEST_BYTES = 2 * 1024 * 1024  # 2 MiB max JSON/XML payload
-
-# Retained for backward compatibility with pre-modularization external helper imports
-_BadRequestError = BadRequestError
-_PayloadTooLargeError = PayloadTooLargeError
-_validate_config_patch = validate_config_patch
-_build_audit_candidates = build_audit_candidates
-_is_allowed_loopback_origin = is_allowed_loopback_origin
-_is_allowed_host_header = is_allowed_host_header
-_xp_literal = xp_literal
 
 PORT = parse_port(sys.argv)
 CONFIG_LOCK = threading.Lock()

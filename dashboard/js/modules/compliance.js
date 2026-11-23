@@ -9,6 +9,7 @@ import { APP_CONFIG } from "../config.js";
 import { appState } from "../state.js";
 
 const SUCCESS_STATUSES = new Set(["SUCCESS", "HEALED", "SCROLLED"]);
+let complianceRenderSeq = 0;
 
 export function initComplianceModule() {
     const btnPrint = document.getElementById("btn-print-certificate");
@@ -51,6 +52,7 @@ async function computeAuditDigest(events) {
 }
 
 async function renderComplianceSummary() {
+    const seq = ++complianceRenderSeq;
     const events = Array.isArray(appState.events) ? appState.events : [];
     const total = events.length;
     const healedCount = events.filter(e => SUCCESS_STATUSES.has(String(e.status || "").toUpperCase())).length;
@@ -68,6 +70,9 @@ async function renderComplianceSummary() {
     if (elHealed) elHealed.textContent = healedCount.toLocaleString();
     if (elLockouts) elLockouts.textContent = lockouts.toLocaleString();
     if (elHash) {
-        elHash.textContent = total > 0 ? await computeAuditDigest(events) : "N/A (No Events)";
+        const digest = total > 0 ? await computeAuditDigest(events) : "N/A (No Events)";
+        if (seq === complianceRenderSeq) {
+            elHash.textContent = digest;
+        }
     }
 }

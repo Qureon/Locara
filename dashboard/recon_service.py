@@ -4,7 +4,10 @@
 import re
 import xml.etree.ElementTree as ET
 
-from config_store import BadRequestError
+try:
+    from .config_store import BadRequestError
+except ImportError:
+    from config_store import BadRequestError
 
 BOUNDS_PATTERN = re.compile(r"\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]")
 XML_FORBIDDEN_DECL_PATTERN = re.compile(r"<!\s*(DOCTYPE|ENTITY)\b", re.IGNORECASE)
