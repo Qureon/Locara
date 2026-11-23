@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
 public class LocaraOrSanitizer {
 
     private static final Pattern PROP_PATTERN = Pattern.compile(
-            "<webElementProperties>.*?<name>([^<]+)</name>.*?<value>([^<]*)</value>.*?</webElementProperties>",
+            "<webElementProperties>(?:(?!</webElementProperties>)[\\s\\S])*?<name>([^<]+)</name>(?:(?!</webElementProperties>)[\\s\\S])*?<value>([^<]*)</value>(?:(?!</webElementProperties>)[\\s\\S])*?</webElementProperties>",
             Pattern.DOTALL
     );
 
@@ -31,7 +31,7 @@ public class LocaraOrSanitizer {
             Pattern.DOTALL
     );
     private static final Pattern XPATH_PROP_VALUE_PATTERN = Pattern.compile(
-            "(<webElementProperties>.*?<name>\\s*xpath\\s*</name>.*?<value>)([^<]*)(</value>.*?</webElementProperties>)",
+            "(<webElementProperties>(?:(?!</webElementProperties>)[\\s\\S])*?<name>\\s*xpath\\s*</name>(?:(?!</webElementProperties>)[\\s\\S])*?)(?:<value>[^<]*</value>|<value\\s*/>)((?:(?!</webElementProperties>)[\\s\\S])*?</webElementProperties>)",
             Pattern.DOTALL
     );
 
@@ -174,7 +174,8 @@ public class LocaraOrSanitizer {
         String escapedXPath = escapeXml(newXPath);
 
         if (XPATH_PROP_VALUE_PATTERN.matcher(result).find()) {
-            result = XPATH_PROP_VALUE_PATTERN.matcher(result).replaceFirst("$1" + Matcher.quoteReplacement(escapedXPath) + "$3");
+            result = XPATH_PROP_VALUE_PATTERN.matcher(result)
+                    .replaceFirst("$1<value>" + Matcher.quoteReplacement(escapedXPath) + "</value>$2");
         }
 
         if (LOCATOR_PATTERN.matcher(result).find()) {

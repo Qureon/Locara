@@ -65,6 +65,7 @@ public class FieldRelationshipParser {
         public String get(String key) {
             if (key == null) return null;
             String norm = normalizeKey(key);
+            if (norm.isEmpty()) return null;
             for (Map.Entry<String, String> e : fieldMap.entrySet()) {
                 if (e.getKey().equalsIgnoreCase(norm) || e.getKey().contains(norm)) {
                     return e.getValue();
@@ -75,17 +76,17 @@ public class FieldRelationshipParser {
 
         public String toSummaryTable() {
             StringBuilder sb = new StringBuilder();
-            sb.append(String.format("%-32s | %s\n", "FIELD LABEL", "VALUE"));
+            sb.append(String.format(Locale.US, "%-32s | %s\n", "FIELD LABEL", "VALUE"));
             sb.append("---------------------------------+-----------------------------------\n");
             for (FieldEntry e : entries) {
-                sb.append(String.format("%-32s | %s\n", truncate(e.getRawLabel(), 32), e.getValue()));
+                sb.append(String.format(Locale.US, "%-32s | %s\n", truncate(e.getRawLabel(), 32), e.getValue()));
             }
             return sb.toString();
         }
 
         private static boolean isTerminalTotal(String label) {
             if (label == null) return false;
-            String l = label.toLowerCase();
+            String l = label.toLowerCase(Locale.ROOT);
             return (l.contains("total") || l.contains("grand total") || l.contains("subtotal")) &&
                     !l.contains("peserta") && !l.contains("tagihan");
         }
@@ -123,7 +124,7 @@ public class FieldRelationshipParser {
 
     private static String normalizeKey(String label) {
         if (label == null) return "";
-        String clean = NORM_NON_ALNUM.matcher(label.toLowerCase()).replaceAll(" ");
+        String clean = NORM_NON_ALNUM.matcher(label.toLowerCase(Locale.ROOT)).replaceAll(" ");
         return NORM_SPACES.matcher(clean).replaceAll("_").trim();
     }
 }

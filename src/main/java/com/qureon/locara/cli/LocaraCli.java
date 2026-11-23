@@ -24,8 +24,10 @@ public class LocaraCli {
 
         String command = args[0];
         if ("sanitize-or".equalsIgnoreCase(command) || hasArg(args, "--sanitize-or")) {
+            String sanitizePath = getArg(args, "--path", null);
+            if (sanitizePath == null) sanitizePath = getArg(args, "--dir", "Object Repository");
             return CliCommandHandlers.runSanitizeMode(
-                    getArg(args, "--path", "Object Repository"), hasArg(args, "--fix"), !hasArg(args, "--no-backup"));
+                    sanitizePath, hasArg(args, "--fix"), !hasArg(args, "--no-backup"));
         }
         if ("inspect-fields".equalsIgnoreCase(command) || hasArg(args, "--inspect-fields")) {
             String xmlPath = resolveFlagOrPositional(args, "--xml");
@@ -52,7 +54,9 @@ public class LocaraCli {
             return CliCommandHandlers.runAlignScriptMode(resolveFlagOrPositional(args, "--script"));
         }
         if ("audit-naming".equalsIgnoreCase(command) || hasArg(args, "--audit-naming")) {
-            String targetPath = resolveFlagOrPositional(args, "--path");
+            String targetPath = getArg(args, "--path", null);
+            if (targetPath == null) targetPath = getArg(args, "--dir", null);
+            if (targetPath == null && args.length > 1 && !args[1].startsWith("-")) targetPath = args[1];
             return CliCommandHandlers.runAuditNamingMode((targetPath == null || targetPath.isEmpty()) ? "." : targetPath);
         }
 

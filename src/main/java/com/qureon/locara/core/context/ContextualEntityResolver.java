@@ -93,7 +93,7 @@ public class ContextualEntityResolver {
                 String d = node.getContentDesc() != null ? node.getContentDesc().replaceAll("[^0-9]", "") : "";
                 if (t.contains(cleanTarget) || d.contains(cleanTarget)) {
                     accountNode = node;
-                    rawAccountNumber = !t.isEmpty() ? t : d;
+                    rawAccountNumber = t.contains(cleanTarget) ? t : d;
                     break;
                 }
             }
@@ -246,7 +246,7 @@ public class ContextualEntityResolver {
         if (text == null || text.trim().isEmpty()) {
             return false;
         }
-        String lower = text.toLowerCase().trim();
+        String lower = text.toLowerCase(java.util.Locale.ROOT).trim();
         return lower.contains("tabungan") ||
                 lower.contains("giro") ||
                 lower.contains("deposito") ||

@@ -187,19 +187,20 @@ public class AutoVariableSynthesizer {
             return xmlContent;
         }
         List<TestCaseVariable> existing = parseVariablesFromContent(xmlContent);
-        boolean found = false;
+        String matchedExistingName = null;
         for (TestCaseVariable ex : existing) {
             if (ex.getName().equalsIgnoreCase(varName)) {
-                found = true;
+                matchedExistingName = ex.getName();
                 break;
             }
         }
 
-        if (found) {
-            // Regex replace defaultValue within matching variable block
+        if (matchedExistingName != null) {
+            // Regex replace defaultValue within matching variable block (preserving case-insensitive match)
             Pattern specificBlock = Pattern.compile(
-                    "(<variable>(?:(?!</variable>)[\\s\\S])*?<name>" + Pattern.quote(varName) + "</name>(?:(?!</variable>)[\\s\\S])*?</variable>)",
-                    Pattern.DOTALL
+                    "(<variable>(?:(?!</variable>)[\\s\\S])*?<name>\\s*" + Pattern.quote(matchedExistingName)
+                            + "\\s*</name>(?:(?!</variable>)[\\s\\S])*?</variable>)",
+                    Pattern.DOTALL | Pattern.CASE_INSENSITIVE
             );
             Matcher m = specificBlock.matcher(xmlContent);
             if (m.find()) {
@@ -227,7 +228,7 @@ public class AutoVariableSynthesizer {
         return "";
     }
 
-    private static final Pattern DEFAULT_VALUE_TAG_PATTERN = Pattern.compile("<defaultValue>[\\s\\S]*?</defaultValue>");
+    private static final Pattern DEFAULT_VALUE_TAG_PATTERN = Pattern.compile("<defaultValue>[\\s\\S]*?</defaultValue>|<defaultValue\\s*/>");
     private static final Pattern CAMEL_CASE_VAR_PATTERN = Pattern.compile("^[a-z][a-zA-Z0-9_]*$");
     private static final Set<String> BLACKLISTED_GENERIC_VAR_NAMES = Set.of(
             "data", "temp", "val", "value", "item", "object", "obj", "result", "x", "abc", "test", "variable", "var"

@@ -3,6 +3,8 @@ package com.qureon.locara.core.model;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 /**
@@ -82,16 +84,18 @@ final class HealConfigLoader {
     private static Properties loadMergedProperties(File propFile) {
         Properties props = new Properties();
         if (propFile != null && propFile.exists()) {
-            try (FileInputStream fis = new FileInputStream(propFile)) {
-                props.load(fis);
+            try (InputStreamReader reader = new InputStreamReader(new FileInputStream(propFile), StandardCharsets.UTF_8)) {
+                props.load(reader);
             } catch (IOException ignored) {}
         }
-        String userDir = System.getProperty("user.dir");
+        File overrideDir = (propFile != null && propFile.getParentFile() != null)
+                ? propFile.getParentFile()
+                : new File(System.getProperty("user.dir"));
         for (String name : LOCAL_OVERRIDE_FILES) {
-            File candidate = new File(userDir, name);
+            File candidate = new File(overrideDir, name);
             if (candidate.exists()) {
-                try (FileInputStream lfis = new FileInputStream(candidate)) {
-                    props.load(lfis);
+                try (InputStreamReader reader = new InputStreamReader(new FileInputStream(candidate), StandardCharsets.UTF_8)) {
+                    props.load(reader);
                     break;
                 } catch (IOException ignored) {}
             }

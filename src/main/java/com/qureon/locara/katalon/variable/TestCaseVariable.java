@@ -62,9 +62,10 @@ public class TestCaseVariable {
     public String toString() {
         return "TestCaseVariable{" +
                 "name='" + name + '\'' +
-                ", defaultValue='" + defaultValue + '\'' +
+                ", defaultValue='" + (masked ? "********" : defaultValue) + '\'' +
                 ", description='" + description + '\'' +
                 ", variableId='" + variableId + '\'' +
+                ", masked=" + masked +
                 '}';
     }
 }

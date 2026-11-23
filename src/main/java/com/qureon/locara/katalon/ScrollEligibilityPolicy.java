@@ -5,6 +5,7 @@ import com.qureon.locara.core.model.UIElementNode;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -14,24 +15,30 @@ import java.util.Set;
 final class ScrollEligibilityPolicy {
 
     private static final Set<String> OVERLAY_AND_DIALOG_KEYWORDS = new HashSet<>(Arrays.asList(
-            "popup", "pop_up", "pop up", "pop-up", "pop",
+            "popup", "pop",
             "modal", "dialog", "alert", "prompt", "overlay", "airbag",
             "izin", "perizinan", "permission", "permissions", "notifikasi", "notification", "notif",
             "lokasi", "location", "alamat", "address", "gps",
-            "allow", "izinkan", "deny", "tolak", "block", "jangan izinkan",
+            "allow", "izinkan", "deny", "tolak", "block",
             "batal", "cancel", "tutup", "close", "dismiss", "later", "nanti",
-            "bottomsheet", "bottom_sheet", "snackbar", "toast", "banner", "promo",
-            "system_dialog", "runtime_permission", "grant_permissions"
+            "bottomsheet", "snackbar", "toast", "banner", "promo"
     ));
+
+    private static final String[] OVERLAY_PHRASES = {
+            "permissioncontroller", "permission_allow_button", "com.android.permissioncontroller",
+            "com.google.android.permissioncontroller", "com.google.android.gms.location",
+            "pop up", "pop-up", "pop_up", "bottom sheet", "bottom_sheet", "jangan izinkan",
+            "system_dialog", "runtime_permission", "grant_permissions"
+    };
 
     private ScrollEligibilityPolicy() {}
 
     static boolean isOverlayOrDialogTarget(String hint, String targetRsPath) {
-        String combined = ((hint != null ? hint : "") + " " + (targetRsPath != null ? targetRsPath : "")).toLowerCase();
-        if (combined.contains("permissioncontroller") || combined.contains("permission_allow_button")
-                || combined.contains("com.android.permissioncontroller") || combined.contains("com.google.android.gms.location")
-                || combined.contains("pop up") || combined.contains("pop-up") || combined.contains("bottom sheet")) {
-            return true;
+        String combined = ((hint != null ? hint : "") + " " + (targetRsPath != null ? targetRsPath : "")).toLowerCase(Locale.ROOT);
+        for (String phrase : OVERLAY_PHRASES) {
+            if (combined.contains(phrase)) {
+                return true;
+            }
         }
         String[] tokens = combined.split("[\\s_\\-./]+");
         for (String token : tokens) {

@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -70,7 +71,7 @@ public class HtmlDomParser {
 
             // Text between previous tag end and current tag start
             if (start > lastEnd && !stack.isEmpty()) {
-                String textSegment = sanitized.substring(lastEnd, start).trim();
+                String textSegment = decodeHtmlEntities(sanitized.substring(lastEnd, start)).trim();
                 if (!textSegment.isEmpty()) {
                     stack.peek().appendText(textSegment);
                 }
@@ -79,21 +80,23 @@ public class HtmlDomParser {
 
             String fullMatch = matcher.group(0);
             boolean isClosing = fullMatch.startsWith("</");
-            String tagName = matcher.group(1).toLowerCase();
+            String tagName = matcher.group(1).toLowerCase(Locale.ROOT);
             String rawAttrs = matcher.group(2);
             boolean selfClosing = "/".equals(matcher.group(3)) || VOID_TAGS.contains(tagName);
 
             if (isClosing) {
-                // Pop stack until matching tag found
-                while (!stack.isEmpty()) {
-                    HtmlElementBuilder popped = stack.pop();
-                    UIElementNode node = popped.build();
-                    flattenedNodes.add(node);
-                    if (!stack.isEmpty()) {
-                        stack.peek().addChild(node);
-                    }
-                    if (popped.tagName.equalsIgnoreCase(tagName)) {
-                        break;
+                // Only unwind if a matching open tag exists; ignore stray closing tags so stack stays intact
+                if (hasMatchingOpenTag(stack, tagName)) {
+                    while (!stack.isEmpty()) {
+                        HtmlElementBuilder popped = stack.pop();
+                        UIElementNode node = popped.build();
+                        flattenedNodes.add(node);
+                        if (!stack.isEmpty()) {
+                            stack.peek().addChild(node);
+                        }
+                        if (popped.tagName.equalsIgnoreCase(tagName)) {
+                            break;
+                        }
                     }
                 }
             } else {
@@ -142,6 +145,28 @@ public class HtmlDomParser {
         return flattenedNodes;
     }
 
+    private static boolean hasMatchingOpenTag(Deque<HtmlElementBuilder> stack, String tagName) {
+        for (HtmlElementBuilder b : stack) {
+            if (b.tagName.equalsIgnoreCase(tagName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String decodeHtmlEntities(String raw) {
+        if (raw == null || !raw.contains("&")) return raw == null ? "" : raw;
+        return raw.replace("&nbsp;", " ")
+                .replace("&quot;", "\"")
+                .replace("&apos;", "'")
+                .replace("&#39;", "'")
+                .replace("&#x27;", "'")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&times;", "\u00D7")
+                .replace("&amp;", "&");
+    }
+
     private Map<String, String> parseAttributes(String rawAttrs) {
         if (rawAttrs == null || rawAttrs.trim().isEmpty()) {
             return Collections.emptyMap();
@@ -149,12 +174,12 @@ public class HtmlDomParser {
         Map<String, String> map = new LinkedHashMap<>();
         Matcher attrMatcher = ATTR_PATTERN.matcher(rawAttrs);
         while (attrMatcher.find()) {
-            String name = attrMatcher.group(1).toLowerCase();
+            String name = attrMatcher.group(1).toLowerCase(Locale.ROOT);
             String val = attrMatcher.group(2);
             if (val == null) val = attrMatcher.group(3);
             if (val == null) val = attrMatcher.group(4);
             if (val == null) val = "";
-            map.put(name, val);
+            map.put(name, decodeHtmlEntities(val));
         }
         return map;
     }

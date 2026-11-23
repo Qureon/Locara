@@ -53,17 +53,17 @@ class LocaraHook {
     private static Boolean readBooleanFlag(List<String> gvNames, List<String> propKeys, List<String> envKeys) {
         try {
             def gvClass = Class.forName("internal.GlobalVariable")
-            for (String f : gvNames) { try { Object val = gvClass.getField(f)?.get(null); if (val != null) return Boolean.parseBoolean(val.toString()) } catch (Throwable ignored) {} }
+            for (String f : gvNames) { try { Object val = gvClass.getField(f)?.get(null); if (val != null) return Boolean.parseBoolean(val.toString().trim()) } catch (Throwable ignored) {} }
         } catch (Throwable ignored) {}
-        for (String k : propKeys) { String sys = System.getProperty(k); if (sys != null) return Boolean.parseBoolean(sys) }
-        for (String k : envKeys) { String env = System.getenv(k); if (env != null) return Boolean.parseBoolean(env) }
+        for (String k : envKeys) { String env = System.getenv(k); if (env != null && !env.trim().isEmpty()) return Boolean.parseBoolean(env.trim()) }
+        for (String k : propKeys) { String sys = System.getProperty(k); if (sys != null && !sys.trim().isEmpty()) return Boolean.parseBoolean(sys.trim()) }
         try {
             String userDir = System.getProperty("user.dir")
             for (String fn : CONFIG_CANDIDATES) {
                 File f = new File(userDir, fn)
                 if (f.exists()) {
-                    Properties p = new Properties(); f.withInputStream { p.load(it) }
-                    for (String k : propKeys) { if (p.containsKey(k)) return Boolean.parseBoolean(p.getProperty(k)) }
+                    Properties p = new Properties(); f.withReader("UTF-8") { p.load(it) }
+                    for (String k : propKeys) { String v = p.getProperty(k); if (v != null && !v.trim().isEmpty()) return Boolean.parseBoolean(v.trim()) }
                 }
             }
         } catch (Throwable ignored) {}
@@ -147,7 +147,8 @@ class LocaraHook {
             String actualText = getLocaraClass()?.healAndGetText(to, DEFAULT_TIMEOUT_SECONDS, extractObjId(to)) as String
             if (actualText != null && !expected.trim().isEmpty()) {
                 String act = actualText.trim(), exp = expected.trim()
-                if (act == exp || act.contains(exp)) return true
+                boolean safeContains = exp.length() >= 3 && act.length() > 0 && act.contains(exp) && (exp.length() / (double) act.length()) >= 0.60d
+                if (act == exp || safeContains) return true
                 double sim = (double) Class.forName("com.qureon.locara.core.matcher.StringSimilarity").getMethod("compositeScore", String.class, String.class).invoke(null, act, exp)
                 if (sim >= getConfiguredConfidenceThreshold(MIN_SEMANTIC_TEXT_THRESHOLD)) return true
             }

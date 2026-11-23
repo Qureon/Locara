@@ -34,7 +34,7 @@ public class VisualEvidenceAnnotator {
      * and writes the annotated PNG file to the evidence directory.
      */
     public File annotateScreenshot(File rawScreenshot, HealCandidate candidate, HealConfig config) {
-        if (rawScreenshot == null || !rawScreenshot.exists() || candidate == null) {
+        if (rawScreenshot == null || !rawScreenshot.exists() || candidate == null || config == null) {
             return null;
         }
 

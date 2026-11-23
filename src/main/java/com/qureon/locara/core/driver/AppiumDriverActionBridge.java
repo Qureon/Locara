@@ -121,7 +121,7 @@ public final class AppiumDriverActionBridge {
             findAccessibleMethod(cls, "clear").invoke(element);
             return true;
         }
-        return true;
+        return false;
     }
 
     public static String readElementText(Object element) throws ReflectiveOperationException {

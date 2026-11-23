@@ -5,6 +5,7 @@ import com.qureon.locara.core.driver.AppiumDriverActionBridge;
 import com.qureon.locara.core.generator.DynamicXPathGenerator;
 import com.qureon.locara.core.guard.DangerKeywordGuard;
 import com.qureon.locara.core.guard.OverlayAirbag;
+import com.qureon.locara.core.ledger.HealingAuditLedger;
 import com.qureon.locara.core.logging.LocaraLogger;
 import com.qureon.locara.core.matcher.LocaraIntentMatcher;
 import com.qureon.locara.core.model.HealCandidate;
@@ -12,7 +13,6 @@ import com.qureon.locara.core.model.HealContext;
 import com.qureon.locara.core.model.HealResult;
 import com.qureon.locara.core.model.UIElementNode;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
@@ -54,7 +54,7 @@ final class KatalonHealingCoordinator {
         List<UIElementNode> nodes = safeParsePageSource(pageSource);
         HealResult result = engine.heal(nodes, pageSource, context);
 
-        if (!result.isSuccess() && overlayAirbag.dismissBlockingOverlay(driver, nodes)) {
+        if (!result.isSuccess() && nodes != null && overlayAirbag.dismissBlockingOverlay(driver, nodes)) {
             pageSource = KatalonDriverBridge.getPageSource(driver);
             if (pageSource != null && !pageSource.isEmpty()) {
                 nodes = safeParsePageSource(pageSource);
@@ -62,7 +62,7 @@ final class KatalonHealingCoordinator {
             }
         }
 
-        if (!result.isSuccess()) {
+        if (!result.isSuccess() && nodes != null) {
             result = scrollEngine.recoverWithScroll(
                     engine.getConfig(), engine, context, nodes, pageSource, result,
                     driver, () -> KatalonDriverBridge.getPageSource(driver), LOG_PREFIX
@@ -98,7 +98,7 @@ final class KatalonHealingCoordinator {
         List<UIElementNode> nodes = safeParsePageSource(pageSource);
         HealResult result = engine.heal(nodes, pageSource, context);
 
-        if (!result.isSuccess() && overlayAirbag.dismissBlockingOverlay(driver, nodes)) {
+        if (!result.isSuccess() && nodes != null && overlayAirbag.dismissBlockingOverlay(driver, nodes)) {
             pageSource = KatalonDriverBridge.getPageSource(driver);
             if (pageSource != null) {
                 result = engine.heal(safeParsePageSource(pageSource), pageSource, context);
@@ -135,7 +135,7 @@ final class KatalonHealingCoordinator {
             HealResult result = engine.heal(nodes, pageSource, context);
 
             if (!result.isSuccess() && nodes != null && !nodes.isEmpty()) {
-                result = trySemanticIntentFallback(context.getTargetHint(), nodes);
+                result = trySemanticIntentFallback(context, nodes);
             }
             if (!result.isSuccess() || result.getCandidate() == null) {
                 return null;
@@ -149,7 +149,8 @@ final class KatalonHealingCoordinator {
         }
     }
 
-    private HealResult trySemanticIntentFallback(String effectiveHint, List<UIElementNode> nodes) {
+    private HealResult trySemanticIntentFallback(HealContext context, List<UIElementNode> nodes) {
+        String effectiveHint = context.getTargetHint();
         UIElementNode bestNode = null;
         double bestScore = 0.0;
         double requiredFloor = Math.max(MIN_SEMANTIC_INTENT_FLOOR, engine.getConfig().getMinConfidenceThreshold());
@@ -171,6 +172,7 @@ final class KatalonHealingCoordinator {
         }
         String generatedXPath = xpathGenerator.generateOptimalXPath(bestNode, nodes, "VERIFY_PRESENT");
         HealCandidate candidate = new HealCandidate(bestNode, generatedXPath, bestScore, "SEMANTIC_INTENT_MATCH");
+        new HealingAuditLedger().recordEvent(context, candidate, null, "SUCCESS", engine.getConfig());
         return new HealResult(true, candidate, null,
                 "Healed via Semantic Intent Matching (" + String.format(Locale.US, "%.1f%%", bestScore * 100.0) + ")");
     }
@@ -193,7 +195,8 @@ final class KatalonHealingCoordinator {
         try {
             return engine.parsePageSource(pageSource);
         } catch (Exception ignored) {
-            return Collections.emptyList();
+            // Return null so LocaraEngine.heal preserves the real XML_PARSE_ERROR status instead of NO_NODES_FOUND
+            return null;
         }
     }
 

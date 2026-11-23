@@ -62,7 +62,9 @@ final class RsXmlDocumentRenderer {
         }
         sb.append("   </locatorCollection>\n");
         sb.append("   <locatorStrategy>").append(strategy.name()).append("</locatorStrategy>\n");
-        sb.append("   <platform>ANDROID</platform>\n");
+        String platform = (node != null && (node.getTag().startsWith("XCUIElementType")
+                || node.getClassName().startsWith("XCUIElementType"))) ? "IOS" : "ANDROID";
+        sb.append("   <platform>").append(platform).append("</platform>\n");
         sb.append("</MobileElementEntity>\n");
         return sb.toString();
     }
@@ -221,7 +223,11 @@ final class RsXmlDocumentRenderer {
     }
 
     private String escapeJavaString(String s) {
-        return s == null ? "" : s.replace("\\", "\\\\").replace("\"", "\\\"");
+        return s == null ? "" : s.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\r", "\\r")
+                .replace("\n", "\\n")
+                .replace("\t", "\\t");
     }
 
     private String sanitizeXml(String input) {

@@ -112,8 +112,8 @@ public class SpatialAlignmentEngine {
         List<UIElementNode> candidateNodes = new ArrayList<>();
         List<UIElementNode> labelNodes = new ArrayList<>();
         for (UIElementNode node : allNodes) {
-            if (!node.isDisplayed() || node.getBounds() == null || node.getBounds().width <= 0) continue;
-            if (node.getTag() != null && node.getTag().toLowerCase().contains("button")) continue;
+            if (!node.isDisplayed() || node.getBounds() == null || node.getBounds().width <= 0 || node.getBounds().height <= 0) continue;
+            if (node.getTag() != null && node.getTag().toLowerCase(Locale.ROOT).contains("button")) continue;
             candidateNodes.add(node);
             if (node.hasText() && !node.getText().trim().isEmpty()) labelNodes.add(node);
         }
@@ -121,14 +121,20 @@ public class SpatialAlignmentEngine {
         Set<UIElementNode> claimedValues = new HashSet<>();
         for (UIElementNode label : labelNodes) {
             if (claimedValues.contains(label)) continue;
-            Optional<UIElementNode> matchedVal = findAlignedNode(label, candidateNodes, AlignmentMode.LEFT_TO_RIGHT);
+            List<UIElementNode> unclaimedCandidates = new ArrayList<>(candidateNodes.size());
+            for (UIElementNode cand : candidateNodes) {
+                if (cand == label || !claimedValues.contains(cand)) {
+                    unclaimedCandidates.add(cand);
+                }
+            }
+            Optional<UIElementNode> matchedVal = findAlignedNode(label, unclaimedCandidates, AlignmentMode.LEFT_TO_RIGHT);
             AlignmentMode usedMode = AlignmentMode.LEFT_TO_RIGHT;
 
             if (!matchedVal.isPresent()) {
                 Rectangle rBounds = label.getBounds();
                 int rX1 = rBounds.x, rY2 = rBounds.y + rBounds.height;
-                for (UIElementNode cand : candidateNodes) {
-                    if (cand == label || claimedValues.contains(cand) || !cand.hasText()) continue;
+                for (UIElementNode cand : unclaimedCandidates) {
+                    if (cand == label || !cand.hasText()) continue;
                     Rectangle cBounds = cand.getBounds();
                     int vDist = cBounds.y - rY2;
                     if (vDist >= 0 && vDist <= 40 && Math.abs(cBounds.x - rX1) <= 40) {

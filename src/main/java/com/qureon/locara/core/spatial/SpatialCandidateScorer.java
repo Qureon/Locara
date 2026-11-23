@@ -53,7 +53,7 @@ final class SpatialCandidateScorer {
     private static double computeSpecificityBonus(UIElementNode cand, boolean isInputIntent, boolean isCheckboxIntent) {
         if (isInputIntent) {
             if (cand.isInputWidget()) return 0.35;
-            if (cand.getTag().toLowerCase().contains("viewgroup")) return -0.10;
+            if (cand.getTag().toLowerCase(java.util.Locale.ROOT).contains("viewgroup")) return -0.10;
         } else if (isCheckboxIntent) {
             if (cand.isCheckboxOrToggleWidget()) return 0.35;
             if (cand.isCompactCheckboxGeometry()) return 0.30;
@@ -109,8 +109,8 @@ final class SpatialCandidateScorer {
     private static boolean isBetterCandidate(double newScore, double currentBestScore, UIElementNode cand, UIElementNode currentBest) {
         if (currentBest == null || newScore > currentBestScore + SCORE_TIE_EPSILON) return true;
         if (Math.abs(newScore - currentBestScore) <= SCORE_TIE_EPSILON) {
-            if (cand.isInputWidget() && !currentBest.isInputWidget()) return true;
-            if (cand.isCheckboxOrToggleWidget() && !currentBest.isCheckboxOrToggleWidget()) return true;
+            if (cand.isInputWidget() != currentBest.isInputWidget()) return cand.isInputWidget();
+            if (cand.isCheckboxOrToggleWidget() != currentBest.isCheckboxOrToggleWidget()) return cand.isCheckboxOrToggleWidget();
             return cand.getDepth() > currentBest.getDepth();
         }
         return false;

@@ -126,13 +126,21 @@ public class ScrollRecoveryEngine {
     public boolean performShortScroll(Object driver) {
         if (driver == null) return false;
         int[] dims = KatalonDriverBridge.getScreenDimensions(driver, DEFAULT_SCREEN_WIDTH, DEFAULT_SCREEN_HEIGHT);
-        return invokeKatalonSwipe(dims[0] / 2, (int) (dims[1] * 0.55), dims[0] / 2, (int) (dims[1] * 0.40), SHORT_SETTLE_MS);
+        int width = dims[0], height = dims[1];
+        if (invokeKatalonSwipe(width / 2, (int) (height * 0.55), width / 2, (int) (height * 0.40), SHORT_SETTLE_MS)) return true;
+        return invokeAppiumGesture(driver, "mobile: scrollGesture", "down",
+                (int) (height * 0.25), Math.max(MIN_GESTURE_BOX_PX, width - 2 * EDGE_MARGIN_PX),
+                Math.max(MIN_GESTURE_BOX_PX, (int) (height * 0.50)), 0.35, SHORT_SETTLE_MS);
     }
 
     public boolean performScrollUp(Object driver) {
         if (driver == null) return false;
         int[] dims = KatalonDriverBridge.getScreenDimensions(driver, DEFAULT_SCREEN_WIDTH, DEFAULT_SCREEN_HEIGHT);
-        return invokeKatalonSwipe(dims[0] / 2, (int) (dims[1] * 0.30), dims[0] / 2, (int) (dims[1] * 0.70), HORIZONTAL_SETTLE_MS);
+        int width = dims[0], height = dims[1];
+        if (invokeKatalonSwipe(width / 2, (int) (height * 0.30), width / 2, (int) (height * 0.70), HORIZONTAL_SETTLE_MS)) return true;
+        return invokeAppiumGesture(driver, "mobile: scrollGesture", "up",
+                (int) (height * 0.20), Math.max(MIN_GESTURE_BOX_PX, width - 2 * EDGE_MARGIN_PX),
+                Math.max(MIN_GESTURE_BOX_PX, (int) (height * 0.60)), GESTURE_PERCENT, HORIZONTAL_SETTLE_MS);
     }
 
     public boolean performSwipeLeft(Object driver) {

@@ -9,29 +9,29 @@ public class HealConfig {
 
     public static final long DEFAULT_MANUAL_SCROLL_COOLDOWN_MS = 15_000L;
 
-    private double minConfidenceThreshold = 0.70;
-    private double weightText = 0.35;
-    private double weightId = 0.25;
-    private double weightDesc = 0.20;
-    private double weightClass = 0.10;
-    private double weightProximity = 0.10;
+    private volatile double minConfidenceThreshold = 0.70;
+    private volatile double weightText = 0.35;
+    private volatile double weightId = 0.25;
+    private volatile double weightDesc = 0.20;
+    private volatile double weightClass = 0.10;
+    private volatile double weightProximity = 0.10;
 
-    private boolean autoGenerateRs = false;
-    private boolean allowOverwriteExistingRs = false;
-    private boolean backupExistingRs = true;
-    private boolean auditLedgerEnabled = true;
-    private boolean adaptiveFrameworkWeights = true;
-    private String katalonProjectPath = System.getProperty("user.dir");
-    private String defaultRsFolder = "Object Repository";
-    private String auditLogFolder = "Include/evidence";
+    private volatile boolean autoGenerateRs = false;
+    private volatile boolean allowOverwriteExistingRs = false;
+    private volatile boolean backupExistingRs = true;
+    private volatile boolean auditLedgerEnabled = true;
+    private volatile boolean adaptiveFrameworkWeights = true;
+    private volatile String katalonProjectPath = System.getProperty("user.dir");
+    private volatile String defaultRsFolder = "Object Repository";
+    private volatile String auditLogFolder = "Include/evidence";
 
     private volatile AppTarget appTarget = AppTarget.AUTO;
     private final ThreadLocal<AppTarget> threadAppTarget = new ThreadLocal<>();
-    private boolean enabled = true;
-    private boolean scrollRecoveryEnabled = true;
-    private int maxScrollAttempts = 2;
-    private boolean manualScrollGuardEnabled = true;
-    private long manualScrollCooldownMs = DEFAULT_MANUAL_SCROLL_COOLDOWN_MS;
+    private volatile boolean enabled = true;
+    private volatile boolean scrollRecoveryEnabled = true;
+    private volatile int maxScrollAttempts = 2;
+    private volatile boolean manualScrollGuardEnabled = true;
+    private volatile long manualScrollCooldownMs = DEFAULT_MANUAL_SCROLL_COOLDOWN_MS;
 
     public HealConfig() {}
 

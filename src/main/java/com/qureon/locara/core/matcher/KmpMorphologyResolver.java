@@ -98,10 +98,19 @@ public final class KmpMorphologyResolver {
     public static boolean isPinKeyMatch(String candId, String targetHint) {
         if (candId == null || targetHint == null) return false;
 
-        // Pattern: pin_key_<digit>
-        if (candId.startsWith("pin_key_") || candId.startsWith("pin_digit_")) {
-            String candDigit = candId.replaceAll("[^0-9]", "");
-            String targetDigit = targetHint.replaceAll("[^0-9]", "");
+        String candLower = candId.toLowerCase(Locale.ROOT);
+        String targetLower = targetHint.toLowerCase(Locale.ROOT).trim();
+        // Pattern: pin_key_<digit> or pin_digit_<digit>; require targetHint to be a bare digit or PIN/keypad context
+        if (candLower.startsWith("pin_key_") || candLower.startsWith("pin_digit_")) {
+            boolean isPinContext = targetLower.matches("^\\d$")
+                    || targetLower.contains("pin")
+                    || targetLower.contains("digit")
+                    || targetLower.contains("key")
+                    || targetLower.contains("pad")
+                    || targetLower.contains("passcode");
+            if (!isPinContext) return false;
+            String candDigit = candLower.replaceAll("[^0-9]", "");
+            String targetDigit = targetLower.replaceAll("[^0-9]", "");
             if (!candDigit.isEmpty() && candDigit.equals(targetDigit)) {
                 return true;
             }
