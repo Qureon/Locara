@@ -115,4 +115,23 @@ test("LocaraPageWrapper locator() defaults to VISIBLE and resolves non-interacti
     const longLoc = await longTextWrapper.locator(".missing-msg", longText);
     assert.equal(longLoc.kind, "text");
     assert.equal(longLoc.opts.exact, false);
+
+    const dataTestWrapper = withLocara({
+        ...basePage,
+        getByTestId: (id) => ({ kind: "testid", id }),
+        evaluate: async () => [
+            { tag: "button", text: "Kirim", testId: "btn-submit-form", testIdAttr: "data-test", role: "", id: "", ariaLabel: "", inputType: "", name: "", placeholder: "" },
+        ],
+    });
+    const dataTestLoc = await dataTestWrapper.locator(".broken", "btn-submit-form");
+    assert.equal(dataTestLoc.kind, "locator");
+    assert.equal(dataTestLoc.s, '[data-test="btn-submit-form"]');
+
+    const matcher = new HeuristicDomMatcher(0.70);
+    const rec = matcher.findBestMatch(
+        [{ tag: "button", text: "Kirim", testId: "btn-submit-form", testIdAttr: "data-test" }],
+        "btn-submit-form",
+        "CLICK"
+    );
+    assert.ok(rec?.playwrightLocatorRecommendation.includes('[data-test="btn-submit-form"]'));
 });

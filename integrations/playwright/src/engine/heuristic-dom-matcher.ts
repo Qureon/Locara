@@ -14,6 +14,7 @@ export interface RawDomNode {
   role?: string;
   inputType?: string;
   testId?: string;
+  testIdAttr?: 'data-testid' | 'data-test';
   name?: string;
   placeholder?: string;
   xpath?: string;
@@ -27,6 +28,7 @@ export interface CandidateElement {
   ariaLabel: string;
   role: string;
   testId: string;
+  testIdAttr?: 'data-testid' | 'data-test';
   name: string;
   placeholder: string;
   xpath: string;
@@ -130,6 +132,7 @@ export class HeuristicDomMatcher {
           ariaLabel,
           role,
           testId,
+          testIdAttr: el.testIdAttr,
           name,
           placeholder,
           xpath: el.xpath || `//${tag}`,
@@ -173,6 +176,9 @@ export class HeuristicDomMatcher {
     role: string
   ): string {
     if (testId) {
+      if (el.testIdAttr === 'data-test') {
+        return `locator('${this.quoteJsString(`[data-test=${JSON.stringify(testId)}]`)}')`;
+      }
       return `getByTestId('${this.quoteJsString(testId)}')`;
     }
     if (role && (text || ariaLabel)) {
@@ -182,11 +188,19 @@ export class HeuristicDomMatcher {
     if (ariaLabel) {
       return `getByLabel('${this.quoteJsString(ariaLabel)}')`;
     }
-    if (text && text.length < 50) {
-      return `getByText('${this.quoteJsString(text)}')`;
+    if (el.placeholder) {
+      return `getByPlaceholder('${this.quoteJsString(el.placeholder)}')`;
     }
     if (el.id) {
       return `locator('${this.quoteJsString(`[id=${JSON.stringify(el.id)}]`)}')`;
+    }
+    if (el.name) {
+      return `locator('${this.quoteJsString(`${el.tag}[name=${JSON.stringify(el.name)}]`)}')`;
+    }
+    if (text) {
+      return text.length < 40
+        ? `getByText('${this.quoteJsString(text)}', { exact: true })`
+        : `getByText('${this.quoteJsString(text)}')`;
     }
     return el.xpath ? `locator('xpath=${this.quoteJsString(el.xpath)}')` : `locator('${this.quoteJsString(el.tag)}')`;
   }

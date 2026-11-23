@@ -140,7 +140,11 @@ export class LocaraPageWrapper {
         const tag = el.tagName.toLowerCase();
         const text = (el.innerText || (el as HTMLInputElement).value || '').trim();
         const ariaLabel = el.getAttribute('aria-label') || '';
-        const testId = el.getAttribute('data-testid') || el.getAttribute('data-test') || '';
+        const dataTestId = el.getAttribute('data-testid') || '';
+        const dataTest = el.getAttribute('data-test') || '';
+        const testId = dataTestId || dataTest;
+        const testIdAttr: 'data-testid' | 'data-test' | undefined =
+          dataTestId ? 'data-testid' : (dataTest ? 'data-test' : undefined);
         const id = el.id || '';
         if (containerTags.has(tag) && el.children.length > 0 && !ariaLabel && !testId && !id) continue;
         if (!text && !ariaLabel && !testId && !id && !el.getAttribute('name') && !el.getAttribute('placeholder')) {
@@ -155,6 +159,7 @@ export class LocaraPageWrapper {
           role: el.getAttribute('role') || '',
           inputType: tag === 'input' ? ((el as HTMLInputElement).type || '').toLowerCase() : '',
           testId,
+          testIdAttr,
           name: el.getAttribute('name') || '',
           placeholder: el.getAttribute('placeholder') || ''
         });
@@ -168,7 +173,9 @@ export class LocaraPageWrapper {
     }
 
     if (match.testId) {
-      return this.page.getByTestId(match.testId);
+      return match.testIdAttr === 'data-test'
+        ? this.page.locator(`[data-test=${JSON.stringify(match.testId)}]`)
+        : this.page.getByTestId(match.testId);
     }
     if (match.role && (match.ariaLabel || match.text)) {
       type PlaywrightAriaRole = Parameters<Page['getByRole']>[0];
