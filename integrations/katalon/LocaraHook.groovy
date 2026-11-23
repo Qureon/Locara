@@ -126,7 +126,7 @@ class LocaraHook {
                 installOptionalInterceptor(mobileCache, k, "com.kms.katalon.core.mobile.keyword.builtin.${cls}", LocaraManualScrollInterceptor.class, { IKeyword orig -> new LocaraManualScrollInterceptor(orig) })
             }
             installed = true
-            KeywordUtil.logInfo("[Locara by Qureon] Native KeywordExecutor Hook v1.16.0 installed (actions, probes, and manual-scroll guard)")
+            KeywordUtil.logInfo("[Locara by Qureon] Native KeywordExecutor Hook v1.16.1 installed (actions, probes, and manual-scroll guard)")
         } catch (Throwable t) { KeywordUtil.markWarning("[Locara by Qureon] Failed to install KeywordExecutor hook: " + t.getMessage()) }
     }
 

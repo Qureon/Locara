@@ -6,7 +6,7 @@ import os
 import tempfile
 from pathlib import Path
 
-ENGINE_VERSION = "v1.16.0"
+ENGINE_VERSION = "v1.16.1"
 DEFAULT_PORT = 8088
 ALLOWED_TARGETS = frozenset({"AUTO", "UMUM", "REVAMP", "KMP", "LEGACY_XML", "LEGACY", "WEB", "GENERIC"})
 FLOAT_CONFIG_KEYS = frozenset({

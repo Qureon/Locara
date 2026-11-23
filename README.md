@@ -5,9 +5,9 @@
 ### Adaptive Locator Intelligence & Universal Self-Healing Engine
 *An autonomous, offline-first self-healing engine for resilient mobile & hybrid test automation.*
 
-[![Version](https://img.shields.io/badge/version-1.16.0-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
+[![Version](https://img.shields.io/badge/version-1.16.1-00E5FF?style=flat-square&logo=semver)](https://github.com/Qureon/Locara/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-120%2F120%20passing-10B981?style=flat-square)](build.gradle)
+[![Tests](https://img.shields.io/badge/tests-164%2F164%20passing-10B981?style=flat-square)](build.gradle)
 [![Java](https://img.shields.io/badge/java-17%20%7C%2021%20%7C%2024-orange?style=flat-square&logo=openjdk)](build.gradle)
 [![Katalon](https://img.shields.io/badge/katalon-8.x%20%7C%209.x%20%7C%2010.x%20%7C%2011.x%20(11.7.0%2B%20Ready)-00B0FF?style=flat-square)](https://katalon.com)
 [![Appium](https://img.shields.io/badge/appium-2.x%20%7C%201.x-662d91?style=flat-square&logo=appium)](https://appium.io)
@@ -50,6 +50,7 @@ Locara menerapkan prinsip **In-Flight Zero-Interruption**:
 18. **Multi-Stack Security Hardening, ThreadLocal Isolation & Persistence (v1.15.0)**: Eliminasi false-green di seluruh wrapper (`Locara`, `CucumberLocara`, `PlaywrightLocara`, Katalon/TS), isolasi thread-safe `ThreadLocal<AppTarget>` (`setThreadAppTarget`/`clearThreadAppTarget`), guard XXE/ReDoS/CSRF/XSS (`PageSourceParser`, `HtmlDomParser`, `dashboard/server.py`, `dashboard/js/utils.js`), persistensi `locara.properties`, Gradle Wrapper (`./gradlew`), serta perluasan suite uji (`110` JUnit + `8` Python `unittest`).
 19. **Manual-Scroll Awareness & Anti-Double-Scroll Guard (v1.15.1)**: Mencegah *double scrolling* via `ManualScrollGuard` (`locara.scroll.manual_guard.enabled=true`, `locara.scroll.manual_cooldown_ms=15000`), intersepsi `Mobile.swipe`/`Mobile.scrollToText` pada `LocaraHook`, API eksplisit `notifyManualScroll()`/`clearManualScrollState()`, deteksi stagnasi viewport batas halaman di `ScrollRecoveryEngine.recoverWithScroll`, serta cakupan uji `115` JUnit + `8` Python `unittest`.
 20. **Enterprise Modularization, True Ghost Mode & Type Safety (v1.16.0)**: Dekomposisi bersih seluruh modul inti Java/Groovy/Python/JS (`<300` baris/berkas), `AppiumDriverActionBridge` & `LocaraLogger` DRY terpusat, native `Mobile.*` Ghost Mode fallback pada `LocaraKeywords.groovy`, penemuan otomatis `Include/config/locara.properties`, penghapusan `: any` TypeScript, serta perluasan suite uji (`120` JUnit + `14` Python `unittest` + `6` Node tests).
+21. **Audit Hardening, Security Allowlist, Offline Dashboard & Expanded Regression Suite (v1.16.1)**: Perbaikan reflection `LocaraKeywords`/`ReflectiveAccessUtil` & `PlaywrightReflectionBridge`, static-asset allowlist + RFC 9110 `HEAD` + locked atomic `locara.properties` persistence, 100% offline dashboard (zero external CDN) & live state analytics tanpa data fabrikasi, Android 14+ `OverlayAirbag` & token-boundary `DangerKeywordGuard`/`polarity-guard.ts`, multi-bracket Playwright MCP parsing + `inputType` scoring + `VISIBLE` DOM harvesting, isolasi CLI (`--project-dir`, `--no-audit`), serta perluasan suite uji ke `164/164` (`129` JUnit + `21` Python `unittest` + `14` Node tests).
 
 ---
 
@@ -104,8 +105,8 @@ Tolong unduh engine test automation offline "Locara" versi rilis terbaru dari re
 https://github.com/Qureon/Locara/releases/latest
 
 Langkah yang perlu kamu lakukan:
-1. Cek tag rilis terbaru dari API GitHub (misal `v1.16.0`).
-2. Download asset file `.jar` biner (contoh: `locara-1.16.0.jar`) dari Releases tersebut.
+1. Cek tag rilis terbaru dari API GitHub (misal `v1.16.1`).
+2. Download asset file `.jar` biner (contoh: `locara-1.16.1.jar`) dari Releases tersebut.
 3. Simpan file .jar tersebut langsung ke dalam folder: Drivers/ di root workspace proyek Katalon ini.
 4. Hapus versi locara-*.jar lama jika sebelumnya ada di dalam folder Drivers/.
 5. Pastikan ukuran file terunduh sekitar ~200 KB dan tidak korup.
@@ -254,14 +255,14 @@ Jalankan evaluasi heuristik dan inspeksi langsung dari terminal:
 
 ```bash
 # 1. Evaluasi & generate file .rs dari berkas XML dump (dengan isolasi direktori proyek / tanpa ledger)
-java -jar locara-1.16.0.jar --xml dump.xml --hint "Lanjut Transfer" --out "Object Repository/Transfer/btn_Lanjut.rs" --project-dir /path/to/project
-java -jar locara-1.16.0.jar --xml dump.xml --hint "Lanjut Transfer" --no-audit
+java -jar locara-1.16.1.jar --xml dump.xml --hint "Lanjut Transfer" --out "Object Repository/Transfer/btn_Lanjut.rs" --project-dir /path/to/project
+java -jar locara-1.16.1.jar --xml dump.xml --hint "Lanjut Transfer" --no-audit
 
 # 2. Inspeksi seluruh elemen interaktif dalam XML / HTML
-java -jar locara-1.16.0.jar --xml dump.xml --inspect
+java -jar locara-1.16.1.jar --xml dump.xml --inspect
 
 # 3. Audit konvensi penamaan .rs, .tc, dan script Groovy
-java -jar locara-1.16.0.jar audit-naming --dir .
+java -jar locara-1.16.1.jar audit-naming --dir .
 ```
 
 ---

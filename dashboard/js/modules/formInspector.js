@@ -1,6 +1,6 @@
 /**
  * ==============================================================================
- * LOCARA MISSION CONTROL — SPATIAL & FORM INSPECTOR MODULE (v1.16.0)
+ * LOCARA MISSION CONTROL — SPATIAL & FORM INSPECTOR MODULE (v1.16.1)
  * Visualizes 2D bounding box Left-to-Right and Top-to-Bottom field alignment,
  * section boundary detection, and key-value receipt pairing.
  * ==============================================================================

@@ -75,7 +75,7 @@ class DashboardServerSecurityAndApiTest(unittest.TestCase):
         )
         self.assertEqual(status, 200)
         data = json.loads(raw)
-        self.assertEqual(data["version"], "v1.16.0")
+        self.assertEqual(data["version"], "v1.16.1")
         lower_hdrs = {k.lower(): v for k, v in hdrs.items()}
         self.assertNotIn("access-control-allow-origin", lower_hdrs)
 
@@ -281,7 +281,7 @@ class DashboardServerSecurityAndApiTest(unittest.TestCase):
         result_path = generate_report.generate_report(output_path=output_file, audit_path=audit_file)
         self.assertTrue(result_path.exists())
         html = result_path.read_text(encoding="utf-8")
-        self.assertIn("v1.16.0", html)
+        self.assertIn("v1.16.1", html)
         self.assertIn("//*[@text=&#x27;Pay Now&#x27;]", html)
         self.assertNotIn("<script>alert(1)</script>", html)
         self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", html)

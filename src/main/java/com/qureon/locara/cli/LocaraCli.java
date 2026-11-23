@@ -123,7 +123,7 @@ public class LocaraCli {
     }
 
     private static void printUsage() {
-        System.out.println("Locara by Qureon CLI v1.16.0 — Autonomous Mobile Recon & Synthesizer");
+        System.out.println("Locara by Qureon CLI v1.16.1 — Autonomous Mobile Recon & Synthesizer");
         System.out.println("Usage:");
         System.out.println("  locara --xml <path> --hint <hint> [--action TAP] [--out <rs>] [--project-dir <dir>] [--no-audit]");
         System.out.println("  locara sanitize-or --path <path> [--fix] [--no-backup]");
